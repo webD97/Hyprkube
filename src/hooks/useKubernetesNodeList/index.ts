@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api";
+import { invoke } from "@tauri-apps/api/core";
 import { Node as CoreV1Node } from 'kubernetes-types/core/v1';
 import { useEffect, useState } from "react";
 
