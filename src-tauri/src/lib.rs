@@ -3,17 +3,23 @@
 
 mod resource_event;
 
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Mutex};
 
 use futures::{StreamExt, TryStreamExt};
 use kube::{
-    api::{DynamicObject, GroupVersionKind}, discovery::verbs, Api, Discovery
+    api::{DynamicObject, GroupVersionKind},
+    discovery::verbs,
+    Api, Discovery,
 };
 use resource_event::WatchEvent;
-use tauri::ipc::Channel;
+use tauri::{ipc::Channel, AppHandle, Manager};
+
+struct AppState {
+    channel_handlers: HashMap<u32, tokio::task::JoinHandle<()>>,
+}
 
 #[tauri::command]
-async fn kube_discover() -> Result<HashMap::<String, Vec<(String, String)>>, ()> {
+async fn kube_discover() -> Result<HashMap<String, Vec<(String, String)>>, ()> {
     let client = kube::Client::try_default()
         .await
         .expect("expected default kubernetes client");
@@ -32,13 +38,12 @@ async fn kube_discover() -> Result<HashMap::<String, Vec<(String, String)>>, ()>
             let v = ar.version;
             let k = ar.kind;
 
-            if ! kinds.contains_key(&g) {
+            if !kinds.contains_key(&g) {
                 kinds.insert(g.clone(), vec![]);
             }
 
             kinds.get_mut(&g).unwrap().push((k, v));
         }
-        
     }
 
     Ok(kinds)
@@ -46,6 +51,7 @@ async fn kube_discover() -> Result<HashMap::<String, Vec<(String, String)>>, ()>
 
 #[tauri::command]
 async fn kube_watch_gvk(
+    app: AppHandle,
     group: &str,
     version: &str,
     kind: &str,
@@ -71,36 +77,65 @@ async fn kube_watch_gvk(
         .boxed();
 
     let channel_id = channel.id();
-    println!("We're now streaming to channel {channel_id}");
+    println!("Streaming {kind} to channel {channel_id}");
 
-    while let Some(status) = stream.try_next().await.expect("next") {
-        match status {
-            kube::api::WatchEvent::Added(obj) => channel
-                .send(WatchEvent::Created { repr: obj.clone() })
-                .unwrap(),
-            kube::api::WatchEvent::Modified(obj) => channel
-                .send(WatchEvent::Updated { repr: obj.clone() })
-                .unwrap(),
-            kube::api::WatchEvent::Deleted(obj) => channel
-                .send(WatchEvent::Deleted { repr: obj.clone() })
-                .unwrap(),
-            kube::api::WatchEvent::Bookmark(_obj) => {}
-            kube::api::WatchEvent::Error(obj) => println!("{}", obj.message),
+    let handle = tokio::spawn(async move {
+        while let Some(status) = stream.try_next().await.expect("next") {
+            match status {
+                kube::api::WatchEvent::Added(obj) => channel
+                    .send(WatchEvent::Created { repr: obj.clone() })
+                    .unwrap(),
+                kube::api::WatchEvent::Modified(obj) => channel
+                    .send(WatchEvent::Updated { repr: obj.clone() })
+                    .unwrap(),
+                kube::api::WatchEvent::Deleted(obj) => channel
+                    .send(WatchEvent::Deleted { repr: obj.clone() })
+                    .unwrap(),
+                kube::api::WatchEvent::Bookmark(_obj) => {}
+                kube::api::WatchEvent::Error(obj) => println!("{}", obj.message),
+            }
         }
-    }
+    });
+
+    let app_state = app.state::<Mutex<AppState>>();
+    let mut app_state = app_state.lock().unwrap();
+
+    app_state.channel_handlers.insert(channel_id, handle);
 
     Ok(())
 }
 
 #[tauri::command]
-fn cleanup_channel(id: u32) {
-    println!("We will now clean up channel {id}")
+fn cleanup_channel(app: AppHandle, id: u32) {
+    println!("Clean up channel {id}");
+
+    let app_state = app.state::<Mutex<AppState>>();
+    let mut app_state = app_state.lock().unwrap();
+
+    if !app_state.channel_handlers.contains_key(&id) {
+        return;
+    }
+
+    let handler = app_state.channel_handlers.get(&id).unwrap();
+    handler.abort();
+
+    app_state.channel_handlers.remove(&id);
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![kube_watch_gvk, kube_discover, cleanup_channel])
+        .setup(|app| {
+            app.manage(Mutex::new(AppState {
+                channel_handlers: HashMap::new(),
+            }));
+            Ok(())
+        })
+        .invoke_handler(tauri::generate_handler![
+            kube_watch_gvk,
+            kube_discover,
+            cleanup_channel
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
