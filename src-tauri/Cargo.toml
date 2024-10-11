@@ -11,7 +11,7 @@ rust-version = "1.60"
 
 [lib]
 name = "app_lib"
-crate-type = ["staticlib", "cdylib", "rlib", "lib"]
+crate-type = ["staticlib", "cdylib", "rlib"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -24,6 +24,8 @@ serde = { version = "1.0", features = ["derive"] }
 tauri = { version = "2", features = [] }
 kube = { version = "0.95.0", features = ["runtime", "derive"] }
 k8s-openapi = { version = "0.23.0", features = ["v1_30"] }
+# futures-util = { version = "0.3" }
+futures = { version = "0.3"}
 
 [features]
 # this feature is used for production builds or when `devPath` points to the filesystem and the built-in dev server is disabled.

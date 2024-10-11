@@ -5,8 +5,9 @@ import relativeTime from 'dayjs/plugin/relativeTime';
 
 import useKubernetesNamespaceList from './hooks/useKubernetesNamespaceList';
 import useKubernetesNodeList from './hooks/useKubernetesNodeList';
-import useKubernetesPodList from './hooks/useKubernetesPodList';
+import useKubernetesResourceWatch from './hooks/useKubernetesResourceWatch';
 import { KubernetesApiObject } from './model/k8s';
+import { Pod } from 'kubernetes-types/core/v1';
 
 function byCreationTimestamp(a: KubernetesApiObject, b: KubernetesApiObject) {
   const creationTimestampA = dayjs(a.metadata?.creationTimestamp);
@@ -18,7 +19,7 @@ function byCreationTimestamp(a: KubernetesApiObject, b: KubernetesApiObject) {
 function App() {
   const nodes = useKubernetesNodeList();
   const namespaces = useKubernetesNamespaceList();
-  const pods = useKubernetesPodList();
+  const pods = useKubernetesResourceWatch<Pod>('kube_watch_pods');
 
   dayjs.extend(relativeTime);
 
@@ -38,7 +39,7 @@ function App() {
         </select>
       </header>
       <main>
-        <h2>Nodes ({ nodes.length })</h2>
+        <h2>Nodes ({nodes.length})</h2>
         <table>
           <thead>
             <tr>
@@ -71,9 +72,9 @@ function App() {
             }
           </tbody>
         </table>
-        <h2>Pods ({ pods.length })</h2>
+        <h2>Pods ({pods.length})</h2>
         <table>
-        <thead>
+          <thead>
             <tr>
               <td>Name</td>
               <td>Namespace</td>
@@ -89,7 +90,7 @@ function App() {
           <tbody>
             {
               pods.sort(byCreationTimestamp).reverse().map(pod => (
-                <tr>
+                <tr key={pod.metadata?.uid}>
                   <td>{pod.metadata?.name}</td>
                   <td>{pod.metadata?.namespace}</td>
                   <td>
@@ -102,7 +103,7 @@ function App() {
                     }
                   </td>
                   <td>
-                  {
+                    {
                       [
                         (pod.spec?.containers.find(c => c.securityContext?.privileged) && 'P'),
                         (pod.spec?.containers.find(c => !c.securityContext?.readOnlyRootFilesystem) && 'W'),
