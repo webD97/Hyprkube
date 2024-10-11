@@ -4,11 +4,11 @@ import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 
 import useKubernetesResourceWatch from './hooks/useKubernetesResourceWatch';
-import { Gvk, KubernetesApiObject } from './model/k8s';
+import { Gvk, GenericResource } from './model/k8s';
 import { useEffect, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 
-function byCreationTimestamp(a: KubernetesApiObject, b: KubernetesApiObject) {
+function byCreationTimestamp(a: GenericResource, b: GenericResource) {
   const creationTimestampA = dayjs(a.metadata?.creationTimestamp);
   const creationTimestampB = dayjs(b.metadata?.creationTimestamp);
 

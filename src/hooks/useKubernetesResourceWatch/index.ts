@@ -1,14 +1,7 @@
 import { Channel, invoke } from "@tauri-apps/api/core";
 import { useEffect, useState } from "react";
 import { WatchEvent } from "../../api/WatchEvent";
-import { ObjectMeta } from "kubernetes-types/meta/v1";
-import { Gvk } from "../../model/k8s";
-
-interface GenericResource {
-    apiVersion?: string,
-    kind?: string,
-    metadata?: ObjectMeta,
-}
+import { GenericResource, Gvk } from "../../model/k8s";
 
 export default function useKubernetesResourceWatch<K extends GenericResource>(gvk: Gvk | undefined) {
     const [resources, setResources] = useState<Array<K>>([]);
