@@ -3,11 +3,9 @@ import './App.css';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 
-import useKubernetesNamespaceList from './hooks/useKubernetesNamespaceList';
-import useKubernetesNodeList from './hooks/useKubernetesNodeList';
 import useKubernetesResourceWatch from './hooks/useKubernetesResourceWatch';
 import { KubernetesApiObject } from './model/k8s';
-import { Pod } from 'kubernetes-types/core/v1';
+import { Node, Pod } from 'kubernetes-types/core/v1';
 
 function byCreationTimestamp(a: KubernetesApiObject, b: KubernetesApiObject) {
   const creationTimestampA = dayjs(a.metadata?.creationTimestamp);
@@ -17,9 +15,9 @@ function byCreationTimestamp(a: KubernetesApiObject, b: KubernetesApiObject) {
 }
 
 function App() {
-  const nodes = useKubernetesNodeList();
-  const namespaces = useKubernetesNamespaceList();
-  const pods = useKubernetesResourceWatch<Pod>('kube_watch_pods');
+  const nodes = useKubernetesResourceWatch<Node>('', 'v1', 'Node');
+  const namespaces = useKubernetesResourceWatch<Pod>('', 'v1', 'Namespace');
+  const pods = useKubernetesResourceWatch<Pod>('', 'v1', 'Pod');
 
   dayjs.extend(relativeTime);
 

@@ -9,7 +9,7 @@ interface GenericResource {
     metadata?: ObjectMeta,
 }
 
-export default function useKubernetesResourceWatch<K extends GenericResource>(tauriCommandName: string) {
+export default function useKubernetesResourceWatch<K extends GenericResource>(group: string, version: string, kind: string) {
     const [pods, setPods] = useState<Array<K>>([]);
 
     useEffect(() => {
@@ -37,7 +37,7 @@ export default function useKubernetesResourceWatch<K extends GenericResource>(ta
             }
         }
 
-        invoke(tauriCommandName, { channel });
+        invoke('kube_watch_gvk', { group, version, kind, channel});
     }, []);
 
     return pods;
