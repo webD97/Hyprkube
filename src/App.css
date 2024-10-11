@@ -1,3 +1,93 @@
+.container {
+    display: grid;
+    grid-template-columns: 17fr 83fr;
+    grid-template-rows: 1fr;
+    gap: 0px 0px;
+    grid-template-areas:
+        "nav main";
+    
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+}
+
 table {
     width: 100%;
+}
+
+table {
+    font-family: monospace;
+    border-spacing: 0;
+}
+
+table tr {
+    height: 2.5em;
+}
+
+table th {
+    text-align: left;
+    font-weight: bold;
+}
+
+table tbody tr:hover {
+    background-color: rgba(0, 0, 0, 0.25);
+}
+
+h1, h2, h3, h4, h5, h6 {
+    cursor: default;
+}
+
+nav {
+    grid-area: nav;
+    overflow: scroll;
+}
+
+nav ul {
+    list-style: none;
+    padding-left: 0;
+    margin: 0;
+    width: calc(100% - 10px)
+}
+
+nav ul li, nav details summary {
+    height: 2.5em;
+    line-height: 2.5em;
+}
+
+nav ul li::before {
+    content: "📄";
+    margin: 0 .5em;
+}
+
+nav ul.pinned li::before {
+    content: "📌";
+    margin: 0 .5em;
+}
+
+nav details > summary::before {
+    content: "📁";
+    margin: 0 .5em;
+}
+
+nav details[open] > summary::before {
+    content: "📂";
+}
+
+nav details > summary::marker, nav details > summary::-webkit-details-marker {
+    display: none;
+    content: "";
+}
+
+nav details > ul {
+    padding-left: 1em;
+}
+
+nav ul li:hover, nav details summary:hover {
+    background-color: rgba(0, 0, 0, 0.4);
+    cursor: pointer;
+}
+
+main {
+    grid-area: main;
+    overflow: scroll;
 }

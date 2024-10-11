@@ -18,14 +18,12 @@ function byCreationTimestamp(a: KubernetesApiObject, b: KubernetesApiObject) {
 
 function App() {
   const nodes = useKubernetesResourceWatch<Node>('', 'v1', 'Node');
-  const namespaces = useKubernetesResourceWatch<Pod>('', 'v1', 'Namespace');
   const pods = useKubernetesResourceWatch<Pod>('', 'v1', 'Pod');
 
   const [gvks, setGvks] = useState<{ [key: string]: [string, string] }>({});
 
   useEffect(() => {
     invoke("kube_discover").then(result => {
-      console.log({result})
       setGvks(result as typeof gvks)
     });
   }, []);
@@ -33,21 +31,18 @@ function App() {
   dayjs.extend(relativeTime);
 
   return (
-    <>
-      <header>
-        <h1>Hyprkube</h1>
-        <span>Namespace:&nbsp;</span>
-        <select>
-          {
-            namespaces.map(namespace => (
-              <option key={namespace.metadata?.uid}>
-                {namespace.metadata?.name}
-              </option>
-            ))
-          }
-        </select>
-      </header>
+    <div className="container">
       <nav>
+        <h1>Hyprkube</h1>
+        <h2>Pinned resources</h2>
+        <ul className="pinned">
+          <li>Pods</li>
+          <li>Deployments</li>
+          <li>Clusters (fleet.cattle.io)</li>
+          <li>BundleDeployments (fleet.cattle.io)</li>
+          <li>GitJob (gitjob.cattle.io)</li>
+        </ul>
+        <h2>All resources</h2>
         {
           Object.entries(gvks).map(([g, vk]) => (
             <details key={g}>
@@ -68,12 +63,12 @@ function App() {
         <table>
           <thead>
             <tr>
-              <td>Name</td>
-              <td>OS image</td>
-              <td>Internal IP</td>
-              <td>Architecture</td>
-              <td>Kubelet version</td>
-              <td>Age</td>
+              <th>Name</th>
+              <th>OS image</th>
+              <th>Internal IP</th>
+              <th>Architecture</th>
+              <th>Kubelet version</th>
+              <th>Age</th>
             </tr>
           </thead>
           <tbody>
@@ -101,15 +96,15 @@ function App() {
         <table>
           <thead>
             <tr>
-              <td>Name</td>
-              <td>Namespace</td>
-              <td>Host Integration</td>
-              <td>Security Context</td>
-              <td>Containers</td>
-              <td>Restarts</td>
-              <td>Node</td>
-              <td>Age</td>
-              <td>Status</td>
+              <th>Name</th>
+              <th>Namespace</th>
+              <th>Host Integration</th>
+              <th>Security Context</th>
+              <th>Containers</th>
+              <th>Restarts</th>
+              <th>Node</th>
+              <th>Age</th>
+              <th>Status</th>
             </tr>
           </thead>
           <tbody>
@@ -150,7 +145,7 @@ function App() {
           </tbody>
         </table>
       </main>
-    </>
+    </div>
   )
 }
 

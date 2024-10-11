@@ -7,7 +7,7 @@ use std::collections::HashMap;
 
 use futures::{StreamExt, TryStreamExt};
 use kube::{
-    api::{DynamicObject, GroupVersionKind}, Api, Discovery
+    api::{DynamicObject, GroupVersionKind}, discovery::verbs, Api, Discovery
 };
 use resource_event::WatchEvent;
 use tauri::ipc::Channel;
@@ -23,7 +23,11 @@ async fn kube_discover() -> Result<HashMap::<String, Vec<(String, String)>>, ()>
     let mut kinds = HashMap::<String, Vec<(String, String)>>::new();
 
     for group in discovery.groups() {
-        for (ar, _) in group.recommended_resources() {
+        for (ar, capabilities) in group.recommended_resources() {
+            if !capabilities.supports_operation(verbs::LIST) {
+                continue;
+            }
+
             let g = ar.group;
             let v = ar.version;
             let k = ar.kind;
