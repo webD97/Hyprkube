@@ -4,8 +4,7 @@ import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 
 import useKubernetesResourceWatch from './hooks/useKubernetesResourceWatch';
-import { KubernetesApiObject } from './model/k8s';
-import { Node, Pod } from 'kubernetes-types/core/v1';
+import { Gvk, KubernetesApiObject } from './model/k8s';
 import { useEffect, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 
@@ -17,10 +16,13 @@ function byCreationTimestamp(a: KubernetesApiObject, b: KubernetesApiObject) {
 }
 
 function App() {
-  const nodes = useKubernetesResourceWatch<Node>('', 'v1', 'Node');
-  const pods = useKubernetesResourceWatch<Pod>('', 'v1', 'Pod');
+  // const nodes = useKubernetesResourceWatch<Node>('', 'v1', 'Node');
+  // const pods = useKubernetesResourceWatch<Pod>('', 'v1', 'Pod');
 
   const [gvks, setGvks] = useState<{ [key: string]: [string, string] }>({});
+  const [currentGvk, setCurrentGvk] = useState<Gvk>();
+
+  const currentResourceList = useKubernetesResourceWatch(currentGvk);
 
   useEffect(() => {
     invoke("kube_discover").then(result => {
@@ -44,13 +46,17 @@ function App() {
         </ul>
         <h2>All resources</h2>
         {
-          Object.entries(gvks).map(([g, vk]) => (
-            <details key={g}>
-              <summary>{g ? g : 'core'}</summary>
+          Object.entries(gvks).map(([group, vk]) => (
+            <details key={group}>
+              <summary>{group ? group : 'core'}</summary>
               <ul>
                 {
-                  vk.map(([k, v]) => (
-                    <li key={`${k}/${v}`}>{k}</li>
+                  vk.map(([kind, version]) => (
+                    <li key={`${kind}/${version}`}
+                      onClick={() => setCurrentGvk({ group, version, kind })}
+                    >
+                      {kind}
+                    </li>
                   ))
                 }
               </ul>
@@ -59,10 +65,43 @@ function App() {
         }
       </nav>
       <main>
-        <aside>
-          <p className="icon">🔍</p>
-          <p>Select a resource</p>
-        </aside>
+        {
+          currentGvk === undefined
+            ? (
+              <aside>
+                <p className="icon">🔍</p>
+                <p>Select a resource</p>
+              </aside>
+            )
+            : (
+              <>
+                <h2>{currentGvk?.kind} ({currentResourceList.length})</h2>
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Namespace</th>
+                      <th>Age</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {
+                      currentResourceList.map(resource => (
+                        <tr key={resource.metadata?.uid}>
+                          <td>{resource.metadata?.name}</td>
+                          <td>{resource.metadata?.namespace}</td>
+                          <td>
+                            {dayjs().to(dayjs(resource.metadata?.creationTimestamp), true)}
+                          </td>
+                        </tr>
+                      ))
+                    }
+                  </tbody>
+                </table>
+              </>
+            )
+        }
+
         {/* <h2>Nodes ({nodes.length})</h2>
         <table>
           <thead>
@@ -148,6 +187,7 @@ function App() {
             }
           </tbody>
         </table> */}
+
       </main>
     </div>
   )
