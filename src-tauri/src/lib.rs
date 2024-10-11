@@ -3,13 +3,42 @@
 
 mod resource_event;
 
+use std::collections::HashMap;
+
 use futures::{StreamExt, TryStreamExt};
 use kube::{
-    api::{DynamicObject, GroupVersionKind},
-    Api, Discovery,
+    api::{DynamicObject, GroupVersionKind}, Api, Discovery
 };
 use resource_event::WatchEvent;
 use tauri::ipc::Channel;
+
+#[tauri::command]
+async fn kube_discover() -> Result<HashMap::<String, Vec<(String, String)>>, ()> {
+    let client = kube::Client::try_default()
+        .await
+        .expect("expected default kubernetes client");
+
+    let discovery = Discovery::new(client.clone()).run().await.unwrap();
+
+    let mut kinds = HashMap::<String, Vec<(String, String)>>::new();
+
+    for group in discovery.groups() {
+        for (ar, _) in group.recommended_resources() {
+            let g = ar.group;
+            let v = ar.version;
+            let k = ar.kind;
+
+            if ! kinds.contains_key(&g) {
+                kinds.insert(g.clone(), vec![]);
+            }
+
+            kinds.get_mut(&g).unwrap().push((k, v));
+        }
+        
+    }
+
+    Ok(kinds)
+}
 
 #[tauri::command]
 async fn kube_watch_gvk(
@@ -59,7 +88,7 @@ async fn kube_watch_gvk(
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![kube_watch_gvk])
+        .invoke_handler(tauri::generate_handler![kube_watch_gvk, kube_discover])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

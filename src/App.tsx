@@ -6,6 +6,8 @@ import relativeTime from 'dayjs/plugin/relativeTime';
 import useKubernetesResourceWatch from './hooks/useKubernetesResourceWatch';
 import { KubernetesApiObject } from './model/k8s';
 import { Node, Pod } from 'kubernetes-types/core/v1';
+import { useEffect, useState } from 'react';
+import { invoke } from '@tauri-apps/api/core';
 
 function byCreationTimestamp(a: KubernetesApiObject, b: KubernetesApiObject) {
   const creationTimestampA = dayjs(a.metadata?.creationTimestamp);
@@ -18,6 +20,15 @@ function App() {
   const nodes = useKubernetesResourceWatch<Node>('', 'v1', 'Node');
   const namespaces = useKubernetesResourceWatch<Pod>('', 'v1', 'Namespace');
   const pods = useKubernetesResourceWatch<Pod>('', 'v1', 'Pod');
+
+  const [gvks, setGvks] = useState<{ [key: string]: [string, string] }>({});
+
+  useEffect(() => {
+    invoke("kube_discover").then(result => {
+      console.log({result})
+      setGvks(result as typeof gvks)
+    });
+  }, []);
 
   dayjs.extend(relativeTime);
 
@@ -36,6 +47,22 @@ function App() {
           }
         </select>
       </header>
+      <nav>
+        {
+          Object.entries(gvks).map(([g, vk]) => (
+            <details key={g}>
+              <summary>{g ? g : 'core'}</summary>
+              <ul>
+                {
+                  vk.map(([k, v]) => (
+                    <li key={`${k}/${v}`}>{k}</li>
+                  ))
+                }
+              </ul>
+            </details>
+          ))
+        }
+      </nav>
       <main>
         <h2>Nodes ({nodes.length})</h2>
         <table>
