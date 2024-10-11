@@ -16,12 +16,9 @@ function byCreationTimestamp(a: GenericResource, b: GenericResource) {
 }
 
 function App() {
-  // const nodes = useKubernetesResourceWatch<Node>('', 'v1', 'Node');
-  // const pods = useKubernetesResourceWatch<Pod>('', 'v1', 'Pod');
-
   const [gvks, setGvks] = useState<{ [key: string]: [string, string] }>({});
   const [currentGvk, setCurrentGvk] = useState<Gvk>();
-
+  const [pinnedGvks, setPinnedGvks] = useState<Gvk[]>([]);
   const currentResourceList = useKubernetesResourceWatch(currentGvk);
 
   useEffect(() => {
@@ -36,14 +33,32 @@ function App() {
     <div className="container">
       <nav>
         <h1>🧊&nbsp;Hyprkube</h1>
-        <h2>Pinned resources</h2>
-        <ul className="pinned">
-          <li>Pods</li>
-          <li>Deployments</li>
-          <li>Clusters (fleet.cattle.io)</li>
-          <li>BundleDeployments (fleet.cattle.io)</li>
-          <li>GitJob (gitjob.cattle.io)</li>
-        </ul>
+        {
+          pinnedGvks.length == 0
+            ? null
+            : (
+              <>
+                <h2>Pinned resources</h2>
+                <ul className="pinned">
+                  {
+                    pinnedGvks.map(({ group, kind, version }) => (
+                      <li key={`${group}/${kind}`} onClick={() => setCurrentGvk({ group, version, kind })}>
+                        <span onClick={() => setCurrentGvk({ group, version, kind })}>
+                          {
+                            group !== ''
+                              ? `${kind} (${group})`
+                              : `${kind}`
+                          }
+                        </span>
+                        <button onClick={() => setPinnedGvks(currentlyPinned => [...currentlyPinned, { group, version, kind }])}>📌</button>
+                      </li>
+                    ))
+                  }
+                </ul>
+              </>
+            )
+        }
+
         <h2>All resources</h2>
         {
           Object.entries(gvks).map(([group, vk]) => (
@@ -52,10 +67,11 @@ function App() {
               <ul>
                 {
                   vk.map(([kind, version]) => (
-                    <li key={`${kind}/${version}`}
-                      onClick={() => setCurrentGvk({ group, version, kind })}
-                    >
-                      {kind}
+                    <li key={`${kind}/${version}`}>
+                      <span onClick={() => setCurrentGvk({ group, version, kind })}>
+                        {kind}
+                      </span>
+                      <button onClick={() => setPinnedGvks(currentlyPinned => [...currentlyPinned, { group, version, kind }])}>📌</button>
                     </li>
                   ))
                 }

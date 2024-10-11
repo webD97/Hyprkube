@@ -45,6 +45,7 @@ h1 {
 nav {
     grid-area: nav;
     overflow: scroll;
+    border-right: 1px #333333 solid;
 }
 
 nav ul {
@@ -59,13 +60,40 @@ nav ul li, nav details summary {
     line-height: 2.5em;
 }
 
-nav ul li::before {
-    content: "📄";
-    margin: 0 .5em;
+nav ul li {
+    display: flex;
 }
 
-nav ul.pinned li::before {
-    content: "📌";
+nav ul li span {
+    flex-grow: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+nav ul li button {
+    background: none;
+    border: none;
+    outline: none;
+    box-shadow: none;
+    margin-right: 1em;
+    cursor: pointer;
+    display: none;
+    flex-shrink: 0;
+}
+
+nav ul li:hover button {
+    display: initial;
+    transition: transform 100ms;
+}
+
+nav ul li button:hover {
+    transform: scale(1.5);
+    transition: transform 100ms;
+}
+
+nav ul li::before {
+    content: "📄";
     margin: 0 .5em;
 }
 
