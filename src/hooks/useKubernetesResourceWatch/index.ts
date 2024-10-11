@@ -36,6 +36,10 @@ export default function useKubernetesResourceWatch<K extends GenericResource>(gv
         }
 
         invoke('kube_watch_gvk', { group: gvk.group, version: gvk.version, kind: gvk.kind, channel });
+
+        return () => {
+            invoke('cleanup_channel', { id: channel.id })
+        }
     }, [gvk]);
 
     return resources;

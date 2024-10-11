@@ -70,6 +70,9 @@ async fn kube_watch_gvk(
         .expect("stream")
         .boxed();
 
+    let channel_id = channel.id();
+    println!("We're now streaming to channel {channel_id}");
+
     while let Some(status) = stream.try_next().await.expect("next") {
         match status {
             kube::api::WatchEvent::Added(obj) => channel
@@ -89,10 +92,15 @@ async fn kube_watch_gvk(
     Ok(())
 }
 
+#[tauri::command]
+fn cleanup_channel(id: u32) {
+    println!("We will now clean up channel {id}")
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![kube_watch_gvk, kube_discover])
+        .invoke_handler(tauri::generate_handler![kube_watch_gvk, kube_discover, cleanup_channel])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
