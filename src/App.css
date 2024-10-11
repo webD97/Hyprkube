@@ -2,12 +2,13 @@
     display: grid;
     grid-template-columns: 17fr 83fr;
     grid-template-rows: 1fr;
-    gap: 0px 0px;
+    gap: 1rem;
     grid-template-areas:
         "nav main";
     
     width: 100vw;
     height: 100vh;
+    padding: 0 0.5rem;
     overflow: hidden;
 }
 
@@ -35,6 +36,10 @@ table tbody tr:hover {
 
 h1, h2, h3, h4, h5, h6 {
     cursor: default;
+}
+
+h1 {
+    text-indent: 1em;
 }
 
 nav {
@@ -90,4 +95,22 @@ nav ul li:hover, nav details summary:hover {
 main {
     grid-area: main;
     overflow: scroll;
+}
+
+main aside {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    cursor: default;
+}
+
+main aside > * {
+    margin: 0;
+}
+
+main aside .icon {
+    font-size: 5rem;
 }

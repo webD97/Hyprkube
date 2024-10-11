@@ -33,7 +33,7 @@ function App() {
   return (
     <div className="container">
       <nav>
-        <h1>Hyprkube</h1>
+        <h1>🧊&nbsp;Hyprkube</h1>
         <h2>Pinned resources</h2>
         <ul className="pinned">
           <li>Pods</li>
@@ -59,7 +59,11 @@ function App() {
         }
       </nav>
       <main>
-        <h2>Nodes ({nodes.length})</h2>
+        <aside>
+          <p className="icon">🔍</p>
+          <p>Select a resource</p>
+        </aside>
+        {/* <h2>Nodes ({nodes.length})</h2>
         <table>
           <thead>
             <tr>
@@ -143,7 +147,7 @@ function App() {
               ))
             }
           </tbody>
-        </table>
+        </table> */}
       </main>
     </div>
   )
