@@ -38,9 +38,11 @@ function App() {
   const currentResourceList = useKubernetesResourceWatch(currentGvk);
 
   useEffect(() => {
-    invoke("kube_discover").then(result => {
-      setGvks(result as typeof gvks)
-    });
+    (async () => {
+      await invoke('initialize_kube_client');
+      const result = (await invoke("kube_discover")) as typeof gvks;
+      setGvks(result);
+    })();
   }, []);
 
   dayjs.extend(relativeTime);
