@@ -84,12 +84,12 @@ function App() {
             })
         }
       </nav>
-      <main>
+      <main className={classes.mainArea}>
         {
           currentGvk === undefined
             ? (
-              <aside>
-                <p className="icon">🔍</p>
+              <aside className={classes.miniHint}>
+                <p>🔍</p>
                 <p>Select a resource</p>
               </aside>
             )

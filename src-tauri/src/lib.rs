@@ -30,7 +30,7 @@ async fn kube_discover() -> Result<HashMap<String, Vec<(String, String)>>, ()> {
 
     for group in discovery.groups() {
         for (ar, capabilities) in group.recommended_resources() {
-            if !capabilities.supports_operation(verbs::LIST) {
+            if !capabilities.supports_operation(verbs::WATCH) {
                 continue;
             }
 
