@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 
 import classes from './App.module.css';
+import GvkList from './components/GvkList';
 
 const defaultPinnedGvks: Gvk[] = [
   { group: '', version: 'v1', kind: 'Namespace' },
@@ -54,45 +55,33 @@ function App() {
             : (
               <>
                 <h2>Pinned resources</h2>
-                <ul>
-                  {
-                    pinnedGvks.map(({ group, kind, version }) => (
-                      <li key={`${group}/${kind}`} onClick={() => setCurrentGvk({ group, version, kind })}>
-                        <span onClick={() => setCurrentGvk({ group, version, kind })}>
-                          {
-                            group !== ''
-                              ? `${kind} (${group})`
-                              : `${kind}`
-                          }
-                        </span>
-                        <button onClick={() => setPinnedGvks(currentlyPinned => currentlyPinned.filter(clickedGvk => clickedGvk.group !== group || clickedGvk.kind !== kind))}>📌</button>
-                      </li>
-                    ))
-                  }
-                </ul>
+                <GvkList withGroupName
+                  gvks={pinnedGvks}
+                  onResourceClicked={(gvk) => setCurrentGvk(gvk)}
+                  onPinButtonClicked={({ group, kind }) => setPinnedGvks(currentlyPinned => currentlyPinned.filter(clickedGvk => clickedGvk.group !== group || clickedGvk.kind !== kind))}
+                />
               </>
             )
         }
 
         <h2>All resources</h2>
         {
-          Object.entries(gvks).sort(([groupA], [groupB]) => groupA.localeCompare(groupB)).map(([group, vk]) => (
-            <details key={group}>
-              <summary>{group ? group : 'core'}</summary>
-              <ul>
-                {
-                  vk.map(([kind, version]) => (
-                    <li key={`${kind}/${version}`}>
-                      <span onClick={() => setCurrentGvk({ group, version, kind })}>
-                        {kind}
-                      </span>
-                      <button onClick={() => setPinnedGvks(currentlyPinned => [...currentlyPinned, { group, version, kind }])}>📌</button>
-                    </li>
-                  ))
-                }
-              </ul>
-            </details>
-          ))
+          Object.entries(gvks)
+            .sort(([groupA], [groupB]) => groupA.localeCompare(groupB))
+            .map(([group, vks]) => {
+              const gvks: Gvk[] = vks.map(([kind, version]) => ({ group, version, kind }));
+
+              return (
+                <details key={group}>
+                  <summary>{group ? group : 'core'}</summary>
+                  <GvkList className={classes.gvkListIndented}
+                    gvks={gvks}
+                    onResourceClicked={(gvk) => setCurrentGvk(gvk)}
+                    onPinButtonClicked={(gvk) => setPinnedGvks(currentlyPinned => [...currentlyPinned, gvk])}
+                  />
+                </details>
+              );
+            })
         }
       </nav>
       <main>

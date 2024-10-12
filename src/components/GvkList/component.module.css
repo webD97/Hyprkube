@@ -1,0 +1,50 @@
+.container ul {
+    list-style: none;
+    padding-left: 0;
+    margin: 0;
+    width: calc(100% - 10px);
+}
+
+.container ul li {
+    height: 2.25em;
+    line-height: 2.25em;
+    display: flex;
+}
+
+.container ul li:hover {
+    background-color: rgba(0, 0, 0, 0.4);
+    cursor: pointer;
+}
+
+.container ul li span {
+    flex-grow: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.container ul li button {
+    background: none;
+    border: none;
+    outline: none;
+    box-shadow: none;
+    margin-right: 1em;
+    cursor: pointer;
+    display: none;
+    flex-shrink: 0;
+}
+
+.container ul li:hover button {
+    display: initial;
+    transition: transform 100ms;
+}
+
+.container ul li button:hover {
+    transform: scale(1.5);
+    transition: transform 100ms;
+}
+
+.container ul li::before {
+    content: "📄";
+    margin: 0 .5em;
+}

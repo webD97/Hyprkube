@@ -49,52 +49,12 @@ nav {
 }
 
 nav ul {
-    list-style: none;
-    padding-left: 0;
     margin: 0;
-    width: calc(100% - 10px)
 }
 
-nav ul li, nav details summary {
+nav details summary { 
     height: 2.25em;
     line-height: 2.25em;
-}
-
-nav ul li {
-    display: flex;
-}
-
-nav ul li span {
-    flex-grow: 1;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-nav ul li button {
-    background: none;
-    border: none;
-    outline: none;
-    box-shadow: none;
-    margin-right: 1em;
-    cursor: pointer;
-    display: none;
-    flex-shrink: 0;
-}
-
-nav ul li:hover button {
-    display: initial;
-    transition: transform 100ms;
-}
-
-nav ul li button:hover {
-    transform: scale(1.5);
-    transition: transform 100ms;
-}
-
-nav ul li::before {
-    content: "📄";
-    margin: 0 .5em;
 }
 
 nav details > summary::before {
@@ -111,11 +71,11 @@ nav details > summary::marker, nav details > summary::-webkit-details-marker {
     content: "";
 }
 
-nav details > ul {
+.gvkListIndented {
     padding-left: 1em;
 }
 
-nav ul li:hover, nav details summary:hover {
+nav details summary:hover {
     background-color: rgba(0, 0, 0, 0.4);
     cursor: pointer;
 }
