@@ -20,7 +20,9 @@ pub fn run() {
             frontend_commands::kube_watch_gvk,
             frontend_commands::kube_discover,
             frontend_commands::cleanup_channel,
-            frontend_commands::initialize_kube_client
+            frontend_commands::initialize_kube_client,
+            frontend_commands::kube_stream_podlogs,
+            frontend_commands::kube_stream_podlogs_cleanup
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

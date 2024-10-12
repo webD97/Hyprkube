@@ -1,10 +1,11 @@
 .container {
     display: grid;
-    grid-template-columns: 17fr 83fr;
+    grid-template-columns: 15fr minmax(0, 85fr);
     grid-template-rows: 1fr;
     gap: 1rem;
     grid-template-areas:
-        "nav main";
+        "nav main"
+        "nav bottom";
     
     width: 100vw;
     height: 100vh;
@@ -93,4 +94,8 @@ nav details summary:hover {
 
 .miniHint > *:first-child {
     font-size: 5rem;
+}
+
+.bottomPanel {
+    grid-area: "bottom";
 }

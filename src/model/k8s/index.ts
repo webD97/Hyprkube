@@ -11,3 +11,8 @@ export type Gvk = {
     version: string,
     kind: string
 };
+
+export interface NamespaceAndName {
+    namespace?: string,
+    name?: string
+}

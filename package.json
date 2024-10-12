@@ -11,6 +11,7 @@
     "tauri": "tauri"
   },
   "dependencies": {
+    "@melloware/react-logviewer": "^5.2.3",
     "@tauri-apps/api": "^2.0.1",
     "dayjs": "^1.11.13",
     "kubernetes-types": "^1.30.0",

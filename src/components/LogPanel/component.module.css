@@ -1,0 +1,9 @@
+.container {
+    color: white;
+    font-family: monospace;
+    height: 300px;
+    max-height: 300px;
+    max-width: 100%;
+    margin: 0;
+    overflow: auto;
+}

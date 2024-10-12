@@ -2,12 +2,13 @@ import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 
 import useKubernetesResourceWatch from './hooks/useKubernetesResourceWatch';
-import { Gvk, GenericResource } from './model/k8s';
+import { Gvk, GenericResource, NamespaceAndName } from './model/k8s';
 import { useEffect, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 
 import classes from './App.module.css';
 import GvkList from './components/GvkList';
+import LogPanel from './components/LogPanel';
 
 const defaultPinnedGvks: Gvk[] = [
   { group: '', version: 'v1', kind: 'Namespace' },
@@ -35,6 +36,7 @@ function App() {
   const [gvks, setGvks] = useState<{ [key: string]: [string, string] }>({});
   const [currentGvk, setCurrentGvk] = useState<Gvk>();
   const [pinnedGvks, setPinnedGvks] = useState<Gvk[]>(defaultPinnedGvks);
+  const [selectedResource, setSelectedResource] = useState<NamespaceAndName>({ namespace: '', name: '' });
   const currentResourceList = useKubernetesResourceWatch(currentGvk);
 
   useEffect(() => {
@@ -86,6 +88,15 @@ function App() {
             })
         }
       </nav>
+      {
+        currentGvk?.kind === 'Pod' && selectedResource ?.namespace!! && selectedResource?.name!!
+          ? (
+            <section className={classes.bottomPanel}>
+              <LogPanel namespace={selectedResource.namespace} name={selectedResource.name} />
+            </section>
+          )
+          : null
+      }
       <main className={classes.mainArea}>
         {
           currentGvk === undefined
@@ -109,7 +120,7 @@ function App() {
                   <tbody>
                     {
                       currentResourceList.sort(byCreationTimestamp).reverse().map(resource => (
-                        <tr key={resource.metadata?.uid}>
+                        <tr key={resource.metadata?.uid} onClick={() => setSelectedResource(resource.metadata!)}>
                           <td>{resource.metadata?.name}</td>
                           <td>{resource.metadata?.namespace}</td>
                           <td>

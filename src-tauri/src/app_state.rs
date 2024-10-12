@@ -5,6 +5,7 @@ use tauri::Manager;
 pub struct AppState {
     pub kubernetes_client: Option<Box<kube::Client>>,
     pub channel_handlers: HashMap<u32, tokio::task::JoinHandle<()>>,
+    pub podlog_stream_handles: HashMap<u32, tokio::task::JoinHandle<()>>,
 }
 
 impl AppState {
@@ -12,6 +13,7 @@ impl AppState {
         AppState {
             kubernetes_client: None,
             channel_handlers: HashMap::new(),
+            podlog_stream_handles: HashMap::new(),
         }
     }
 }
