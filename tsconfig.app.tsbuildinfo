@@ -1,1 +1,0 @@
-{"root":["./src/App.tsx","./src/main.tsx","./src/vite-env.d.ts","./src/hooks/useKubernetesNamespaceList/index.ts","./src/hooks/useKubernetesNodeList/index.ts","./src/hooks/useKubernetesPodList/index.ts","./src/model/k8s/index.ts"],"version":"5.6.2"}
