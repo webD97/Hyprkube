@@ -56,8 +56,8 @@ nav ul {
 }
 
 nav ul li, nav details summary {
-    height: 2.5em;
-    line-height: 2.5em;
+    height: 2.25em;
+    line-height: 2.25em;
 }
 
 nav ul li {

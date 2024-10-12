@@ -8,6 +8,21 @@ import { Gvk, GenericResource } from './model/k8s';
 import { useEffect, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 
+const defaultPinnedGvks: Gvk[] = [
+  { group: '', version: 'v1', kind: 'Namespace' },
+  { group: '', version: 'v1', kind: 'Pod' },
+  { group: 'apps', version: 'v1', kind: 'Deployment' },
+  { group: 'apps', version: 'v1', kind: 'StatefulSet' },
+  { group: 'batch', version: 'v1', kind: 'CronJob' },
+  { group: 'batch', version: 'v1', kind: 'Job' },
+  { group: '', version: 'v1', kind: 'ConfigMap' },
+  { group: '', version: 'v1', kind: 'Secret' },
+  { group: '', version: 'v1', kind: 'Service' },
+  { group: 'networking.k8s.io', version: 'v1', kind: 'Ingress' },
+  { group: '', version: 'v1', kind: 'PersistentVolumeClaim' },
+  { group: '', version: 'v1', kind: 'PersistentVolume' },
+];
+
 function byCreationTimestamp(a: GenericResource, b: GenericResource) {
   const creationTimestampA = dayjs(a.metadata?.creationTimestamp);
   const creationTimestampB = dayjs(b.metadata?.creationTimestamp);
@@ -18,7 +33,7 @@ function byCreationTimestamp(a: GenericResource, b: GenericResource) {
 function App() {
   const [gvks, setGvks] = useState<{ [key: string]: [string, string] }>({});
   const [currentGvk, setCurrentGvk] = useState<Gvk>();
-  const [pinnedGvks, setPinnedGvks] = useState<Gvk[]>([]);
+  const [pinnedGvks, setPinnedGvks] = useState<Gvk[]>(defaultPinnedGvks);
   const currentResourceList = useKubernetesResourceWatch(currentGvk);
 
   useEffect(() => {
@@ -39,7 +54,7 @@ function App() {
             : (
               <>
                 <h2>Pinned resources</h2>
-                <ul className="pinned">
+                <ul>
                   {
                     pinnedGvks.map(({ group, kind, version }) => (
                       <li key={`${group}/${kind}`} onClick={() => setCurrentGvk({ group, version, kind })}>
@@ -50,7 +65,7 @@ function App() {
                               : `${kind}`
                           }
                         </span>
-                        <button onClick={() => setPinnedGvks(currentlyPinned => [...currentlyPinned, { group, version, kind }])}>📌</button>
+                        <button onClick={() => setPinnedGvks(currentlyPinned => currentlyPinned.filter(clickedGvk => clickedGvk.group !== group || clickedGvk.kind !== kind))}>📌</button>
                       </li>
                     ))
                   }
@@ -61,7 +76,7 @@ function App() {
 
         <h2>All resources</h2>
         {
-          Object.entries(gvks).map(([group, vk]) => (
+          Object.entries(gvks).sort(([groupA], [groupB]) => groupA.localeCompare(groupB)).map(([group, vk]) => (
             <details key={group}>
               <summary>{group ? group : 'core'}</summary>
               <ul>
@@ -102,7 +117,7 @@ function App() {
                   </thead>
                   <tbody>
                     {
-                      currentResourceList.map(resource => (
+                      currentResourceList.sort(byCreationTimestamp).reverse().map(resource => (
                         <tr key={resource.metadata?.uid}>
                           <td>{resource.metadata?.name}</td>
                           <td>{resource.metadata?.namespace}</td>
