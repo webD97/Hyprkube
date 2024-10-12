@@ -1,5 +1,3 @@
-import './App.css';
-
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 
@@ -7,6 +5,8 @@ import useKubernetesResourceWatch from './hooks/useKubernetesResourceWatch';
 import { Gvk, GenericResource } from './model/k8s';
 import { useEffect, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
+
+import classes from './App.module.css';
 
 const defaultPinnedGvks: Gvk[] = [
   { group: '', version: 'v1', kind: 'Namespace' },
@@ -45,7 +45,7 @@ function App() {
   dayjs.extend(relativeTime);
 
   return (
-    <div className="container">
+    <div className={classes.container}>
       <nav>
         <h1>🧊&nbsp;Hyprkube</h1>
         {
