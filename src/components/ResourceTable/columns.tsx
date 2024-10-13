@@ -20,7 +20,7 @@ export const coreNodes: ColumnDefinition[] = [
     ['OS image', { jsonPath: '$.status.nodeInfo.osImage' }],
     ['Internal IP', {
         jsonPath: '$.status.addresses', transform: (addresses: NodeAddress[][]) => {
-            return addresses[0].find(address => address.type === 'InternalIP')?.address;
+            return addresses[0]?.find(address => address.type === 'InternalIP')?.address;
         }
     }],
     ['Architecture', { jsonPath: '$.status.nodeInfo.architecture' }],

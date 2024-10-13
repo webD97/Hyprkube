@@ -123,6 +123,7 @@ function App() {
               <>
                 <h2>{currentGvk?.kind} ({currentResourceList.length})</h2>
                 <ResourceTable
+                  gvk={currentGvk}
                   resources={currentResourceList}
                   additionalPrinterColumns={gvks?.gvks[currentGvk.group].kinds.find(r => r.kind === currentGvk.kind)?.additionalPrinterColumns}
                   onResourceClicked={(resource) => setSelectedResource({ namespace: resource.metadata?.namespace, name: resource.metadata?.name })}

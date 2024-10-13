@@ -1,4 +1,4 @@
-import { GenericResource } from "../../model/k8s";
+import { GenericResource, Gvk } from "../../model/k8s";
 import dayjs from "dayjs";
 import { JSONPath } from "jsonpath-plus";
 import { ColumnDefinition, coreNodes, corePods, genericNamespacedResource, genericNonNamespacedResource } from "./columns";
@@ -7,6 +7,7 @@ import { useMemo } from "react";
 import EmojiHint from "../EmojiHint";
 
 export interface ResourceTableProps<R extends GenericResource> {
+    gvk: Gvk,
     resources: R[],
     onResourceClicked?: (resource: R) => void,
     additionalPrinterColumns?: CustomResourceColumnDefinition[]
@@ -19,15 +20,20 @@ function byCreationTimestamp(a: GenericResource, b: GenericResource) {
     return creationTimestampA.diff(creationTimestampB);
 }
 
+const mappings = {
+    'Pod./v1': corePods,
+    'Node./v1': coreNodes,
+};
+
 const ResourceTable = <R extends GenericResource>(props: ResourceTableProps<R>) => {
     const {
+        gvk,
         resources,
         onResourceClicked = () => undefined,
         additionalPrinterColumns = []
     } = props;
 
     const columns = useMemo(() => {
-        const { apiVersion, kind } = resources[0] || {};
         const isNamespaced = resources[0]?.metadata?.namespace || true;
 
         if (additionalPrinterColumns && additionalPrinterColumns.length > 0) {
@@ -48,17 +54,18 @@ const ResourceTable = <R extends GenericResource>(props: ResourceTableProps<R>) 
             return mergedColumns;
         }
 
-        if (apiVersion === 'v1' && kind === 'Pod') {
-            return corePods;
-        }
-        if (apiVersion === 'v1' && kind === 'Node') {
-            return coreNodes;
-        }
-        else if (isNamespaced) {
+        const view: ColumnDefinition[] | undefined = mappings[`${gvk.kind}.${gvk.group || ''}/${gvk.version}` as keyof typeof mappings];
+
+        if (view) return view;
+
+        // Generic fallback for namespaced resources
+        if (isNamespaced) {
             return genericNamespacedResource;
         }
+
+        // Generic fallback for cluster-wide resources
         return genericNonNamespacedResource;
-    }, [resources, additionalPrinterColumns]);
+    }, [resources, additionalPrinterColumns, gvk.kind, gvk.group, gvk.version]);
 
     return (
         <>
@@ -89,10 +96,6 @@ const ResourceTable = <R extends GenericResource>(props: ResourceTableProps<R>) 
                                                             path: jsonPath,
                                                             json: resource
                                                         }));
-
-                                                    if (typeof (value) === 'string') {
-                                                        return (<span>{value}</span>);
-                                                    }
 
                                                     return value;
                                                 })()
