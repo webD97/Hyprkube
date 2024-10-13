@@ -14,6 +14,7 @@
     "@melloware/react-logviewer": "^5.2.3",
     "@tauri-apps/api": "^2.0.1",
     "dayjs": "^1.11.13",
+    "jsonpath-plus": "^10.0.0",
     "kubernetes-types": "^1.30.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",

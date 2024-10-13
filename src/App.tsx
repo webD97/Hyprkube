@@ -143,59 +143,7 @@ function App() {
               ))
             }
           </tbody>
-        </table>
-        <h2>Pods ({pods.length})</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Namespace</th>
-              <th>Host Integration</th>
-              <th>Security Context</th>
-              <th>Containers</th>
-              <th>Restarts</th>
-              <th>Node</th>
-              <th>Age</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {
-              pods.sort(byCreationTimestamp).reverse().map(pod => (
-                <tr key={pod.metadata?.uid}>
-                  <td>{pod.metadata?.name}</td>
-                  <td>{pod.metadata?.namespace}</td>
-                  <td>
-                    {
-                      [
-                        (pod.spec?.hostNetwork && 'N'),
-                        (pod.spec?.hostPID && 'P'),
-                        (pod.spec?.hostIPC && 'I'),
-                      ].filter(flag => flag !== undefined).join(', ')
-                    }
-                  </td>
-                  <td>
-                    {
-                      [
-                        (pod.spec?.containers.find(c => c.securityContext?.privileged) && 'P'),
-                        (pod.spec?.containers.find(c => !c.securityContext?.readOnlyRootFilesystem) && 'W'),
-                      ].filter(flag => flag !== undefined).join(', ')
-                    }
-                  </td>
-                  <td>
-                    {pod.status?.containerStatuses?.map(status => status.ready).map(ready => ready ? '▪' : '▫')}
-                  </td>
-                  <td>{pod.status?.containerStatuses?.map(status => status.restartCount).reduce((previous, next) => previous + next)}</td>
-                  <td>{pod.spec?.nodeName}</td>
-                  <td>
-                    {dayjs().to(dayjs(pod.metadata?.creationTimestamp), true)}
-                  </td>
-                  <td>{pod.status?.phase}</td>
-                </tr>
-              ))
-            }
-          </tbody>
-        </table> */}
+        </table>*/}
 
       </main>
     </div>
