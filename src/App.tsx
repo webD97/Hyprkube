@@ -44,6 +44,8 @@ function App() {
 
   dayjs.extend(relativeTime);
 
+  console.log({gvks})
+
   return (
     <div className={classes.container}>
       <nav>
@@ -63,16 +65,38 @@ function App() {
             )
         }
 
-        <h2>All resources</h2>
+        <h2>Builtin resources</h2>
         {
-          Object.entries(gvks)
-            .sort(([groupA], [groupB]) => groupA.localeCompare(groupB))
-            .map(([group, vks]) => {
-              const gvks: Gvk[] = vks.map(([kind, version]) => ({ group, version, kind }));
+          Object.values(gvks?.gvks || [])
+            .filter((group) => !group.isCrd)
+            .sort((groupA, groupB) => groupA.name.localeCompare(groupB.name))
+            .map(({ name: groupName, kinds }) => {
+              const gvks = kinds.map(({kind, version}) => ({ group: groupName, version, kind }));
 
               return (
-                <details key={group}>
-                  <summary>{group ? group : 'core'}</summary>
+                <details key={groupName}>
+                  <summary>{groupName ? groupName : 'core'}</summary>
+                  <GvkList className={classes.gvkListIndented}
+                    gvks={gvks}
+                    onResourceClicked={(gvk) => setCurrentGvk(gvk)}
+                    onPinButtonClicked={(gvk) => setPinnedGvks(currentlyPinned => [...currentlyPinned, gvk])}
+                  />
+                </details>
+              );
+            })
+        }
+
+        <h2>Custom resources</h2>
+        {
+          Object.values(gvks?.gvks || [])
+            .filter((group) => group.isCrd)
+            .sort((groupA, groupB) => groupA.name.localeCompare(groupB.name))
+            .map(({ name: groupName, kinds }) => {
+              const gvks = kinds.map(({kind, version}) => ({ group: groupName, version, kind }));
+
+              return (
+                <details key={groupName}>
+                  <summary>{groupName ? groupName : 'core'}</summary>
                   <GvkList className={classes.gvkListIndented}
                     gvks={gvks}
                     onResourceClicked={(gvk) => setCurrentGvk(gvk)}

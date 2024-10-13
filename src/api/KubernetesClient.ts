@@ -5,8 +5,21 @@ export function getDefaultKubernetesClient() {
     return invoke('initialize_kube_client') as Promise<KubernetesClient>;
 }
 
+export type DiscoveredGroup = {
+    name: string,
+    isCrd: boolean,
+    kinds: DiscoveredResource[]
+}
+
+export type DiscoveredResource = {
+    version: string,
+    kind: string,
+}
+
 export type DiscoveryResult = {
-    gvks: { [key: string]: [string, string] }
+    gvks: { [key: string]: DiscoveredGroup },
+    crdApigroups: string[],
+    builtinApigroups: string[]
 }
 
 export function discoverGvks(client: KubernetesClient): Promise<DiscoveryResult> {

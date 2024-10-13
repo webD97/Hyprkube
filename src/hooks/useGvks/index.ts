@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
-import { discoverGvks } from "../../api/KubernetesClient";
+import { discoverGvks, DiscoveryResult } from "../../api/KubernetesClient";
 import { KubernetesClient } from "../../model/k8s"
 
-export const useGvks = (kubernetesClient: KubernetesClient | undefined): { [key: string]: [string, string] } => {
-    const [gvks, setGvks] = useState<{ [key: string]: [string, string] }>({});
+export const useGvks = (kubernetesClient: KubernetesClient | undefined): DiscoveryResult|undefined => {
+    const [gvks, setGvks] = useState<DiscoveryResult|undefined>();
 
     useEffect(() => {
         if (!kubernetesClient) return;
-        discoverGvks(kubernetesClient).then(result => setGvks(result.gvks));
+        discoverGvks(kubernetesClient).then(result => setGvks(result));
     }, [kubernetesClient]);
 
     return gvks;
