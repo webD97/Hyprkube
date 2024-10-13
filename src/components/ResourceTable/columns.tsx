@@ -2,7 +2,7 @@ import dayjs from "dayjs";
 import { ReactNode } from "react";
 import { type ContainerStatus, type NodeAddress } from 'kubernetes-types/core/v1';
 
-export type ColumnDefinition = [string, { jsonPath: string, transform?: (value: any) => string | ReactNode }];
+export type ColumnDefinition = [string, { description?: string, jsonPath: string, transform?: (value: any) => string | ReactNode }];
 
 export const genericNamespacedResource: ColumnDefinition[] = [
     ['Name', { jsonPath: '$.metadata.name' }],

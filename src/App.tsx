@@ -11,6 +11,7 @@ import LogPanel from './components/LogPanel';
 import { getDefaultKubernetesClient } from './api/KubernetesClient';
 import { useGvks } from './hooks/useGvks';
 import ResourceTable from './components/ResourceTable';
+import EmojiHint from './components/EmojiHint';
 
 const defaultPinnedGvks: Gvk[] = [
   { group: '', version: 'v1', kind: 'Node' },
@@ -43,8 +44,6 @@ function App() {
   }, []);
 
   dayjs.extend(relativeTime);
-
-  console.log({gvks})
 
   return (
     <div className={classes.container}>
@@ -108,7 +107,7 @@ function App() {
         }
       </nav>
       {
-        currentGvk?.kind === 'Pod' && selectedResource?.namespace!! && selectedResource?.name!!
+        currentGvk?.kind === 'Pod' && selectedResource?.namespace && selectedResource?.name
           ? (
             <section className={classes.bottomPanel}>
               <LogPanel kubernetesClient={kubernetesClient} namespace={selectedResource.namespace} name={selectedResource.name} />
@@ -119,57 +118,18 @@ function App() {
       <main className={classes.mainArea}>
         {
           currentGvk === undefined
-            ? (
-              <aside className={classes.miniHint}>
-                <p>🔍</p>
-                <p>Select a resource</p>
-              </aside>
-            )
+            ? <EmojiHint emoji="🔍">Select a resource to get started.</EmojiHint>
             : (
               <>
                 <h2>{currentGvk?.kind} ({currentResourceList.length})</h2>
                 <ResourceTable
                   resources={currentResourceList}
+                  additionalPrinterColumns={gvks?.gvks[currentGvk.group].kinds.find(r => r.kind === currentGvk.kind)?.additionalPrinterColumns}
                   onResourceClicked={(resource) => setSelectedResource({ namespace: resource.metadata?.namespace, name: resource.metadata?.name })}
                 />
               </>
             )
         }
-
-        {/* <h2>Nodes ({nodes.length})</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>OS image</th>
-              <th>Internal IP</th>
-              <th>Architecture</th>
-              <th>Kubelet version</th>
-              <th>Age</th>
-            </tr>
-          </thead>
-          <tbody>
-            {
-              nodes.map(node => (
-                <tr key={node.metadata?.uid}>
-                  <td>{node.metadata?.name}</td>
-                  <td>{node.status?.nodeInfo?.osImage}</td>
-                  <td>
-                    {
-                      node.status?.addresses?.find((address: any) => address.type === 'InternalIP')?.address
-                    }
-                  </td>
-                  <td>{node.status?.nodeInfo?.architecture}</td>
-                  <td>{node.status?.nodeInfo?.kubeletVersion}</td>
-                  <td>
-                    {dayjs().to(dayjs(node.metadata?.creationTimestamp), true)}
-                  </td>
-                </tr>
-              ))
-            }
-          </tbody>
-        </table>*/}
-
       </main>
     </div>
   )
