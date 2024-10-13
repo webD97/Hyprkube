@@ -1,12 +1,18 @@
 use std::{collections::HashMap, sync::Mutex};
 
+use serde::Serialize;
 use tauri::Manager as _;
 use uuid::Uuid;
 
 use crate::{app_state::KubernetesClientRegistry, frontend_types::BackendError};
 
+#[derive(Serialize)]
+pub struct DiscoveryResult {
+    pub gvks: HashMap<String, Vec<(String, String)>>
+}
+
 #[tauri::command]
-pub async fn kube_discover(app: tauri::AppHandle, client_id: Uuid) -> Result<HashMap<String, Vec<(String, String)>>, BackendError> {
+pub async fn kube_discover(app: tauri::AppHandle, client_id: Uuid) -> Result<DiscoveryResult, BackendError> {
     let client = {
         let client_registry = app.state::<Mutex<KubernetesClientRegistry>>();
         let client_registry = client_registry
@@ -18,7 +24,9 @@ pub async fn kube_discover(app: tauri::AppHandle, client_id: Uuid) -> Result<Has
 
     let discovery = kube::Discovery::new(client).run().await?;
 
-    let mut kinds = HashMap::<String, Vec<(String, String)>>::new();
+    let mut result = DiscoveryResult {
+        gvks: HashMap::new()
+    };
 
     for group in discovery.groups() {
         for (ar, capabilities) in group.recommended_resources() {
@@ -30,13 +38,13 @@ pub async fn kube_discover(app: tauri::AppHandle, client_id: Uuid) -> Result<Has
             let v = ar.version;
             let k = ar.kind;
 
-            if !kinds.contains_key(&g) {
-                kinds.insert(g.clone(), vec![]);
+            if !result.gvks.contains_key(&g) {
+                result.gvks.insert(g.clone(), vec![]);
             }
 
-            kinds.get_mut(&g).unwrap().push((k, v));
+            result.gvks.get_mut(&g).unwrap().push((k, v));
         }
     }
 
-    Ok(kinds)
+    Ok(result)
 }

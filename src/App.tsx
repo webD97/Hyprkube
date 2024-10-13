@@ -4,12 +4,12 @@ import relativeTime from 'dayjs/plugin/relativeTime';
 import useKubernetesResourceWatch from './hooks/useKubernetesResourceWatch';
 import { Gvk, GenericResource, NamespaceAndName, KubernetesClient } from './model/k8s';
 import { useEffect, useState } from 'react';
-import { invoke } from '@tauri-apps/api/core';
 
 import classes from './App.module.css';
 import GvkList from './components/GvkList';
 import LogPanel from './components/LogPanel';
 import { getDefaultKubernetesClient } from './api/KubernetesClient';
+import { useGvks } from './hooks/useGvks';
 
 const defaultPinnedGvks: Gvk[] = [
   { group: '', version: 'v1', kind: 'Namespace' },
@@ -34,22 +34,17 @@ function byCreationTimestamp(a: GenericResource, b: GenericResource) {
 }
 
 function App() {
-  const [kubernetesClient, setKubernetesClient] = useState<KubernetesClient|undefined>(undefined);
-  const [gvks, setGvks] = useState<{ [key: string]: [string, string] }>({});
+  const [kubernetesClient, setKubernetesClient] = useState<KubernetesClient | undefined>(undefined);
+  const gvks = useGvks(kubernetesClient);
   const [currentGvk, setCurrentGvk] = useState<Gvk>();
   const [pinnedGvks, setPinnedGvks] = useState<Gvk[]>(defaultPinnedGvks);
   const [selectedResource, setSelectedResource] = useState<NamespaceAndName>({ namespace: '', name: '' });
   const currentResourceList = useKubernetesResourceWatch(kubernetesClient, currentGvk);
 
   useEffect(() => {
-    (async () => {
-      const kubernetesClient = await getDefaultKubernetesClient();
-
-      setKubernetesClient(kubernetesClient);
-
-      const result = (await invoke("kube_discover", { clientId: kubernetesClient.id })) as typeof gvks;
-      setGvks(result);
-    })().catch(e => alert(e));
+    getDefaultKubernetesClient()
+      .then(client => setKubernetesClient(client))
+      .catch(e => alert(e));
   }, []);
 
   dayjs.extend(relativeTime);
@@ -94,7 +89,7 @@ function App() {
         }
       </nav>
       {
-        currentGvk?.kind === 'Pod' && selectedResource ?.namespace!! && selectedResource?.name!!
+        currentGvk?.kind === 'Pod' && selectedResource?.namespace!! && selectedResource?.name!!
           ? (
             <section className={classes.bottomPanel}>
               <LogPanel kubernetesClient={kubernetesClient} namespace={selectedResource.namespace} name={selectedResource.name} />
