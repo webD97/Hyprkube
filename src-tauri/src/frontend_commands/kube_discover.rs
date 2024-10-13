@@ -1,13 +1,11 @@
 use std::collections::HashMap;
 
-#[tauri::command]
-pub async fn kube_discover(app: tauri::AppHandle) -> Result<HashMap<String, Vec<(String, String)>>, String> {
-    let client = crate::app_state::clone_client(&app)?;
+use crate::frontend_types::BackendError;
 
-    let discovery = match kube::Discovery::new(client).run().await {
-        Ok(result) => result,
-        Err(error) => return Err(error.to_string()),
-    };
+#[tauri::command]
+pub async fn kube_discover(app: tauri::AppHandle) -> Result<HashMap<String, Vec<(String, String)>>, BackendError> {
+    let client = crate::app_state::clone_client(&app)?;
+    let discovery = kube::Discovery::new(client).run().await?;
 
     let mut kinds = HashMap::<String, Vec<(String, String)>>::new();
 

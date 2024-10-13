@@ -6,7 +6,7 @@ use tauri::Manager as _;
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio_util::compat::FuturesAsyncReadCompatExt;
 
-use crate::app_state::{self, AppState};
+use crate::{app_state::{self, AppState}, frontend_types::BackendError};
 
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase", tag = "event", content = "data")]
@@ -27,7 +27,7 @@ pub async fn kube_stream_podlogs(
     namespace: &str,
     name: &str,
     channel: tauri::ipc::Channel<LogStreamEvent>,
-) -> Result<(), String> {
+) -> Result<(), BackendError> {
     let client = app_state::clone_client(&app)?;
     let pods: kube::Api<Pod> = kube::Api::namespaced(client, namespace);
 
@@ -38,10 +38,7 @@ pub async fn kube_stream_podlogs(
         ..Default::default()
     };
 
-    let logs = match pods.log_stream(name, &log_params).await {
-        Ok(stream) => stream,
-        Err(error) => return Err(error.to_string()),
-    };
+    let logs = pods.log_stream(name, &log_params).await?;
 
     let log_stream = logs.compat();
     let mut reader = BufReader::new(log_stream).lines();
@@ -72,7 +69,9 @@ pub async fn kube_stream_podlogs(
     });
 
     let app_state = app.state::<Mutex<AppState>>();
-    let mut app_state = app_state.lock().unwrap();
+    let mut app_state = app_state
+        .lock()
+        .map_err(|x| BackendError::Generic(x.to_string()))?;
 
     app_state.podlog_stream_handles.insert(channel_id, handle);
 

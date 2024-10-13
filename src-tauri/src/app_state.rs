@@ -2,6 +2,8 @@ use std::{collections::HashMap, sync::Mutex};
 
 use tauri::Manager;
 
+use crate::frontend_types::BackendError;
+
 pub struct AppState {
     pub kubernetes_client: Option<Box<kube::Client>>,
     pub channel_handlers: HashMap<u32, tokio::task::JoinHandle<()>>,
@@ -18,17 +20,21 @@ impl AppState {
     }
 }
 
-pub fn clone_client(app: &tauri::AppHandle) -> Result<kube::Client, String> {
+pub fn clone_client(app: &tauri::AppHandle) -> Result<kube::Client, BackendError> {
     let client;
     {
         let app_state = app.state::<Mutex<AppState>>();
-        let app_state = app_state.lock().unwrap();
-        
-        client = match &app_state.kubernetes_client {
-            Some(boxed_client) => (**boxed_client).clone(),
-            None => return Err("Kubernetes Client not yet initialized".into()),
-        };
+        let app_state = app_state
+            .lock()
+            .map_err(|x| BackendError::Generic(x.to_string()))?;
+
+        client = app_state
+            .kubernetes_client
+            .clone()
+            .ok_or(BackendError::Generic(
+                "Kubernetes Client not yet initialized".into(),
+            ))?;
     }
 
-    Ok(client)
+    Ok(*client)
 }
