@@ -5,8 +5,9 @@ use serde::Serialize;
 use tauri::Manager as _;
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio_util::compat::FuturesAsyncReadCompatExt;
+use uuid::Uuid;
 
-use crate::{app_state::{self, AppState}, frontend_types::BackendError};
+use crate::{app_state::{AppState, KubernetesClientRegistry}, frontend_types::BackendError};
 
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase", tag = "event", content = "data")]
@@ -24,11 +25,20 @@ pub enum LogStreamEvent {
 #[tauri::command]
 pub async fn kube_stream_podlogs(
     app: tauri::AppHandle,
+    client_id: Uuid,
     namespace: &str,
     name: &str,
     channel: tauri::ipc::Channel<LogStreamEvent>,
 ) -> Result<(), BackendError> {
-    let client = app_state::clone_client(&app)?;
+    let client = {
+        let client_registry = app.state::<Mutex<KubernetesClientRegistry>>();
+        let client_registry = client_registry
+            .lock()
+            .map_err(|x| BackendError::Generic(x.to_string()))?;
+        
+        client_registry.try_clone(&client_id)?
+    };
+
     let pods: kube::Api<Pod> = kube::Api::namespaced(client, namespace);
 
     let log_params = kube::api::LogParams {

@@ -2,21 +2,31 @@ use std::sync::Mutex;
 
 use futures::{StreamExt as _, TryStreamExt as _};
 use tauri::Manager as _;
+use uuid::Uuid;
 
 use crate::{
-    app_state::{self, AppState},
+    app_state::{AppState, KubernetesClientRegistry},
     frontend_types::{self, BackendError},
 };
 
 #[tauri::command]
 pub async fn kube_watch_gvk(
     app: tauri::AppHandle,
+    client_id: Uuid,
     group: &str,
     version: &str,
     kind: &str,
     channel: tauri::ipc::Channel<frontend_types::WatchEvent<kube::api::DynamicObject>>,
 ) -> Result<(), BackendError> {
-    let client = app_state::clone_client(&app)?;
+    let client = {
+        let client_registry = app.state::<Mutex<KubernetesClientRegistry>>();
+        let client_registry = client_registry
+            .lock()
+            .map_err(|x| BackendError::Generic(x.to_string()))?;
+        
+        client_registry.try_clone(&client_id)?
+    };
+    
     let disovery = kube::Discovery::new(client.clone()).run().await?;
     let gvk = &kube::api::GroupVersionKind::gvk(group, version, kind);
 

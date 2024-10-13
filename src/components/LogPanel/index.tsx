@@ -3,18 +3,20 @@ import React from 'react';
 import classes from './component.module.css';
 import { LazyLog, ScrollFollow } from '@melloware/react-logviewer';
 import { usePodLogs } from '../../hooks/usePodLogs';
+import { KubernetesClient } from '../../model/k8s';
 
 export interface LogPanelProps {
+    kubernetesClient: KubernetesClient|undefined,
     namespace: string,
     name: string
 }
 
 const LogPanel: React.FC<LogPanelProps> = (props) => {
     const {
-        namespace, name
+        kubernetesClient, namespace, name
     } = props;
 
-    const text = usePodLogs(namespace, name);
+    const text = usePodLogs(kubernetesClient, namespace, name);
 
     return (
         <div className={classes.container}>

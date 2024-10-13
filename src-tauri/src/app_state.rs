@@ -1,11 +1,10 @@
-use std::{collections::HashMap, sync::Mutex};
+use std::collections::HashMap;
 
-use tauri::Manager;
+use uuid::Uuid;
 
 use crate::frontend_types::BackendError;
 
 pub struct AppState {
-    pub kubernetes_client: Option<Box<kube::Client>>,
     pub channel_handlers: HashMap<u32, tokio::task::JoinHandle<()>>,
     pub podlog_stream_handles: HashMap<u32, tokio::task::JoinHandle<()>>,
 }
@@ -13,28 +12,37 @@ pub struct AppState {
 impl AppState {
     pub fn new() -> AppState {
         AppState {
-            kubernetes_client: None,
             channel_handlers: HashMap::new(),
             podlog_stream_handles: HashMap::new(),
         }
     }
 }
 
-pub fn clone_client(app: &tauri::AppHandle) -> Result<kube::Client, BackendError> {
-    let client;
-    {
-        let app_state = app.state::<Mutex<AppState>>();
-        let app_state = app_state
-            .lock()
-            .map_err(|x| BackendError::Generic(x.to_string()))?;
+pub struct KubernetesClientRegistry {
+    pub registered: HashMap<Uuid, Box<kube::Client>>,
+}
 
-        client = app_state
-            .kubernetes_client
-            .clone()
-            .ok_or(BackendError::Generic(
-                "Kubernetes Client not yet initialized".into(),
-            ))?;
+impl KubernetesClientRegistry {
+    pub fn new() -> KubernetesClientRegistry {
+        KubernetesClientRegistry {
+            registered: HashMap::new(),
+        }
     }
 
-    Ok(*client)
+    pub fn insert(&mut self, client: kube::Client) -> Uuid {
+        let id = Uuid::new_v4();
+
+        self.registered.insert(id, Box::new(client));
+
+        id
+    }
+
+    pub fn try_clone(&self, id: &Uuid) -> Result<kube::Client, BackendError> {
+        self.registered
+            .get(id)
+            .map(|client| *client.clone())
+            .ok_or(BackendError::Generic(format!(
+                "Kubernetes client with id {id} not found."
+            )))
+    }
 }

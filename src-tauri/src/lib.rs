@@ -14,6 +14,7 @@ pub fn run() {
     tauri::Builder::default()
         .setup(|app| {
             app.manage(Mutex::new(app_state::AppState::new()));
+            app.manage(Mutex::new(app_state::KubernetesClientRegistry::new()));
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

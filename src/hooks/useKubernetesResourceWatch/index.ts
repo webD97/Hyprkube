@@ -3,11 +3,12 @@ import { useEffect, useState } from "react";
 import { WatchEvent } from "../../api/WatchEvent";
 import { GenericResource, Gvk } from "../../model/k8s";
 
-export default function useKubernetesResourceWatch<K extends GenericResource>(gvk: Gvk | undefined) {
+export default function useKubernetesResourceWatch<K extends GenericResource>(kubernetesClient: any|undefined, gvk: Gvk | undefined) {
     const [resources, setResources] = useState<Array<K>>([]);
 
     useEffect(() => {
         if (gvk === undefined) return;
+        if (kubernetesClient === undefined) return;
 
         setResources([]);
 
@@ -35,12 +36,13 @@ export default function useKubernetesResourceWatch<K extends GenericResource>(gv
             }
         }
 
-        invoke('kube_watch_gvk', { group: gvk.group, version: gvk.version, kind: gvk.kind, channel });
+        invoke('kube_watch_gvk', { clientId: kubernetesClient.id, group: gvk.group, version: gvk.version, kind: gvk.kind, channel })
+            .catch(e => alert(e));
 
         return () => {
             invoke('cleanup_channel', { id: channel.id })
         }
-    }, [gvk]);
+    }, [gvk, kubernetesClient]);
 
     return resources;
 }

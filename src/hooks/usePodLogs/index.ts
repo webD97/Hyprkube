@@ -1,11 +1,14 @@
 import { Channel, invoke } from "@tauri-apps/api/core";
 import { useState, useEffect } from "react";
 import { LogStreamEvent } from "../../api/LogStreamEvent";
+import { KubernetesClient } from "../../model/k8s";
 
-export const usePodLogs = (namespace: string, name: string) => {
+export const usePodLogs = (kubernetesClient: KubernetesClient|undefined, namespace: string, name: string) => {
     const [text, setText] = useState('');
 
     useEffect(() => {
+        if (!kubernetesClient) return; 
+
         setText('');
 
         const channel = new Channel<LogStreamEvent>();
@@ -22,13 +25,13 @@ export const usePodLogs = (namespace: string, name: string) => {
             }
         };
 
-        invoke('kube_stream_podlogs', { namespace, name, channel })
+        invoke('kube_stream_podlogs', { namespace, name, channel, clientId: kubernetesClient.id })
             .catch(e => setText(e));
 
         return () => {
             invoke('kube_stream_podlogs_cleanup', { channelId: channel.id });
         };
-    }, [namespace, name]);
+    }, [namespace, name, kubernetesClient]);
 
     return text;
 };
