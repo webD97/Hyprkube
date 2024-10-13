@@ -2,7 +2,7 @@ import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 
 import useKubernetesResourceWatch from './hooks/useKubernetesResourceWatch';
-import { Gvk, GenericResource, NamespaceAndName, KubernetesClient } from './model/k8s';
+import { Gvk, NamespaceAndName, KubernetesClient } from './model/k8s';
 import { useEffect, useState } from 'react';
 
 import classes from './App.module.css';
@@ -10,6 +10,7 @@ import GvkList from './components/GvkList';
 import LogPanel from './components/LogPanel';
 import { getDefaultKubernetesClient } from './api/KubernetesClient';
 import { useGvks } from './hooks/useGvks';
+import ResourceTable from './components/ResourceTable';
 
 const defaultPinnedGvks: Gvk[] = [
   { group: '', version: 'v1', kind: 'Namespace' },
@@ -25,13 +26,6 @@ const defaultPinnedGvks: Gvk[] = [
   { group: '', version: 'v1', kind: 'PersistentVolumeClaim' },
   { group: '', version: 'v1', kind: 'PersistentVolume' },
 ];
-
-function byCreationTimestamp(a: GenericResource, b: GenericResource) {
-  const creationTimestampA = dayjs(a.metadata?.creationTimestamp);
-  const creationTimestampB = dayjs(b.metadata?.creationTimestamp);
-
-  return creationTimestampA.diff(creationTimestampB);
-}
 
 function App() {
   const [kubernetesClient, setKubernetesClient] = useState<KubernetesClient | undefined>(undefined);
@@ -109,28 +103,10 @@ function App() {
             : (
               <>
                 <h2>{currentGvk?.kind} ({currentResourceList.length})</h2>
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Name</th>
-                      <th>Namespace</th>
-                      <th>Age</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {
-                      currentResourceList.sort(byCreationTimestamp).reverse().map(resource => (
-                        <tr key={resource.metadata?.uid} onClick={() => setSelectedResource(resource.metadata!)}>
-                          <td>{resource.metadata?.name}</td>
-                          <td>{resource.metadata?.namespace}</td>
-                          <td>
-                            {dayjs().to(dayjs(resource.metadata?.creationTimestamp), true)}
-                          </td>
-                        </tr>
-                      ))
-                    }
-                  </tbody>
-                </table>
+                <ResourceTable
+                  resources={currentResourceList}
+                  onResourceClicked={(resource) => setSelectedResource({ namespace: resource.metadata?.namespace, name: resource.metadata?.name })}
+                />
               </>
             )
         }
