@@ -1,5 +1,6 @@
 import dayjs from "dayjs";
 import { ReactNode } from "react";
+import { type ContainerStatus, type NodeAddress } from 'kubernetes-types/core/v1';
 
 export type ColumnDefinition = [string, { jsonPath: string, transform?: (value: any) => string | ReactNode }];
 
@@ -14,15 +15,33 @@ export const genericNonNamespacedResource: ColumnDefinition[] = [
     ['Age', { jsonPath: '$.metadata.creationTimestamp', transform: (timestamp: string) => dayjs().to(dayjs(timestamp), true) }]
 ];
 
+export const coreNodes: ColumnDefinition[] = [
+    ['Name', { jsonPath: '$.metadata.name' }],
+    ['OS image', { jsonPath: '$.status.nodeInfo.osImage' }],
+    ['Internal IP', {
+        jsonPath: '$.status.addresses', transform: (addresses: NodeAddress[][]) => {
+            return addresses[0].find(address => address.type === 'InternalIP')?.address;
+        }
+    }],
+    ['Architecture', { jsonPath: '$.status.nodeInfo.architecture' }],
+    ['Kubelet version', { jsonPath: '$.status.nodeInfo.kubeletVersion' }],
+    ['Age', { jsonPath: '$.metadata.creationTimestamp', transform: (timestamp: string) => dayjs().to(dayjs(timestamp), true) }]
+];
+
 export const corePods: ColumnDefinition[] = [
     ['Name', { jsonPath: '$.metadata.name' }],
     ['Namespace', { jsonPath: '$.metadata.namespace' }],
-    // ['Containers', { jsonPath: '$.spec.containers.length' }],
     ['Containers', {
-        jsonPath: '$.status.containerStatuses[*].state', transform: (state) => {
-            const boxes = state.map((status: any) => Object.keys(status)[0]).map((state: string) => {
-                if (state === 'terminated') return <span style={{color: 'darkgrey'}}>□</span>
-                if (state === 'running') return <span style={{color: 'lightgreen'}}>■</span>
+        jsonPath: '$.status.containerStatuses[*].', transform: (statuses: ContainerStatus[]) => {
+            const boxes = statuses.map((status) => {
+                if (status.ready) {
+                    return <span style={{ color: status.ready ? 'lightgreen' : 'orange' }}>■</span>
+                }
+
+                const state = status.state ? Object.keys(status.state)[0] : '';
+
+                if (state === 'running') return <span style={{ color: 'orange' }}>■</span>;
+                return <span style={{ color: 'darkgrey' }}>□</span>
             });
 
             return <>{boxes.map((box: ReactNode) => <>{box}{"\u00A0"}</>)}</>;
@@ -31,7 +50,7 @@ export const corePods: ColumnDefinition[] = [
     ['Restarts', { jsonPath: '$.status.containerStatuses[*].restartCount', transform: (v: number[]) => v.reduce((a, b) => a + b, 0).toString() }],
     ['Node', { jsonPath: '$.spec.nodeName' }],
     ['Status', {
-        jsonPath: '$.status.phase', transform: (phase) => {
+        jsonPath: '$.status.phase', transform: (phase: string) => {
             const colors = {
                 Running: "lightgreen",
                 Succeeded: "lightgreen",

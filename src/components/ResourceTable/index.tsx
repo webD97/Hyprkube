@@ -1,7 +1,7 @@
 import { GenericResource } from "../../model/k8s";
 import dayjs from "dayjs";
 import { JSONPath } from "jsonpath-plus";
-import { corePods, genericNamespacedResource, genericNonNamespacedResource } from "./columns";
+import { coreNodes, corePods, genericNamespacedResource, genericNonNamespacedResource } from "./columns";
 
 export interface ResourceTableProps<R extends GenericResource> {
     resources: R[],
@@ -28,6 +28,9 @@ const ResourceTable = <R extends GenericResource>(props: ResourceTableProps<R>) 
 
         if (apiVersion === 'v1' && kind === 'Pod') {
             return corePods;
+        }
+        if (apiVersion === 'v1' && kind === 'Node') {
+            return coreNodes;
         }
         else if (resources[0]?.metadata?.namespace) {
             return genericNamespacedResource;

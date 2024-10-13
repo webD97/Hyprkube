@@ -13,6 +13,7 @@ import { useGvks } from './hooks/useGvks';
 import ResourceTable from './components/ResourceTable';
 
 const defaultPinnedGvks: Gvk[] = [
+  { group: '', version: 'v1', kind: 'Node' },
   { group: '', version: 'v1', kind: 'Namespace' },
   { group: '', version: 'v1', kind: 'Pod' },
   { group: 'apps', version: 'v1', kind: 'Deployment' },
