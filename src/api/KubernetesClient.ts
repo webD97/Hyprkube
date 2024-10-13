@@ -14,6 +14,10 @@ export type DiscoveredGroup = {
 export type DiscoveredResource = {
     version: string,
     kind: string,
+    additionalPrinterColumns: {
+        jsonPath: string,
+        name: string
+    }[]
 }
 
 export type DiscoveryResult = {

@@ -1,6 +1,8 @@
 use std::{collections::HashMap, sync::Mutex};
 
-use k8s_openapi::apiextensions_apiserver::pkg::apis::apiextensions::v1::CustomResourceDefinition;
+use k8s_openapi::apiextensions_apiserver::pkg::apis::apiextensions::v1::{
+    CustomResourceColumnDefinition, CustomResourceDefinition,
+};
 use kube::api::ListParams;
 use serde::Serialize;
 use tauri::Manager as _;
@@ -21,6 +23,7 @@ pub struct DiscoveredGroup {
 pub struct DiscoveredResource {
     pub version: String,
     pub kind: String,
+    pub additional_printer_columns: Option<Vec<CustomResourceColumnDefinition>>,
 }
 
 #[derive(Serialize)]
@@ -56,7 +59,7 @@ pub async fn kube_discover(
     let api: kube::Api<CustomResourceDefinition> = kube::Api::all(client.clone());
     let crds = api.list(&ListParams::default()).await?.items;
 
-    for crd in crds {
+    for crd in &crds {
         if !result.crd_apigroups.contains(&crd.spec.group) {
             result.crd_apigroups.push(crd.spec.group.clone());
         }
@@ -86,6 +89,28 @@ pub async fn kube_discover(
                 );
             }
 
+            let mut additional_printer_columns = None;
+
+            if is_crd {
+                let crd = crds
+                    .clone()
+                    .into_iter()
+                    .find(|crd| crd.spec.group == ar.group && crd.spec.names.kind == ar.kind)
+                    .unwrap();
+
+                let apc = crd
+                    .spec
+                    .versions
+                    .get(0)
+                    .unwrap()
+                    .additional_printer_columns
+                    .clone();
+
+                apc.map(|apc| {
+                    additional_printer_columns = Some(apc);
+                });
+            }
+
             result
                 .gvks
                 .get_mut(&ar.group)
@@ -94,6 +119,7 @@ pub async fn kube_discover(
                 .push(DiscoveredResource {
                     kind: ar.kind.clone(),
                     version: ar.version.clone(),
+                    additional_printer_columns,
                 });
         }
     }
