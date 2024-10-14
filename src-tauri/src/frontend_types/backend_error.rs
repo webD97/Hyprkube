@@ -1,7 +1,12 @@
+use crate::resource_views::ResourceViewError;
+
 #[derive(thiserror::Error, Debug)]
 pub enum BackendError {
     #[error(transparent)]
     KubeClientError(#[from] kube::Error),
+
+    #[error(transparent)]
+    ResourceViewError(#[from] ResourceViewError),
 
     #[error("an error occurred")]
     Generic(String),
