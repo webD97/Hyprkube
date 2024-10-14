@@ -8,7 +8,7 @@ use uuid::Uuid;
 use crate::{
     app_state::{AppState, KubernetesClientRegistry},
     frontend_types::BackendError,
-    resource_views::ResourceView,
+    view_registry::ViewRegistry,
 };
 
 #[derive(Clone, Serialize)]
@@ -35,13 +35,14 @@ pub async fn watch_gvk_with_view(
     gvk: kube::api::GroupVersionKind,
     channel: tauri::ipc::Channel<WatchEvent>,
 ) -> Result<Vec<String>, BackendError> {
-    let client = {
+    let client;
+    {
         let client_registry = app.state::<Mutex<KubernetesClientRegistry>>();
         let client_registry = client_registry
             .lock()
             .map_err(|x| BackendError::Generic(x.to_string()))?;
 
-        client_registry.try_clone(&client_id)?
+        client = client_registry.try_clone(&client_id)?
     };
 
     let disovery = kube::Discovery::new(client.clone()).run().await?;
@@ -64,35 +65,19 @@ pub async fn watch_gvk_with_view(
     let channel_id = channel.id();
     println!("Streaming {:?} to channel {channel_id}", gvk);
 
-    let script = r#"
-        #{
-            name: "Pods (default)",
-            matchApiVersion: "v1",
-            matchKind: "Pod",
-            columns: [
-                #{
-                    title: "Namespace",
-                    accessor: |obj| {
-                        obj.metadata.namespace
-                    }
-                },
-                #{
-                    title: "Name",
-                    accessor: |obj| {
-                        obj.metadata.name
-                    }
-                },
-                #{
-                    title: "Age",
-                    accessor: |obj| {
-                        obj.metadata.creationTimestamp
-                    }
-                }
-            ]
-        }
-    "#;
+    let view_registry = app.state::<Mutex<ViewRegistry>>();
+    let view_registry = view_registry.lock().unwrap();
 
-    let view = ResourceView::new(script)?;
+    let view = match view_registry.get_default_for_gvk(&gvk) {
+        Some(view) => view.clone(),
+        None => {
+            return Err(BackendError::Generic(format!(
+                "No view found for {:?}",
+                gvk
+            )))
+        }
+    };
+
     let column_titles = view.render_titles();
 
     let handle = tokio::spawn(async move {

@@ -1,3 +1,4 @@
+use kube::api::GroupVersionKind;
 use rhai::{CustomType, Dynamic, EvalAltResult, FnPtr, TypeBuilder};
 use serde::Serialize;
 use thiserror::Error;
@@ -126,6 +127,19 @@ impl ResourceView {
             engine,
             ast,
             definition,
+        })
+    }
+
+    pub fn get_gvk(&self) -> Option<GroupVersionKind> {
+        let (group, version) = self
+            .definition
+            .match_api_version
+            .split_once("/")
+            .or(Some(("", self.definition.match_api_version.as_str())))?;
+        Some(GroupVersionKind {
+            group: group.into(),
+            version: version.into(),
+            kind: self.definition.match_kind.clone(),
         })
     }
 
