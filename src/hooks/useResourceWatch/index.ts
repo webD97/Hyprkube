@@ -12,6 +12,12 @@ type ResourceField =
             string: string,
             color: string
         }
+    }
+    |
+    {
+        ColoredBox: {
+            color: string,
+        }
     };
 
 type OkData = { "Ok": ResourceField[] };

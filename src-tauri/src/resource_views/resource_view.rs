@@ -32,6 +32,7 @@ impl ResourceView {
         let mut engine = rhai::Engine::new();
         engine
             .build_type::<ColoredString>()
+            .build_type::<ColoredBox>()
             .register_type_with_name::<ColumnDefinion>("Column")
             .register_type_with_name::<ResourceViewDefinition>("ResourceView");
 
@@ -94,6 +95,10 @@ impl ResourceView {
                                         return FrontendValue::ColoredString(value.clone().cast());
                                     }
 
+                                    if value.is::<ColoredBox>() {
+                                        return FrontendValue::ColoredBox(value.clone().cast());
+                                    }
+
                                     FrontendValue::PlainString(value.to_string())
                                 })
                                 .collect();
@@ -101,6 +106,10 @@ impl ResourceView {
 
                         if dyn_value.is::<ColoredString>() {
                             return vec![FrontendValue::ColoredString(dyn_value.clone().cast())];
+                        }
+
+                        if dyn_value.is::<ColoredBox>() {
+                            return vec![FrontendValue::ColoredBox(dyn_value.clone().cast())];
                         }
 
                         vec![FrontendValue::PlainString(dyn_value.to_string())]
@@ -124,5 +133,21 @@ impl ColoredString {
 
     fn build_extra(builder: &mut TypeBuilder<Self>) {
         builder.with_fn("ColoredString", |string, color| Self::new(string, color));
+    }
+}
+
+#[derive(Clone, Serialize, CustomType)]
+#[rhai_type(extra = Self::build_extra)]
+pub struct ColoredBox {
+    pub color: String,
+}
+
+impl ColoredBox {
+    pub fn new(string: String) -> Self {
+        ColoredBox { color: string }
+    }
+
+    fn build_extra(builder: &mut TypeBuilder<Self>) {
+        builder.with_fn("ColoredBox", |string| Self::new(string));
     }
 }

@@ -49,6 +49,10 @@ const ResourceView: React.FC<ResourceViewProps> = (props) => {
                                                     const { string, color } = part.ColoredString;
                                                     return <span key={idx} style={{ color }}>{string}</span>;
                                                 }
+                                                else if ("ColoredBox" in part) {
+                                                    const { color } = part.ColoredBox;
+                                                    return <span key={idx} style={{ color }}>■{"\u00A0"}</span>;
+                                                }
                                             })
                                         }
 
