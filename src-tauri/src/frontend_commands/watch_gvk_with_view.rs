@@ -8,7 +8,7 @@ use uuid::Uuid;
 use crate::{
     app_state::{AppState, KubernetesClientRegistry},
     frontend_types::BackendError,
-    view_registry::ViewRegistry,
+    state::ViewRegistry,
 };
 
 #[derive(Clone, Serialize)]

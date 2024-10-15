@@ -5,12 +5,12 @@ mod app_state;
 mod frontend_commands;
 mod frontend_types;
 mod resource_views;
-mod view_registry;
+mod state;
 
 use std::sync::Mutex;
 
+use state::ViewRegistry;
 use tauri::Manager;
-use view_registry::ViewRegistry;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
