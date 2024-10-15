@@ -76,8 +76,9 @@ impl ResourceView {
             .map(|column| {
                 column
                     .accessor
-                    .call::<String>(&self.engine, &self.ast, (obj_as_map.clone(),))
+                    .call::<rhai::Dynamic>(&self.engine, &self.ast, (obj_as_map.clone(),))
                     .map_err(|e| e.to_string())
+                    .map(|value| value.to_string())
             })
             .collect()
     }
