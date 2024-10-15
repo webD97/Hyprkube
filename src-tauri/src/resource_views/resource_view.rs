@@ -1,4 +1,5 @@
 use kube::api::GroupVersionKind;
+use rhai::{CustomType, TypeBuilder};
 use serde::Serialize;
 use thiserror::Error;
 
@@ -30,6 +31,7 @@ impl ResourceView {
     pub fn new(script: &str) -> Result<Self, ResourceViewError> {
         let mut engine = rhai::Engine::new();
         engine
+            .build_type::<ColoredString>()
             .register_type_with_name::<ColumnDefinion>("Column")
             .register_type_with_name::<ResourceViewDefinition>("ResourceView");
 
@@ -65,9 +67,9 @@ impl ResourceView {
             .collect()
     }
 
-    pub fn render_columns<T>(&self, obj: &T) -> Vec<Result<FrontendValue, String>>
+    pub fn render_columns<T>(&self, obj: &T) -> Vec<Result<Vec<FrontendValue>, String>>
     where
-        T: kube::Resource + Clone + Serialize + 'static,
+        T: kube::Resource + Clone + Serialize,
     {
         let obj_as_map: rhai::Dynamic =
             rhai::serde::to_dynamic(obj).expect("failed to convert Kubernetes resource to dynamic");
@@ -83,23 +85,44 @@ impl ResourceView {
                     .map(|dyn_value| {
                         // Poor man's coloring: 0 -> value, 1 -> color
                         if dyn_value.is::<Vec<rhai::Dynamic>>() {
-                            let dyn_value: Vec<rhai::Dynamic> = dyn_value.into_array().unwrap();
+                            return dyn_value
+                                .into_array()
+                                .unwrap()
+                                .iter()
+                                .map(|value| {
+                                    if value.is::<ColoredString>() {
+                                        return FrontendValue::ColoredString(value.clone().cast());
+                                    }
 
-                            let (value, color) = match dyn_value.len() {
-                                0 => ("".into(), "".into()),
-                                1 => (dyn_value.get(0).unwrap().to_string(), "".into()),
-                                _ => (
-                                    dyn_value.get(0).unwrap().to_string(),
-                                    dyn_value.get(1).unwrap().to_string(),
-                                ),
-                            };
-
-                            return FrontendValue::ColoredString(value, color);
+                                    FrontendValue::PlainString(value.to_string())
+                                })
+                                .collect();
                         }
 
-                        FrontendValue::PlainString(dyn_value.to_string())
+                        if dyn_value.is::<ColoredString>() {
+                            return vec![FrontendValue::ColoredString(dyn_value.clone().cast())];
+                        }
+
+                        vec![FrontendValue::PlainString(dyn_value.to_string())]
                     })
             })
             .collect()
+    }
+}
+
+#[derive(Clone, Serialize, CustomType)]
+#[rhai_type(extra = Self::build_extra)]
+pub struct ColoredString {
+    pub string: String,
+    pub color: String,
+}
+
+impl ColoredString {
+    pub fn new(string: String, color: String) -> Self {
+        ColoredString { string, color }
+    }
+
+    fn build_extra(builder: &mut TypeBuilder<Self>) {
+        builder.with_fn("ColoredString", |string, color| Self::new(string, color));
     }
 }

@@ -17,11 +17,11 @@ pub enum WatchEvent {
     #[serde(rename_all = "camelCase")]
     Created {
         uid: String,
-        columns: Vec<Result<FrontendValue, String>>,
+        columns: Vec<Result<Vec<FrontendValue>, String>>,
     },
     Updated {
         uid: String,
-        columns: Vec<Result<FrontendValue, String>>,
+        columns: Vec<Result<Vec<FrontendValue>, String>>,
     },
     Deleted {
         uid: String,

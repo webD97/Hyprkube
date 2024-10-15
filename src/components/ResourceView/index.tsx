@@ -37,17 +37,19 @@ const ResourceView: React.FC<ResourceViewProps> = (props) => {
                                         let render = null;
 
                                         if ("Err" in data) {
-                                            render = data.Err.message;
+                                            render = data.Err;
                                         }
 
                                         if ("Ok" in data) {
-                                            if ("PlainString" in data.Ok) {
-                                                render = data.Ok.PlainString;
-                                            }
-                                            else if ("ColoredString" in data.Ok) {
-                                                const [value, color] = data.Ok.ColoredString;
-                                                render = <span style={{ color }}>{value}</span>;
-                                            }
+                                            render = data.Ok.map((part, idx) => {
+                                                if ("PlainString" in part) {
+                                                    return <span key={idx}>{part.PlainString}</span>;
+                                                }
+                                                else if ("ColoredString" in part) {
+                                                    const { string, color } = part.ColoredString;
+                                                    return <span key={idx} style={{ color }}>{string}</span>;
+                                                }
+                                            })
                                         }
 
                                         return (

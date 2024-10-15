@@ -6,19 +6,19 @@
         #{
             title: "Namespace",
             accessor: |obj| {
-                obj.metadata.namespace
+                obj.metadata?.namespace
             }
         },
         #{
             title: "Name",
             accessor: |obj| {
-                obj.metadata.name
+                obj.metadata?.name
             }
         },
         #{
             title: "Age",
             accessor: |obj| {
-                obj.metadata.creationTimestamp
+                obj.metadata?.creationTimestamp
             }
         },
     ]

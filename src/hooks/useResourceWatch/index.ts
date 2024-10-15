@@ -8,11 +8,14 @@ type ResourceField =
     }
     |
     {
-        ColoredString: [string, string]
+        ColoredString: {
+            string: string,
+            color: string
+        }
     };
 
-type OkData = { "Ok": ResourceField };
-type ErrData = { "Err": { "message": string } };
+type OkData = { "Ok": ResourceField[] };
+type ErrData = { "Err": string };
 type ColumnData = (OkData | ErrData)[];
 
 type Payload = {
@@ -54,6 +57,7 @@ export default function useKubernetesResourceWatch(kubernetesClient: KubernetesC
         channel.onmessage = (message) => {
             if (message.event === 'created') {
                 const { uid, columns } = message.data;
+                console.log({ uid, columns })
                 setResources(datasets => ({
                     ...datasets,
                     [uid]: columns
