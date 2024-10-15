@@ -2,6 +2,8 @@ use kube::api::GroupVersionKind;
 use serde::Serialize;
 use thiserror::Error;
 
+use crate::frontend_types::FrontendValue;
+
 use super::resource_view_definition::{
     ColumnDefinion, InvalidViewDefinition, ResourceViewDefinition,
 };
@@ -63,7 +65,7 @@ impl ResourceView {
             .collect()
     }
 
-    pub fn render_columns<T>(&self, obj: &T) -> Vec<Result<String, String>>
+    pub fn render_columns<T>(&self, obj: &T) -> Vec<Result<FrontendValue, String>>
     where
         T: kube::Resource + Clone + Serialize + 'static,
     {
@@ -78,7 +80,25 @@ impl ResourceView {
                     .accessor
                     .call::<rhai::Dynamic>(&self.engine, &self.ast, (obj_as_map.clone(),))
                     .map_err(|e| e.to_string())
-                    .map(|value| value.to_string())
+                    .map(|dyn_value| {
+                        // Poor man's coloring: 0 -> value, 1 -> color
+                        if dyn_value.is::<Vec<rhai::Dynamic>>() {
+                            let dyn_value: Vec<rhai::Dynamic> = dyn_value.into_array().unwrap();
+
+                            let (value, color) = match dyn_value.len() {
+                                0 => ("".into(), "".into()),
+                                1 => (dyn_value.get(0).unwrap().to_string(), "".into()),
+                                _ => (
+                                    dyn_value.get(0).unwrap().to_string(),
+                                    dyn_value.get(1).unwrap().to_string(),
+                                ),
+                            };
+
+                            return FrontendValue::ColoredString(value, color);
+                        }
+
+                        FrontendValue::PlainString(dyn_value.to_string())
+                    })
             })
             .collect()
     }

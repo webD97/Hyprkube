@@ -34,17 +34,25 @@ const ResourceView: React.FC<ResourceViewProps> = (props) => {
                             <tr key={uid} onClick={() => onResourceClicked(uid)}>
                                 {
                                     columnData.map((data, idx) => {
-                                        const str = (() => {
-                                            if ("Ok" in data) {
-                                                return data.Ok;
+                                        let render = null;
+
+                                        if ("Err" in data) {
+                                            render = data.Err.message;
+                                        }
+
+                                        if ("Ok" in data) {
+                                            if ("PlainString" in data.Ok) {
+                                                render = data.Ok.PlainString;
                                             }
-                                            if ("Err" in data) {
-                                                return data.Err.message;
+                                            else if ("ColoredString" in data.Ok) {
+                                                const [value, color] = data.Ok.ColoredString;
+                                                render = <span style={{ color }}>{value}</span>;
                                             }
-                                        })();
+                                        }
+
                                         return (
-                                            <td key={`${str}@${idx}`}>
-                                                {str}
+                                            <td key={idx}>
+                                                {render}
                                             </td>
                                         );
                                     })

@@ -2,7 +2,16 @@ import { Channel, invoke } from "@tauri-apps/api/core";
 import { useEffect, useState } from "react";
 import { Gvk, KubernetesClient } from "../../model/k8s";
 
-type OkData = { "Ok": string };
+type ResourceField =
+    {
+        PlainString: string
+    }
+    |
+    {
+        ColoredString: [string, string]
+    };
+
+type OkData = { "Ok": ResourceField };
 type ErrData = { "Err": { "message": string } };
 type ColumnData = (OkData | ErrData)[];
 

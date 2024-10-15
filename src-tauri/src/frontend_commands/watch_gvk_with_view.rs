@@ -7,7 +7,7 @@ use uuid::Uuid;
 
 use crate::{
     app_state::{AppState, KubernetesClientRegistry},
-    frontend_types::BackendError,
+    frontend_types::{BackendError, FrontendValue},
     state::ViewRegistry,
 };
 
@@ -17,11 +17,11 @@ pub enum WatchEvent {
     #[serde(rename_all = "camelCase")]
     Created {
         uid: String,
-        columns: Vec<Result<String, String>>,
+        columns: Vec<Result<FrontendValue, String>>,
     },
     Updated {
         uid: String,
-        columns: Vec<Result<String, String>>,
+        columns: Vec<Result<FrontendValue, String>>,
     },
     Deleted {
         uid: String,
