@@ -68,7 +68,12 @@ impl TryFrom<rhai::Map> for ResourceViewDefinition {
 
     fn try_from(value: rhai::Map) -> Result<Self, Self::Error> {
         Ok(Self {
-            name: value.get("name").unwrap().clone().into_string().unwrap(),
+            name: value
+                .get("name")
+                .ok_or(ViewDefinitionError::MissingField(".matchKind".into()))?
+                .clone()
+                .into_string()
+                .map_err(|e| ViewDefinitionError::IncorrectType(e.into()))?,
             match_kind: value
                 .get("matchKind")
                 .ok_or(ViewDefinitionError::MissingField(".matchKind".into()))?
