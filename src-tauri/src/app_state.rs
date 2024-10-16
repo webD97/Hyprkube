@@ -5,14 +5,12 @@ use uuid::Uuid;
 use crate::frontend_types::BackendError;
 
 pub struct AppState {
-    pub channel_handlers: HashMap<u32, tokio::task::JoinHandle<()>>,
     pub podlog_stream_handles: HashMap<u32, tokio::task::JoinHandle<()>>,
 }
 
 impl AppState {
     pub fn new() -> AppState {
         AppState {
-            channel_handlers: HashMap::new(),
             podlog_stream_handles: HashMap::new(),
         }
     }

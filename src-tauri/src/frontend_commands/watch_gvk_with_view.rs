@@ -2,19 +2,22 @@ use std::sync::Mutex;
 
 use futures::{StreamExt as _, TryStreamExt as _};
 use serde::Serialize;
-use tauri::Manager as _;
+use tauri::State;
 use uuid::Uuid;
 
 use crate::{
-    app_state::{AppState, KubernetesClientRegistry},
+    app_state::KubernetesClientRegistry,
     frontend_types::{BackendError, FrontendValue},
     state::ViewRegistry,
 };
 
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase", tag = "event", content = "data")]
-pub enum WatchEvent {
+pub enum WatchStreamEvent {
     #[serde(rename_all = "camelCase")]
+    AnnounceColumns {
+        titles: Vec<String>,
+    },
     Created {
         uid: String,
         columns: Vec<Result<Vec<FrontendValue>, String>>,
@@ -30,21 +33,13 @@ pub enum WatchEvent {
 
 #[tauri::command]
 pub async fn watch_gvk_with_view(
-    app: tauri::AppHandle,
+    client_registry_arc: State<'_, Mutex<KubernetesClientRegistry>>,
+    view_registry: State<'_, ViewRegistry>,
     client_id: Uuid,
     gvk: kube::api::GroupVersionKind,
-    channel: tauri::ipc::Channel<WatchEvent>,
-) -> Result<Vec<String>, BackendError> {
-    let client;
-    {
-        let client_registry = app.state::<Mutex<KubernetesClientRegistry>>();
-        let client_registry = client_registry
-            .lock()
-            .map_err(|x| BackendError::Generic(x.to_string()))?;
-
-        client = client_registry.try_clone(&client_id)?
-    };
-
+    channel: tauri::ipc::Channel<WatchStreamEvent>,
+) -> Result<(), BackendError> {
+    let client = client_registry_arc.lock().unwrap().try_clone(&client_id)?;
     let disovery = kube::Discovery::new(client.clone()).run().await?;
 
     let (api_resource, _) = disovery
@@ -65,73 +60,58 @@ pub async fn watch_gvk_with_view(
     let channel_id = channel.id();
     println!("Streaming {:?} to channel {channel_id}", gvk);
 
-    let view_registry = app.state::<Mutex<ViewRegistry>>();
-    let view_registry = view_registry.lock().unwrap();
+    let column_titles = view_registry.render_default_column_titles_for_gvk(&gvk);
 
-    let view = match view_registry.get_default_for_gvk(&gvk) {
-        Some(view) => view.clone(),
-        None => {
-            return Err(BackendError::Generic(format!(
-                "No view found for {:?}",
-                gvk
-            )))
-        }
-    };
+    channel
+        .send(WatchStreamEvent::AnnounceColumns {
+            titles: column_titles,
+        })
+        .unwrap();
 
-    let column_titles = view.render_titles();
+    loop {
+        let status = stream.try_next().await;
+        let event = match status {
+            Ok(event) => event,
+            Err(error) => {
+                eprintln!("{error}");
+                None
+            }
+        };
 
-    let handle = tokio::spawn(async move {
-        loop {
-            let status = stream.try_next().await;
-            let event = match status {
-                Ok(event) => event,
-                Err(error) => {
-                    eprintln!("{error}");
-                    None
-                }
-            };
-
-            let to_send = match event {
-                Some(kube::api::WatchEvent::Added(obj)) => {
-                    let columns = view.render_columns(&obj);
-                    Some(WatchEvent::Created {
-                        uid: obj.metadata.uid.expect("no uid"),
-                        columns,
-                    })
-                }
-                Some(kube::api::WatchEvent::Modified(obj)) => {
-                    let columns = view.render_columns(&obj);
-                    Some(WatchEvent::Updated {
-                        uid: obj.metadata.uid.expect("no uid"),
-                        columns,
-                    })
-                }
-                Some(kube::api::WatchEvent::Deleted(obj)) => Some(WatchEvent::Deleted {
+        let to_send = match event {
+            Some(kube::api::WatchEvent::Added(obj)) => {
+                let columns = view_registry.render_default_view_for_gvk(&gvk, &obj);
+                Some(WatchStreamEvent::Created {
                     uid: obj.metadata.uid.expect("no uid"),
-                }),
-                Some(kube::api::WatchEvent::Bookmark(_obj)) => None,
-                Some(kube::api::WatchEvent::Error(error)) => {
-                    eprintln!("{error}");
-                    None
-                }
-                None => None,
-            };
+                    columns,
+                })
+            }
+            Some(kube::api::WatchEvent::Modified(obj)) => {
+                let columns = view_registry.render_default_view_for_gvk(&gvk, &obj);
+                Some(WatchStreamEvent::Updated {
+                    uid: obj.metadata.uid.expect("no uid"),
+                    columns,
+                })
+            }
+            Some(kube::api::WatchEvent::Deleted(obj)) => Some(WatchStreamEvent::Deleted {
+                uid: obj.metadata.uid.expect("no uid"),
+            }),
+            Some(kube::api::WatchEvent::Bookmark(_obj)) => None,
+            Some(kube::api::WatchEvent::Error(error)) => {
+                eprintln!("{error}");
+                return Err(BackendError::Generic(format!(
+                    "Something unexpected happened: {:?}",
+                    error
+                )));
+            }
+            None => None,
+        };
 
-            if let Some(message) = to_send {
-                match channel.send(message) {
-                    Ok(()) => (),
-                    Err(error) => eprintln!("error sending to channel: {error}"),
-                }
+        if let Some(message) = to_send {
+            match channel.send(message) {
+                Ok(()) => (),
+                Err(error) => eprintln!("error sending to channel: {error}"),
             }
         }
-    });
-
-    let app_state = app.state::<Mutex<AppState>>();
-    let mut app_state = app_state
-        .lock()
-        .map_err(|x| BackendError::Generic(x.to_string()))?;
-
-    app_state.channel_handlers.insert(channel_id, handle);
-
-    Ok(column_titles)
+    }
 }

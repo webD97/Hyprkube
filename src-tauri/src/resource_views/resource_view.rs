@@ -47,6 +47,10 @@ impl ResourceView {
         })
     }
 
+    pub fn get_display_name(&self) -> &str {
+        self.definition.name.as_str()
+    }
+
     pub fn get_gvk(&self) -> Option<GroupVersionKind> {
         let (group, version) = self
             .definition

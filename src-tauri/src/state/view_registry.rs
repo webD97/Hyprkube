@@ -1,35 +1,66 @@
-use std::{collections::HashMap, path::PathBuf, sync::Arc};
+use std::{
+    collections::HashMap,
+    path::PathBuf,
+    sync::{Arc, Mutex},
+    time::Duration,
+};
 
 use kube::api::GroupVersionKind;
+use notify_debouncer_mini::{
+    new_debouncer,
+    notify::{RecommendedWatcher, RecursiveMode},
+    DebounceEventResult, Debouncer,
+};
 use scan_dir::ScanDir;
+use serde::Serialize;
+use tauri::Emitter;
 
-use crate::resource_views::ResourceView;
+use crate::{dirs::get_views_dir, frontend_types::FrontendValue, resource_views::ResourceView};
 
 const FALLBACK_SCRIPT: &str = include_str!("./fallback_view.rhai");
 
-#[derive(Default)]
 pub struct ViewRegistry {
-    views: HashMap<GroupVersionKind, Vec<Arc<ResourceView>>>,
+    views: Arc<Mutex<HashMap<GroupVersionKind, HashMap<PathBuf, ResourceView>>>>,
+    script_watchers: HashMap<PathBuf, Debouncer<RecommendedWatcher>>,
+    app: tauri::AppHandle,
 }
 
 impl ViewRegistry {
-    fn import_script(&mut self, contents: &str) {
-        let view = ResourceView::new(contents).unwrap();
+    pub fn new(app: tauri::AppHandle) -> Self {
+        Self {
+            views: Arc::new(Mutex::new(HashMap::new())),
+            script_watchers: HashMap::new(),
+            app,
+        }
+    }
+
+    fn import_script(
+        view_map: Arc<Mutex<HashMap<GroupVersionKind, HashMap<PathBuf, ResourceView>>>>,
+        contents: &str,
+        source_path: PathBuf,
+    ) -> Result<(GroupVersionKind, String), &str> {
+        let view: ResourceView = ResourceView::new(contents).unwrap();
 
         let gvk = match view.get_gvk() {
-            None => {
-                eprintln!("Script does not contain a valid GVK");
-                return;
-            }
+            None => return Err("Script does not contain a valid GVK"),
             Some(gvk) => gvk,
         };
 
-        self.views.entry(gvk).or_insert(vec![]).push(Arc::new(view));
+        let view_name = view.get_display_name().to_owned();
+
+        view_map
+            .lock()
+            .unwrap()
+            .entry(gvk.clone())
+            .or_insert(HashMap::new())
+            .insert(source_path, view);
+
+        Ok((gvk, view_name))
     }
 
-    fn scan_directory(&mut self, path: &PathBuf) {
+    fn scan_directory(&mut self, path: PathBuf) {
         let view_scripts: Vec<PathBuf> = ScanDir::files()
-            .walk(path, |iter| {
+            .walk(&path, |iter| {
                 iter.filter(|&(_, ref name)| name.ends_with(".rhai"))
                     .map(|(ref entry, _)| entry.path())
                     .collect()
@@ -37,59 +68,121 @@ impl ViewRegistry {
             .unwrap();
 
         for script_path in view_scripts {
+            let the_map = self.views.clone();
+            let the_app = self.app.clone();
+
+            let mut watcher =
+                new_debouncer(Duration::from_secs(1), move |res: DebounceEventResult| {
+                    match res {
+                        Ok(events) => events.iter().for_each(|e| {
+                            println!("Event {:?} for {:?}", e.kind, e.path);
+
+                            let script = std::fs::read_to_string(&e.path).unwrap();
+
+                            let (gvk, name) = Self::import_script(
+                                the_map.clone(),
+                                script.as_str(),
+                                e.path.clone(),
+                            )
+                            .unwrap();
+
+                            the_app
+                                .emit("view_definition_changed".into(), (gvk, name))
+                                .unwrap();
+                        }),
+                        Err(e) => println!("Error {:?}", e),
+                    };
+                })
+                .unwrap();
+
+            watcher
+                .watcher()
+                .watch(&script_path, RecursiveMode::NonRecursive)
+                .unwrap();
+
+            self.script_watchers.insert(script_path.clone(), watcher);
+
             let script = std::fs::read_to_string(&script_path).unwrap();
-            self.import_script(script.as_str());
+
+            Self::import_script(self.views.clone(), script.as_str(), script_path).unwrap();
         }
-    }
-
-    fn scan_config_directory(&mut self) {
-        let config_dir = dirs::config_dir();
-
-        if config_dir.is_none() {
-            eprintln!("Cannot scan config dir for custom views because its location is not known. This might be an unsupported platform.");
-            return;
-        }
-
-        let mut config_dir = config_dir.unwrap();
-        config_dir.push("hyprkube");
-        let config_dir = config_dir;
-
-        let mut views_dir = config_dir.clone();
-        views_dir.push("views");
-        let views_dir = views_dir;
-
-        if !views_dir.exists() {
-            let create_result = std::fs::create_dir_all(&views_dir);
-
-            if create_result.is_err() {
-                eprintln!(
-                    "Failed to create directory {:?} for custom view scripts: {:?}",
-                    views_dir, create_result
-                );
-                return;
-            }
-        }
-
-        self.scan_directory(&views_dir);
     }
 
     /// Scans all known config directories for custom view scripts
     pub fn scan_directories(&mut self) {
-        self.import_script(FALLBACK_SCRIPT);
-        self.scan_config_directory();
+        Self::import_script(self.views.clone(), FALLBACK_SCRIPT, PathBuf::new()).unwrap();
+        let views_dir = get_views_dir().unwrap();
+        self.scan_directory(views_dir);
     }
 
-    pub fn get_default_for_gvk(&self, gvk: &GroupVersionKind) -> Option<&Arc<ResourceView>> {
-        let empty_gvk = &GroupVersionKind {
-            group: "".into(),
-            version: "".into(),
-            kind: "".into(),
-        };
+    pub fn render_default_column_titles_for_gvk(&self, gvk: &GroupVersionKind) -> Vec<String> {
+        let current_views = self.views.lock().unwrap();
 
-        if !self.views.contains_key(gvk) || self.views.get(gvk).unwrap().len() < 1 {
-            return self.views.get(empty_gvk).unwrap().get(0);
+        if !current_views.contains_key(gvk) || current_views.get(gvk).unwrap().len() < 1 {
+            println!("Using fallback columns for {:?}", gvk);
+
+            let empty_gvk = &GroupVersionKind {
+                group: "".into(),
+                version: "".into(),
+                kind: "".into(),
+            };
+
+            let fallback = current_views
+                .get(empty_gvk)
+                .unwrap()
+                .iter()
+                .next()
+                .unwrap()
+                .1;
+            return fallback.render_titles();
         }
 
-        self.views.get(gvk).unwrap().get(0)
+        current_views
+            .get(gvk)
+            .unwrap()
+            .iter()
+            .next()
+            .unwrap()
+            .1
+            .render_titles()
+    }
+
+    pub fn render_default_view_for_gvk<T>(
+        &self,
+        gvk: &GroupVersionKind,
+        obj: &T,
+    ) -> Vec<Result<Vec<FrontendValue>, String>>
+    where
+        T: kube::Resource + Clone + Serialize,
+    {
+        let current_views = self.views.lock().unwrap();
+
+        if !current_views.contains_key(gvk) || current_views.get(gvk).unwrap().len() < 1 {
+            println!("Using fallback view for {:?}", gvk);
+
+            let empty_gvk = &GroupVersionKind {
+                group: "".into(),
+                version: "".into(),
+                kind: "".into(),
+            };
+
+            let fallback = current_views
+                .get(empty_gvk)
+                .unwrap()
+                .iter()
+                .next()
+                .unwrap()
+                .1;
+            return fallback.render_columns(obj);
+        }
+
+        current_views
+            .get(gvk)
+            .unwrap()
+            .iter()
+            .next()
+            .unwrap()
+            .1
+            .render_columns(obj)
     }
 }

@@ -2,6 +2,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod app_state;
+mod dirs;
 mod frontend_commands;
 mod frontend_types;
 mod resource_views;
@@ -14,20 +15,18 @@ use tauri::Manager;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let mut view_registry = ViewRegistry::default();
-    view_registry.scan_directories();
-
     tauri::Builder::default()
         .setup(|app| {
+            let mut view_registry = ViewRegistry::new(app.handle().clone());
+            view_registry.scan_directories();
+
             app.manage(Mutex::new(app_state::AppState::new()));
             app.manage(Mutex::new(app_state::KubernetesClientRegistry::new()));
-            app.manage(Mutex::new(view_registry));
+            app.manage(view_registry);
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
-            frontend_commands::kube_watch_gvk,
             frontend_commands::kube_discover,
-            frontend_commands::cleanup_channel,
             frontend_commands::initialize_kube_client,
             frontend_commands::kube_stream_podlogs,
             frontend_commands::kube_stream_podlogs_cleanup,

@@ -1,6 +1,7 @@
 import { Channel, invoke } from "@tauri-apps/api/core";
-import { useEffect, useState } from "react";
+import { useEffect, useReducer, useState } from "react";
 import { Gvk, KubernetesClient } from "../../model/k8s";
+import { listen } from "@tauri-apps/api/event";
 
 type ResourceField =
     {
@@ -44,12 +45,27 @@ export type WatchEvent =
             uid: string
         }
     }
+    | {
+        event: 'announceColumns';
+        data: {
+            titles: string[]
+        }
+    }
 
 export type ResourceViewData = { [key: string]: ColumnData };
 
 export default function useKubernetesResourceWatch(kubernetesClient: KubernetesClient | undefined, gvk: Gvk | undefined): [string[], ResourceViewData] {
     const [columnTitles, setColumnTitles] = useState<string[]>([]);
     const [resources, setResources] = useState<ResourceViewData>({});
+
+    const [forced, forceUpdate] = useReducer(x => x + 1, 0);
+
+    useEffect(() => {
+        listen<string>('view_definition_changed', (event) => {
+            console.log({ event });
+            forceUpdate();
+        });
+    }, []);
 
     useEffect(() => {
         if (gvk === undefined) return;
@@ -61,9 +77,11 @@ export default function useKubernetesResourceWatch(kubernetesClient: KubernetesC
         const channel = new Channel<WatchEvent>();
 
         channel.onmessage = (message) => {
-            if (message.event === 'created') {
+            if (message.event === 'announceColumns') {
+                setColumnTitles(message.data.titles);
+            }
+            else if (message.event === 'created') {
                 const { uid, columns } = message.data;
-                console.log({ uid, columns })
                 setResources(datasets => ({
                     ...datasets,
                     [uid]: columns
@@ -90,14 +108,9 @@ export default function useKubernetesResourceWatch(kubernetesClient: KubernetesC
             }
         }
 
-        (invoke('watch_gvk_with_view', { clientId: kubernetesClient.id, gvk, channel }) as Promise<string[]>)
-            .then(titles => setColumnTitles(titles))
+        invoke('watch_gvk_with_view', { clientId: kubernetesClient.id, gvk, channel })
             .catch(e => alert(e));
-
-        return () => {
-            invoke('cleanup_channel', { id: channel.id })
-        }
-    }, [gvk, kubernetesClient]);
+    }, [gvk, kubernetesClient, forced]);
 
     return [columnTitles, resources];
 }
