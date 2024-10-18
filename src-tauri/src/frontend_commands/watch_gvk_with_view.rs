@@ -8,7 +8,7 @@ use uuid::Uuid;
 use crate::{
     app_state::KubernetesClientRegistry,
     frontend_types::{BackendError, FrontendValue},
-    state::ViewRegistry,
+    resource_rendering::RendererRegistry,
 };
 
 #[derive(Clone, Serialize)]
@@ -38,7 +38,7 @@ pub enum WatchStreamEvent {
 #[tauri::command]
 pub async fn watch_gvk_with_view(
     client_registry_arc: State<'_, Mutex<KubernetesClientRegistry>>,
-    view_registry: State<'_, ViewRegistry>,
+    views: State<'_, RendererRegistry>,
     client_id: Uuid,
     gvk: kube::api::GroupVersionKind,
     channel: tauri::ipc::Channel<WatchStreamEvent>,
@@ -64,7 +64,9 @@ pub async fn watch_gvk_with_view(
     let channel_id = channel.id();
     println!("Streaming {:?} to channel {channel_id}", gvk);
 
-    let column_titles = view_registry.render_default_column_titles_for_gvk(&gvk);
+    let view = views.get_renderer(&gvk);
+
+    let column_titles = view.titles();
 
     channel
         .send(WatchStreamEvent::AnnounceColumns {
@@ -84,7 +86,7 @@ pub async fn watch_gvk_with_view(
 
         let to_send = match event {
             Some(kube::api::WatchEvent::Added(obj)) => {
-                let columns = view_registry.render_default_view_for_gvk(&gvk, &obj);
+                let columns = view.render(&obj);
                 Some(WatchStreamEvent::Created {
                     uid: obj.metadata.uid.expect("no uid"),
                     namespace: obj.metadata.namespace.or(Some("".into())).unwrap(),
@@ -93,7 +95,7 @@ pub async fn watch_gvk_with_view(
                 })
             }
             Some(kube::api::WatchEvent::Modified(obj)) => {
-                let columns = view_registry.render_default_view_for_gvk(&gvk, &obj);
+                let columns = view.render(&obj);
                 Some(WatchStreamEvent::Updated {
                     uid: obj.metadata.uid.expect("no uid"),
                     namespace: obj.metadata.namespace.or(Some("".into())).unwrap(),

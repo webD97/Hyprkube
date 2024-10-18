@@ -1,4 +1,4 @@
-use crate::resource_views::ResourceViewError;
+use crate::resource_rendering::ResourceViewError;
 
 #[derive(thiserror::Error, Debug)]
 pub enum BackendError {

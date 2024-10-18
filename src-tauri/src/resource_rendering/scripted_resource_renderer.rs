@@ -1,18 +1,19 @@
-use kube::api::GroupVersionKind;
-use rhai::{CustomType, TypeBuilder};
-use serde::Serialize;
 use thiserror::Error;
 
-use crate::frontend_types::FrontendValue;
-
-use super::resource_view_definition::{
-    ColumnDefinion, InvalidViewDefinition, ResourceViewDefinition,
+use crate::{
+    frontend_types::FrontendValue,
+    resource_rendering::{ColoredBox, ColoredString},
 };
 
-pub struct ResourceView {
+use super::{
+    resource_view_definition::{ColumnDefinion, InvalidViewDefinition, ResourceViewDefinition},
+    ResourceRenderer,
+};
+
+pub struct ScriptedResourceView {
     engine: rhai::Engine,
     ast: rhai::AST,
-    definition: ResourceViewDefinition,
+    pub definition: ResourceViewDefinition,
 }
 
 #[derive(Debug, Error)]
@@ -27,7 +28,7 @@ pub enum ResourceViewError {
     RuntimeError(#[from] Box<rhai::EvalAltResult>),
 }
 
-impl ResourceView {
+impl ScriptedResourceView {
     pub fn new(script: &str) -> Result<Self, ResourceViewError> {
         let mut engine = rhai::Engine::new();
         engine
@@ -47,23 +48,6 @@ impl ResourceView {
         })
     }
 
-    pub fn get_display_name(&self) -> &str {
-        self.definition.name.as_str()
-    }
-
-    pub fn get_gvk(&self) -> Option<GroupVersionKind> {
-        let (group, version) = self
-            .definition
-            .match_api_version
-            .split_once("/")
-            .or(Some(("", self.definition.match_api_version.as_str())))?;
-        Some(GroupVersionKind {
-            group: group.into(),
-            version: version.into(),
-            kind: self.definition.match_kind.clone(),
-        })
-    }
-
     pub fn render_titles(&self) -> Vec<String> {
         self.definition
             .columns
@@ -72,10 +56,10 @@ impl ResourceView {
             .collect()
     }
 
-    pub fn render_columns<T>(&self, obj: &T) -> Vec<Result<Vec<FrontendValue>, String>>
-    where
-        T: kube::Resource + Clone + Serialize,
-    {
+    pub fn render_columns(
+        &self,
+        obj: &kube::api::DynamicObject,
+    ) -> Vec<Result<Vec<FrontendValue>, String>> {
         let obj_as_map: rhai::Dynamic =
             rhai::serde::to_dynamic(obj).expect("failed to convert Kubernetes resource to dynamic");
 
@@ -123,35 +107,12 @@ impl ResourceView {
     }
 }
 
-#[derive(Clone, Serialize, CustomType)]
-#[rhai_type(extra = Self::build_extra)]
-pub struct ColoredString {
-    pub string: String,
-    pub color: String,
-}
-
-impl ColoredString {
-    pub fn new(string: String, color: String) -> Self {
-        ColoredString { string, color }
+impl ResourceRenderer for ScriptedResourceView {
+    fn titles(&self) -> Vec<String> {
+        self.render_titles()
     }
 
-    fn build_extra(builder: &mut TypeBuilder<Self>) {
-        builder.with_fn("ColoredString", |string, color| Self::new(string, color));
-    }
-}
-
-#[derive(Clone, Serialize, CustomType)]
-#[rhai_type(extra = Self::build_extra)]
-pub struct ColoredBox {
-    pub color: String,
-}
-
-impl ColoredBox {
-    pub fn new(string: String) -> Self {
-        ColoredBox { color: string }
-    }
-
-    fn build_extra(builder: &mut TypeBuilder<Self>) {
-        builder.with_fn("ColoredBox", |string| Self::new(string));
+    fn render(&self, obj: &kube::api::DynamicObject) -> Vec<Result<Vec<FrontendValue>, String>> {
+        self.render_columns(obj)
     }
 }

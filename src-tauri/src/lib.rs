@@ -5,23 +5,19 @@ mod app_state;
 mod dirs;
 mod frontend_commands;
 mod frontend_types;
-mod resource_views;
-mod state;
+mod resource_rendering;
 
 use std::sync::Mutex;
 
-use state::ViewRegistry;
+use resource_rendering::RendererRegistry;
 use tauri::Manager;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .setup(|app| {
-            let mut view_registry = ViewRegistry::new(app.handle().clone());
-            view_registry.scan_directories();
-
+            app.manage(RendererRegistry::new());
             app.manage(Mutex::new(app_state::KubernetesClientRegistry::new()));
-            app.manage(view_registry);
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

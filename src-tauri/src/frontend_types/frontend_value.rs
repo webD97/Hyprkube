@@ -1,6 +1,6 @@
 use serde::Serialize;
 
-use crate::resource_views::{ColoredBox, ColoredString};
+use crate::resource_rendering::{ColoredBox, ColoredString};
 
 #[derive(Clone, Serialize)]
 pub enum FrontendValue {
