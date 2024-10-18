@@ -7,7 +7,7 @@ use crate::{
 
 use super::{
     resource_view_definition::{ColumnDefinion, InvalidViewDefinition, ResourceViewDefinition},
-    ResourceRenderer,
+    Hyperlink, ResourceRenderer,
 };
 
 pub struct ScriptedResourceView {
@@ -34,6 +34,7 @@ impl ScriptedResourceView {
         engine
             .build_type::<ColoredString>()
             .build_type::<ColoredBox>()
+            .build_type::<Hyperlink>()
             .register_type_with_name::<ColumnDefinion>("Column")
             .register_type_with_name::<ResourceViewDefinition>("ResourceView");
 
@@ -87,6 +88,10 @@ impl ScriptedResourceView {
                                         return FrontendValue::ColoredBox(value.clone().cast());
                                     }
 
+                                    if value.is::<Hyperlink>() {
+                                        return FrontendValue::Hyperlink(value.clone().cast());
+                                    }
+
                                     FrontendValue::PlainString(value.to_string())
                                 })
                                 .collect();
@@ -98,6 +103,10 @@ impl ScriptedResourceView {
 
                         if dyn_value.is::<ColoredBox>() {
                             return vec![FrontendValue::ColoredBox(dyn_value.clone().cast())];
+                        }
+
+                        if dyn_value.is::<Hyperlink>() {
+                            return vec![FrontendValue::Hyperlink(dyn_value.clone().cast())];
                         }
 
                         vec![FrontendValue::PlainString(dyn_value.to_string())]

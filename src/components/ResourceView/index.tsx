@@ -1,5 +1,6 @@
 import { ResourceViewData } from "../../hooks/useResourceWatch";
 import EmojiHint from "../EmojiHint";
+import { open } from '@tauri-apps/plugin-shell';
 
 export interface ResourceViewProps {
     columnTitles: string[],
@@ -42,6 +43,7 @@ const ResourceView: React.FC<ResourceViewProps> = (props) => {
 
                                         if ("Ok" in data) {
                                             render = data.Ok.map((part, idx) => {
+                                                console.log({ part })
                                                 if ("PlainString" in part) {
                                                     return <span key={idx}>{part.PlainString}</span>;
                                                 }
@@ -52,6 +54,10 @@ const ResourceView: React.FC<ResourceViewProps> = (props) => {
                                                 else if ("ColoredBox" in part) {
                                                     const { color } = part.ColoredBox;
                                                     return <span key={idx} style={{ color }}>■{"\u00A0"}</span>;
+                                                }
+                                                else if ("Hyperlink" in part) {
+                                                    const { url, display_text } = part.Hyperlink;
+                                                    return <a key={idx} style={{ cursor: "pointer" }} onClick={() => open(url)} title={url}>🔗&nbsp;{display_text}</a>;
                                                 }
                                             })
                                         }

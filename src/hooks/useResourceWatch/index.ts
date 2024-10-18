@@ -19,6 +19,13 @@ type ResourceField =
         ColoredBox: {
             color: string,
         }
+    }
+    |
+    {
+        Hyperlink: {
+            url: string,
+            display_text: string
+        }
     };
 
 type OkData = { "Ok": ResourceField[] };

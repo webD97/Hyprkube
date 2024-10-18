@@ -33,3 +33,20 @@ impl ColoredBox {
         builder.with_fn("ColoredBox", |string| Self::new(string));
     }
 }
+
+#[derive(Clone, Serialize, CustomType)]
+#[rhai_type(extra = Self::build_extra)]
+pub struct Hyperlink {
+    pub url: String,
+    pub display_text: String,
+}
+
+impl Hyperlink {
+    pub fn new(url: String, display_text: String) -> Self {
+        Self { url, display_text }
+    }
+
+    fn build_extra(builder: &mut rhai::TypeBuilder<Self>) {
+        builder.with_fn("Hyperlink", Self::new);
+    }
+}
