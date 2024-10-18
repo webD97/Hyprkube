@@ -4,18 +4,6 @@ use uuid::Uuid;
 
 use crate::frontend_types::BackendError;
 
-pub struct AppState {
-    pub podlog_stream_handles: HashMap<u32, tokio::task::JoinHandle<()>>,
-}
-
-impl AppState {
-    pub fn new() -> AppState {
-        AppState {
-            podlog_stream_handles: HashMap::new(),
-        }
-    }
-}
-
 pub struct KubernetesClientRegistry {
     pub registered: HashMap<Uuid, Box<kube::Client>>,
 }

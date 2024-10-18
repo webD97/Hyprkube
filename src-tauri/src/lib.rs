@@ -20,7 +20,6 @@ pub fn run() {
             let mut view_registry = ViewRegistry::new(app.handle().clone());
             view_registry.scan_directories();
 
-            app.manage(Mutex::new(app_state::AppState::new()));
             app.manage(Mutex::new(app_state::KubernetesClientRegistry::new()));
             app.manage(view_registry);
             Ok(())
@@ -29,7 +28,6 @@ pub fn run() {
             frontend_commands::kube_discover,
             frontend_commands::initialize_kube_client,
             frontend_commands::kube_stream_podlogs,
-            frontend_commands::kube_stream_podlogs_cleanup,
             frontend_commands::watch_gvk_with_view,
         ])
         .run(tauri::generate_context!())
