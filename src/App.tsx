@@ -1,7 +1,7 @@
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 
-import { Gvk, KubernetesClient } from './model/k8s';
+import { Gvk, KubernetesClient, NamespaceAndName } from './model/k8s';
 import { useEffect, useState } from 'react';
 
 import classes from './App.module.css';
@@ -11,6 +11,7 @@ import { useGvks } from './hooks/useGvks';
 import EmojiHint from './components/EmojiHint';
 import useResourceWatch from './hooks/useResourceWatch';
 import ResourceView from './components/ResourceView';
+import LogPanel from './components/LogPanel';
 
 const defaultPinnedGvks: Gvk[] = [
   { group: '', version: 'v1', kind: 'Node' },
@@ -33,7 +34,7 @@ function App() {
   const gvks = useGvks(kubernetesClient);
   const [currentGvk, setCurrentGvk] = useState<Gvk>();
   const [pinnedGvks, setPinnedGvks] = useState<Gvk[]>(defaultPinnedGvks);
-  // const [selectedResource, setSelectedResource] = useState<NamespaceAndName>({ namespace: '', name: '' });
+  const [selectedResource, setSelectedResource] = useState<NamespaceAndName>({ namespace: '', name: '' });
   const [columnTitles, resources] = useResourceWatch(kubernetesClient, currentGvk);
 
   useEffect(() => {
@@ -105,7 +106,7 @@ function App() {
             })
         }
       </nav>
-      {/* {
+      {
         currentGvk?.kind === 'Pod' && selectedResource?.namespace && selectedResource?.name
           ? (
             <section className={classes.bottomPanel}>
@@ -113,7 +114,7 @@ function App() {
             </section>
           )
           : null
-      } */}
+      }
       <main className={classes.mainArea}>
         {
           currentGvk === undefined
@@ -121,15 +122,16 @@ function App() {
             : (
               <>
                 <h2>{currentGvk?.kind}</h2>
-                {/* <ResourceTable
-                  gvk={currentGvk}
-                  resources={currentResourceList}
-                  additionalPrinterColumns={gvks?.gvks[currentGvk.group].kinds.find(r => r.kind === currentGvk.kind)?.additionalPrinterColumns}
-                  onResourceClicked={(resource) => setSelectedResource({ namespace: resource.metadata?.namespace, name: resource.metadata?.name })}
-                /> */}
                 <ResourceView
                   columnTitles={columnTitles || []}
                   resourceData={resources}
+                  onResourceClicked={(uid) => {
+                    const resource = resources[uid];
+                    setSelectedResource({
+                      namespace: resource.namespace,
+                      name: resource.name
+                    });
+                  }}
                 />
               </>
             )

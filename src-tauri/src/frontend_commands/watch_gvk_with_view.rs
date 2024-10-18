@@ -15,19 +15,23 @@ use crate::{
 #[serde(rename_all = "camelCase", tag = "event", content = "data")]
 pub enum WatchStreamEvent {
     #[serde(rename_all = "camelCase")]
-    AnnounceColumns {
-        titles: Vec<String>,
-    },
+    AnnounceColumns { titles: Vec<String> },
     Created {
         uid: String,
+        namespace: String,
+        name: String,
         columns: Vec<Result<Vec<FrontendValue>, String>>,
     },
     Updated {
         uid: String,
+        namespace: String,
+        name: String,
         columns: Vec<Result<Vec<FrontendValue>, String>>,
     },
     Deleted {
         uid: String,
+        namespace: String,
+        name: String,
     },
 }
 
@@ -83,6 +87,8 @@ pub async fn watch_gvk_with_view(
                 let columns = view_registry.render_default_view_for_gvk(&gvk, &obj);
                 Some(WatchStreamEvent::Created {
                     uid: obj.metadata.uid.expect("no uid"),
+                    namespace: obj.metadata.namespace.or(Some("".into())).unwrap(),
+                    name: obj.metadata.name.or(Some("".into())).unwrap(),
                     columns,
                 })
             }
@@ -90,10 +96,14 @@ pub async fn watch_gvk_with_view(
                 let columns = view_registry.render_default_view_for_gvk(&gvk, &obj);
                 Some(WatchStreamEvent::Updated {
                     uid: obj.metadata.uid.expect("no uid"),
+                    namespace: obj.metadata.namespace.or(Some("".into())).unwrap(),
+                    name: obj.metadata.name.or(Some("".into())).unwrap(),
                     columns,
                 })
             }
             Some(kube::api::WatchEvent::Deleted(obj)) => Some(WatchStreamEvent::Deleted {
+                namespace: obj.metadata.namespace.or(Some("".into())).unwrap(),
+                name: obj.metadata.name.or(Some("".into())).unwrap(),
                 uid: obj.metadata.uid.expect("no uid"),
             }),
             Some(kube::api::WatchEvent::Bookmark(_obj)) => None,

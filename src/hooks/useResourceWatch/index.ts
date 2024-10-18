@@ -27,6 +27,8 @@ type ColumnData = (OkData | ErrData)[];
 
 type Payload = {
     uid: string,
+    namespace: string,
+    name: string,
     columns: ColumnData
 }
 
@@ -52,7 +54,9 @@ export type WatchEvent =
         }
     }
 
-export type ResourceViewData = { [key: string]: ColumnData };
+export type ResourceViewData = {
+    [key: string]: Payload
+};
 
 export default function useKubernetesResourceWatch(kubernetesClient: KubernetesClient | undefined, gvk: Gvk | undefined): [string[], ResourceViewData] {
     const [columnTitles, setColumnTitles] = useState<string[]>([]);
@@ -81,17 +85,17 @@ export default function useKubernetesResourceWatch(kubernetesClient: KubernetesC
                 setColumnTitles(message.data.titles);
             }
             else if (message.event === 'created') {
-                const { uid, columns } = message.data;
+                const { uid } = message.data;
                 setResources(datasets => ({
                     ...datasets,
-                    [uid]: columns
+                    [uid]: message.data
                 }));
             }
             else if (message.event === 'updated') {
-                const { uid, columns } = message.data;
+                const { uid } = message.data;
                 setResources(datasets => ({
                     ...datasets,
-                    [uid]: columns
+                    [uid]: message.data
                 }));
             }
             else if (message.event === 'deleted') {

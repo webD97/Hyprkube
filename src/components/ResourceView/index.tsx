@@ -33,7 +33,7 @@ const ResourceView: React.FC<ResourceViewProps> = (props) => {
                         Object.entries(resourceData).map(([uid, columnData]) => (
                             <tr key={uid} onClick={() => onResourceClicked(uid)}>
                                 {
-                                    columnData.map((data, idx) => {
+                                    columnData.columns.map((data, idx) => {
                                         let render = null;
 
                                         if ("Err" in data) {
