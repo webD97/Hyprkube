@@ -10,6 +10,7 @@ pub use renderer_registry::*;
 pub use scripted_resource_renderer::*;
 
 pub trait ResourceRenderer: Send + Sync {
+    fn display_name(&self) -> &str;
     fn titles(&self) -> Vec<String>;
 
     fn render(&self, obj: &kube::api::DynamicObject) -> Vec<Result<Vec<FrontendValue>, String>>;

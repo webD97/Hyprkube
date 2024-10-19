@@ -3,12 +3,15 @@ use std::{collections::HashMap, sync::Mutex};
 use k8s_openapi::apiextensions_apiserver::pkg::apis::apiextensions::v1::{
     CustomResourceColumnDefinition, CustomResourceDefinition,
 };
-use kube::api::ListParams;
+use kube::api::{GroupVersionKind, ListParams};
 use serde::Serialize;
-use tauri::Manager as _;
+use tauri::{Manager as _, State};
 use uuid::Uuid;
 
-use crate::{app_state::KubernetesClientRegistry, frontend_types::BackendError};
+use crate::{
+    app_state::KubernetesClientRegistry, frontend_types::BackendError,
+    resource_rendering::RendererRegistry,
+};
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -24,6 +27,7 @@ pub struct DiscoveredResource {
     pub version: String,
     pub kind: String,
     pub additional_printer_columns: Option<Vec<CustomResourceColumnDefinition>>,
+    pub views: Vec<String>,
 }
 
 #[derive(Serialize)]
@@ -37,6 +41,7 @@ pub struct DiscoveryResult {
 #[tauri::command]
 pub async fn kube_discover(
     app: tauri::AppHandle,
+    view_registry: State<'_, RendererRegistry>,
     client_id: Uuid,
 ) -> Result<DiscoveryResult, BackendError> {
     let client = {
@@ -111,6 +116,9 @@ pub async fn kube_discover(
                 });
             }
 
+            let gvk = GroupVersionKind::gvk(&ar.group, &ar.version, &ar.kind);
+            let views = view_registry.get_renderers(&gvk);
+
             result
                 .gvks
                 .get_mut(&ar.group)
@@ -120,6 +128,7 @@ pub async fn kube_discover(
                     kind: ar.kind.clone(),
                     version: ar.version.clone(),
                     additional_printer_columns,
+                    views,
                 });
         }
     }

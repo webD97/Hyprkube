@@ -1,5 +1,5 @@
 #{
-    name: "Pods (default)",
+    name: "Pods default view",
     matchApiVersion: "v1",
     matchKind: "Pod",
     columns: [

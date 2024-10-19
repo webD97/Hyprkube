@@ -41,6 +41,7 @@ pub async fn watch_gvk_with_view(
     views: State<'_, RendererRegistry>,
     client_id: Uuid,
     gvk: kube::api::GroupVersionKind,
+    view_name: String,
     channel: tauri::ipc::Channel<WatchStreamEvent>,
 ) -> Result<(), BackendError> {
     let client = client_registry_arc.lock().unwrap().try_clone(&client_id)?;
@@ -64,7 +65,7 @@ pub async fn watch_gvk_with_view(
     let channel_id = channel.id();
     println!("Streaming {:?} to channel {channel_id}", gvk);
 
-    let view = views.get_renderer(&gvk);
+    let view = views.get_renderer(&gvk, view_name.as_str());
 
     let column_titles = view.titles();
 

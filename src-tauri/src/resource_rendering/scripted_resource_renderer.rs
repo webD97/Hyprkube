@@ -50,6 +50,10 @@ impl ScriptedResourceView {
         })
     }
 
+    pub fn display_name(&self) -> &str {
+        self.definition.name.as_str()
+    }
+
     pub fn render_titles(&self) -> Vec<String> {
         self.definition
             .columns
@@ -126,6 +130,10 @@ impl ScriptedResourceView {
 }
 
 impl ResourceRenderer for ScriptedResourceView {
+    fn display_name(&self) -> &str {
+        self.display_name()
+    }
+
     fn titles(&self) -> Vec<String> {
         self.render_titles()
     }

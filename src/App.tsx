@@ -35,7 +35,18 @@ function App() {
   const [currentGvk, setCurrentGvk] = useState<Gvk>();
   const [pinnedGvks, setPinnedGvks] = useState<Gvk[]>(defaultPinnedGvks);
   const [selectedResource, setSelectedResource] = useState<NamespaceAndName>({ namespace: '', name: '' });
-  const [columnTitles, resources] = useResourceWatch(kubernetesClient, currentGvk);
+  const [selectedView, setSelectedView] = useState("");
+  const [columnTitles, resources] = useResourceWatch(kubernetesClient, currentGvk, selectedView);
+
+  useEffect(() => {
+    if (!currentGvk) return;
+
+    const availableViews = gvks?.gvks[currentGvk.group].kinds.find(k => k.kind === currentGvk.kind)?.views || [];
+
+    if (availableViews?.length < 1) return;
+
+    setSelectedView(availableViews[0]);
+  }, [selectedResource, currentGvk, gvks?.gvks]);
 
   useEffect(() => {
     getDefaultKubernetesClient()
@@ -121,7 +132,16 @@ function App() {
             ? <EmojiHint emoji="🔍">Select a resource to get started.</EmojiHint>
             : (
               <>
-                <h2>{currentGvk?.kind}</h2>
+                <div className={classes.topBar}>
+                  <h2>{currentGvk?.kind}</h2>
+                  <select value={selectedView} onChange={(e) => setSelectedView(e.target.value)}>
+                    {
+                      gvks?.gvks[currentGvk.group].kinds.find(v => v.kind === currentGvk.kind)?.views.map(view => (
+                        <option key={view}>{view}</option>
+                      ))
+                    }
+                  </select>
+                </div>
                 <ResourceView
                   columnTitles={columnTitles || []}
                   resourceData={resources}

@@ -8,7 +8,7 @@ pub enum BackendError {
     #[error(transparent)]
     ResourceViewError(#[from] ResourceViewError),
 
-    #[error("an error occurred")]
+    #[error("{0}")]
     Generic(String),
 }
 

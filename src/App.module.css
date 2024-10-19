@@ -6,7 +6,7 @@
     grid-template-areas:
         "nav main"
         "nav bottom";
-    
+
     width: 100vw;
     height: 100vh;
     padding: 0 0.5rem;
@@ -35,7 +35,8 @@ table th {
     font-weight: bold;
 }
 
-table td, table th {
+table td,
+table th {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -57,21 +58,22 @@ nav ul {
     margin: 0;
 }
 
-nav details summary { 
+nav details summary {
     height: 2.25em;
     line-height: 2.25em;
 }
 
-nav details > summary::before {
+nav details>summary::before {
     content: "📁";
     margin: 0 .5em;
 }
 
-nav details[open] > summary::before {
+nav details[open]>summary::before {
     content: "📂";
 }
 
-nav details > summary::marker, nav details > summary::-webkit-details-marker {
+nav details>summary::marker,
+nav details>summary::-webkit-details-marker {
     display: none;
     content: "";
 }
@@ -92,4 +94,21 @@ nav details summary:hover {
 
 .bottomPanel {
     grid-area: "bottom";
+}
+
+.topBar {
+    display: flex;
+    align-items: center;
+}
+
+.topBar>* {
+    margin: 0.5em;
+}
+
+.topBar>*:first-child {
+    margin-left: 0;
+}
+
+.topBar>*:last-child {
+    margin-right: 0;
 }

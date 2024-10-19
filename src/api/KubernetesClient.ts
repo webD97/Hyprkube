@@ -15,7 +15,8 @@ export type DiscoveredGroup = {
 export type DiscoveredResource = {
     version: string,
     kind: string,
-    additionalPrinterColumns: CustomResourceColumnDefinition[]
+    additionalPrinterColumns: CustomResourceColumnDefinition[],
+    views: string[]
 }
 
 export type DiscoveryResult = {

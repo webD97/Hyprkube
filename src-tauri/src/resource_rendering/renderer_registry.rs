@@ -14,9 +14,12 @@ struct BuiltinScripts;
 
 pub struct RendererRegistry {
     pub mappings: HashMap<GroupVersionKind, Vec<Box<dyn ResourceRenderer>>>,
+    generic_renderer: Box<dyn ResourceRenderer>,
 }
 
 impl RendererRegistry {
+    const EMPTY_VEC: &Vec<Box<dyn ResourceRenderer>> = &Vec::new();
+
     pub fn new() -> RendererRegistry {
         let mut renderers: HashMap<GroupVersionKind, Vec<Box<dyn ResourceRenderer>>> =
             HashMap::new();
@@ -66,23 +69,41 @@ impl RendererRegistry {
                 .push(Box::new(view));
         }
 
-        // Fallback renderer that can be used for any resource but with little information
-        renderers
-            .entry(GroupVersionKind::gvk("*", "*", "*"))
-            .or_insert_with(Vec::new)
-            .push(Box::new(FallbackRenderer {}));
-
         RendererRegistry {
             mappings: renderers,
+            generic_renderer: Box::new(FallbackRenderer {}),
         }
     }
 
-    pub fn get_renderer(&self, gvk: &GroupVersionKind) -> &Box<dyn ResourceRenderer> {
-        self.mappings
+    /// Returns the names of all available renderers for the given GVK
+    pub fn get_renderers(&self, gvk: &GroupVersionKind) -> Vec<String> {
+        let renderers = self.mappings.get(gvk).or(Some(Self::EMPTY_VEC)).unwrap();
+
+        renderers
+            .iter()
+            .map(|v| v.display_name().to_owned())
+            .chain(std::iter::once(
+                self.generic_renderer.display_name().to_owned(),
+            ))
+            .collect()
+    }
+
+    pub fn get_renderer(
+        &self,
+        gvk: &GroupVersionKind,
+        view_name: &str,
+    ) -> &Box<dyn ResourceRenderer> {
+        let specific_view = self
+            .mappings
             .get(gvk)
-            .or_else(|| self.mappings.get(&GroupVersionKind::gvk("*", "*", "*")))
+            .or(Some(Self::EMPTY_VEC))
             .unwrap()
-            .first()
-            .unwrap()
+            .iter()
+            .find(|view| view.display_name() == view_name);
+
+        match specific_view {
+            Some(view) => return view.to_owned(),
+            None => return &self.generic_renderer,
+        }
     }
 }

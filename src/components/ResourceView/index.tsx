@@ -67,7 +67,7 @@ const ResourceView: React.FC<ResourceViewProps> = (props) => {
                                                 else if ("RelativeTime" in part) {
                                                     const { iso } = part.RelativeTime;
                                                     const date = dayjs(iso);
-                                                    return <span title={date.format("LLL")}>{dayjs().to(date, true)}</span>;
+                                                    return <span key={idx} title={date.format("LLL")}>{dayjs().to(date, true)}</span>;
                                                 }
                                             })
                                         }

@@ -5,6 +5,10 @@ use super::ResourceRenderer;
 pub struct FallbackRenderer {}
 
 impl ResourceRenderer for FallbackRenderer {
+    fn display_name(&self) -> &str {
+        "Minimal default"
+    }
+
     fn titles(&self) -> Vec<String> {
         vec!["Namespace".into(), "Name".into(), "Age".into()]
     }

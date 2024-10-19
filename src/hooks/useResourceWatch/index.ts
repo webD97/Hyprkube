@@ -71,7 +71,7 @@ export type ResourceViewData = {
     [key: string]: Payload
 };
 
-export default function useKubernetesResourceWatch(kubernetesClient: KubernetesClient | undefined, gvk: Gvk | undefined): [string[], ResourceViewData] {
+export default function useKubernetesResourceWatch(kubernetesClient: KubernetesClient | undefined, gvk: Gvk | undefined, viewName: string): [string[], ResourceViewData] {
     const [columnTitles, setColumnTitles] = useState<string[]>([]);
     const [resources, setResources] = useState<ResourceViewData>({});
 
@@ -87,6 +87,7 @@ export default function useKubernetesResourceWatch(kubernetesClient: KubernetesC
     useEffect(() => {
         if (gvk === undefined) return;
         if (kubernetesClient === undefined) return;
+        if (viewName === '') return;
 
         setResources({});
         setColumnTitles([]);
@@ -125,9 +126,9 @@ export default function useKubernetesResourceWatch(kubernetesClient: KubernetesC
             }
         }
 
-        invoke('watch_gvk_with_view', { clientId: kubernetesClient.id, gvk, channel })
+        invoke('watch_gvk_with_view', { clientId: kubernetesClient.id, gvk, channel, viewName })
             .catch(e => alert(e));
-    }, [gvk, kubernetesClient, forced]);
+    }, [gvk, kubernetesClient, forced, viewName]);
 
     return [columnTitles, resources];
 }
