@@ -1,3 +1,6 @@
+import dayjs from "dayjs";
+import RelativeTime from "dayjs/plugin/relativeTime";
+import LocalizedFormat from "dayjs/plugin/localizedFormat";
 import { ResourceViewData } from "../../hooks/useResourceWatch";
 import EmojiHint from "../EmojiHint";
 import { open } from '@tauri-apps/plugin-shell';
@@ -7,6 +10,9 @@ export interface ResourceViewProps {
     resourceData: ResourceViewData,
     onResourceClicked?: (uid: string) => void,
 }
+
+dayjs.extend(RelativeTime);
+dayjs.extend(LocalizedFormat);
 
 const ResourceView: React.FC<ResourceViewProps> = (props) => {
     const {
@@ -43,7 +49,6 @@ const ResourceView: React.FC<ResourceViewProps> = (props) => {
 
                                         if ("Ok" in data) {
                                             render = data.Ok.map((part, idx) => {
-                                                console.log({ part })
                                                 if ("PlainString" in part) {
                                                     return <span key={idx}>{part.PlainString}</span>;
                                                 }
@@ -59,6 +64,11 @@ const ResourceView: React.FC<ResourceViewProps> = (props) => {
                                                     const { url, display_text } = part.Hyperlink;
                                                     return <a key={idx} style={{ cursor: "pointer" }} onClick={() => open(url)} title={url}>🔗&nbsp;{display_text}</a>;
                                                 }
+                                                else if ("RelativeTime" in part) {
+                                                    const { iso } = part.RelativeTime;
+                                                    const date = dayjs(iso);
+                                                    return <span title={date.format("LLL")}>{dayjs().to(date, true)}</span>;
+                                                }
                                             })
                                         }
 
@@ -73,7 +83,7 @@ const ResourceView: React.FC<ResourceViewProps> = (props) => {
                         ))
                     }
                 </tbody>
-            </table>
+            </table >
             {
                 Object.keys(resourceData).length == 0
                     ? <EmojiHint emoji="🤷‍♀️">No resource of this type found.</EmojiHint>

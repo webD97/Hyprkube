@@ -39,7 +39,7 @@
         #{
             title: "Age",
             accessor: |obj| {
-                obj.metadata.creationTimestamp
+                RelativeTime(obj.metadata?.creationTimestamp)
             }
         },
     ]

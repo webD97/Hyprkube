@@ -50,3 +50,19 @@ impl Hyperlink {
         builder.with_fn("Hyperlink", Self::new);
     }
 }
+
+#[derive(Clone, Serialize, CustomType)]
+#[rhai_type(extra = Self::build_extra)]
+pub struct RelativeTime {
+    pub iso: String,
+}
+
+impl RelativeTime {
+    pub fn new(iso: String) -> Self {
+        Self { iso }
+    }
+
+    fn build_extra(builder: &mut rhai::TypeBuilder<Self>) {
+        builder.with_fn("RelativeTime", Self::new);
+    }
+}

@@ -26,6 +26,12 @@ type ResourceField =
             url: string,
             display_text: string
         }
+    }
+    |
+    {
+        RelativeTime: {
+            iso: string,
+        }
     };
 
 type OkData = { "Ok": ResourceField[] };

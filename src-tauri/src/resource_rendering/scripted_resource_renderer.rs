@@ -2,7 +2,7 @@ use thiserror::Error;
 
 use crate::{
     frontend_types::FrontendValue,
-    resource_rendering::{ColoredBox, ColoredString},
+    resource_rendering::{ColoredBox, ColoredString, RelativeTime},
 };
 
 use super::{
@@ -35,6 +35,7 @@ impl ScriptedResourceView {
             .build_type::<ColoredString>()
             .build_type::<ColoredBox>()
             .build_type::<Hyperlink>()
+            .build_type::<RelativeTime>()
             .register_type_with_name::<ColumnDefinion>("Column")
             .register_type_with_name::<ResourceViewDefinition>("ResourceView");
 
@@ -92,6 +93,10 @@ impl ScriptedResourceView {
                                         return FrontendValue::Hyperlink(value.clone().cast());
                                     }
 
+                                    if value.is::<RelativeTime>() {
+                                        return FrontendValue::RelativeTime(value.clone().cast());
+                                    }
+
                                     FrontendValue::PlainString(value.to_string())
                                 })
                                 .collect();
@@ -107,6 +112,10 @@ impl ScriptedResourceView {
 
                         if dyn_value.is::<Hyperlink>() {
                             return vec![FrontendValue::Hyperlink(dyn_value.clone().cast())];
+                        }
+
+                        if dyn_value.is::<RelativeTime>() {
+                            return vec![FrontendValue::RelativeTime(dyn_value.clone().cast())];
                         }
 
                         vec![FrontendValue::PlainString(dyn_value.to_string())]

@@ -1,6 +1,6 @@
 use serde::Serialize;
 
-use crate::resource_rendering::{ColoredBox, ColoredString, Hyperlink};
+use crate::resource_rendering::{ColoredBox, ColoredString, Hyperlink, RelativeTime};
 
 #[derive(Clone, Serialize)]
 pub enum FrontendValue {
@@ -8,4 +8,5 @@ pub enum FrontendValue {
     Hyperlink(Hyperlink),
     ColoredString(ColoredString),
     ColoredBox(ColoredBox),
+    RelativeTime(RelativeTime),
 }
