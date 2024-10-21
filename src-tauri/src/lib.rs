@@ -11,18 +11,26 @@ use std::sync::{Arc, Mutex};
 
 use app_state::JoinHandleStore;
 use resource_rendering::RendererRegistry;
-use tauri::Manager;
+use tauri::{Listener, Manager};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .setup(|app| {
+            let app_handle = app.handle().clone();
+
             app.manage(Arc::new(RendererRegistry::new()));
             app.manage(Mutex::new(app_state::KubernetesClientRegistry::new()));
             app.manage(Arc::new(Mutex::new(JoinHandleStore::new(
-                app.handle().clone(),
+                app_handle.clone(),
             ))));
+
+            app.listen("frontend-onbeforeunload", move |_event| {
+                println!("ONBEFOREUNLOAD");
+                reset_state(app_handle.clone());
+            });
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -34,4 +42,15 @@ pub fn run() {
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+fn reset_state(app_handle: tauri::AppHandle) {
+    let join_handle_store = app_handle.state::<Arc<Mutex<JoinHandleStore>>>();
+
+    let mut join_handle_store = join_handle_store.lock().unwrap();
+
+    let _ = std::mem::replace(
+        &mut *join_handle_store,
+        JoinHandleStore::new(app_handle.clone()),
+    );
 }

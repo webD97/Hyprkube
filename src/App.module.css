@@ -2,7 +2,6 @@
     display: grid;
     grid-template-columns: 15fr minmax(0, 85fr);
     grid-template-rows: 4fr minmax(0, auto) 1.5rem;
-    gap: 1rem;
     grid-template-areas:
         "nav main"
         "nav bottom"

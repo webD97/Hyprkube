@@ -13,6 +13,8 @@ import useResourceWatch from './hooks/useResourceWatch';
 import ResourceView from './components/ResourceView';
 import LogPanel from './components/LogPanel';
 import StatusPanel from './containers/StatusPanel';
+import TabView, { Tab } from './components/TabView';
+import { useTabs } from './components/TabView/hooks';
 
 const defaultPinnedGvks: Gvk[] = [
   { group: '', version: 'v1', kind: 'Node' },
@@ -39,6 +41,9 @@ function App() {
   const [selectedView, setSelectedView] = useState("");
   const [columnTitles, resources] = useResourceWatch(kubernetesClient, currentGvk, selectedView);
 
+
+  // const [tabs, setTabs] = useState<ReactElement<TabProps>[]>([]);
+  const [tabs, activeTab, pushTab, removeTab, setActiveTab] = useTabs();
 
   useEffect(() => {
     if (!currentGvk) return;
@@ -82,11 +87,11 @@ function App() {
           Object.values(gvks?.gvks || [])
             .filter((group) => !group.isCrd)
             .sort((groupA, groupB) => groupA.name.localeCompare(groupB.name))
-            .map(({ name: groupName, kinds }) => {
+            .map(({ name: groupName, kinds }, idx) => {
               const gvks = kinds.map(({ kind, version }) => ({ group: groupName, version, kind }));
 
               return (
-                <details key={groupName}>
+                <details key={idx}>
                   <summary>{groupName ? groupName : 'core'}</summary>
                   <GvkList className={classes.gvkListIndented}
                     gvks={gvks}
@@ -120,13 +125,13 @@ function App() {
         }
       </nav>
       <section className={classes.bottomPanel}>
-        {
-          currentGvk?.kind === 'Pod' && selectedResource?.namespace && selectedResource?.name
-            ? (
-              <LogPanel kubernetesClient={kubernetesClient} namespace={selectedResource.namespace} name={selectedResource.name} />
-            )
-            : null
-        }
+        <TabView
+          activeTab={activeTab}
+          onCloseClicked={(idx) => removeTab(idx)}
+          setActiveTab={setActiveTab}
+        >
+          {tabs}
+        </TabView>
       </section>
       <main className={classes.mainArea}>
         {
@@ -148,11 +153,23 @@ function App() {
                   columnTitles={columnTitles || []}
                   resourceData={resources}
                   onResourceClicked={(uid) => {
-                    const resource = resources[uid];
-                    setSelectedResource({
-                      namespace: resource.namespace,
-                      name: resource.name
-                    });
+                    setSelectedResource(resources[uid]);
+
+                    if (currentGvk.kind === "Pod") {
+                      pushTab(
+                        <Tab title={resources[uid].name}>
+                          {
+                            () => (
+                              <LogPanel
+                                kubernetesClient={kubernetesClient}
+                                namespace={resources[uid].namespace}
+                                name={resources[uid].name}
+                              />
+                            )
+                          }
+                        </Tab>
+                      );
+                    }
                   }}
                 />
               </>

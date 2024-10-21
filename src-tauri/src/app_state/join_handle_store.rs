@@ -15,6 +15,12 @@ struct Stats {
     channels: usize,
 }
 
+impl Drop for JoinHandleStore {
+    fn drop(&mut self) {
+        self.abort_all();
+    }
+}
+
 impl JoinHandleStore {
     pub fn new(app_handle: tauri::AppHandle) -> Self {
         Self {
@@ -58,6 +64,13 @@ impl JoinHandleStore {
 
         // Clean up
         self.handles.retain(|_, v| !v.is_empty());
+    }
+
+    pub fn abort_all(&mut self) {
+        let keys: Vec<u32> = self.handles.keys().cloned().collect();
+        for channel_id in keys {
+            self.abort(channel_id.to_owned());
+        }
     }
 
     pub fn abort(&mut self, channel_id: u32) {

@@ -1,0 +1,50 @@
+.tabWrapper {
+    background-color: #111111;
+}
+
+.contentWrapper {
+    padding: 0 0.5rem;
+}
+
+.tab {
+    background: #181818;
+    border-top: 3px transparent solid;
+    height: 2.5em;
+    line-height: calc(2.5em - 3px);
+    max-width: 250px;
+    display: inline-flex;
+    padding: 0 0.5em;
+}
+
+.tab button {
+    background: none;
+    border: none;
+    color: white;
+}
+
+.tab button:last-child {
+    flex-shrink: 0;
+    display: none;
+}
+
+.tab button:not(:disabled) {
+    cursor: pointer;
+}
+
+.tab button:not(:disabled):last-child {
+    display: initial;
+}
+
+.tab button:first-child {
+    flex-grow: 1;
+    word-wrap: none;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+}
+
+.tab:has(button:first-child:disabled) {
+    background-color: #222222;
+    border-top-color: dodgerblue;
+    cursor: default;
+}

@@ -3,9 +3,10 @@ import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
 
-import { ErrorBoundary } from "react-error-boundary";
+import { ErrorBoundary, FallbackProps } from "react-error-boundary";
+import { emit } from '@tauri-apps/api/event';
 
-function fallbackRender(context: any) {
+function fallbackRender(context: FallbackProps) {
   // Call resetErrorBoundary() to reset the error boundary and retry the render.
 
   return (
@@ -15,6 +16,10 @@ function fallbackRender(context: any) {
     </div>
   );
 }
+
+window.onbeforeunload = function () {
+  emit('frontend-onbeforeunload');
+};
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
