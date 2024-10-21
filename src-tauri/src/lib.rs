@@ -18,11 +18,8 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .setup(|app| {
-            // let handles: HashMap<u32, Vec<tauri::async_runtime::JoinHandle<()>>> = HashMap::new();
-
             app.manage(Arc::new(RendererRegistry::new()));
             app.manage(Mutex::new(app_state::KubernetesClientRegistry::new()));
-            // app.manage(Mutex::new(handles));
             app.manage(Arc::new(Mutex::new(JoinHandleStore::default())));
             Ok(())
         })
