@@ -3,11 +3,11 @@ import { useState, useEffect } from "react";
 import { LogStreamEvent } from "../../api/LogStreamEvent";
 import { KubernetesClient } from "../../model/k8s";
 
-export const usePodLogs = (kubernetesClient: KubernetesClient|undefined, namespace: string, name: string) => {
+export const usePodLogs = (kubernetesClient: KubernetesClient | undefined, namespace: string, name: string) => {
     const [text, setText] = useState('');
 
     useEffect(() => {
-        if (!kubernetesClient) return; 
+        if (!kubernetesClient) return;
 
         setText('');
 
@@ -29,7 +29,7 @@ export const usePodLogs = (kubernetesClient: KubernetesClient|undefined, namespa
             .catch(e => setText(e));
 
         return () => {
-            invoke('kube_stream_podlogs_cleanup', { channelId: channel.id });
+            invoke('cleanup_channel', { channel });
         };
     }, [namespace, name, kubernetesClient]);
 
