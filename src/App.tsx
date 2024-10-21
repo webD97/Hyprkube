@@ -12,6 +12,7 @@ import EmojiHint from './components/EmojiHint';
 import useResourceWatch from './hooks/useResourceWatch';
 import ResourceView from './components/ResourceView';
 import LogPanel from './components/LogPanel';
+import StatusPanel from './containers/StatusPanel';
 
 const defaultPinnedGvks: Gvk[] = [
   { group: '', version: 'v1', kind: 'Node' },
@@ -37,6 +38,7 @@ function App() {
   const [selectedResource, setSelectedResource] = useState<NamespaceAndName>({ namespace: '', name: '' });
   const [selectedView, setSelectedView] = useState("");
   const [columnTitles, resources] = useResourceWatch(kubernetesClient, currentGvk, selectedView);
+
 
   useEffect(() => {
     if (!currentGvk) return;
@@ -117,15 +119,15 @@ function App() {
             })
         }
       </nav>
-      {
-        currentGvk?.kind === 'Pod' && selectedResource?.namespace && selectedResource?.name
-          ? (
-            <section className={classes.bottomPanel}>
+      <section className={classes.bottomPanel}>
+        {
+          currentGvk?.kind === 'Pod' && selectedResource?.namespace && selectedResource?.name
+            ? (
               <LogPanel kubernetesClient={kubernetesClient} namespace={selectedResource.namespace} name={selectedResource.name} />
-            </section>
-          )
-          : null
-      }
+            )
+            : null
+        }
+      </section>
       <main className={classes.mainArea}>
         {
           currentGvk === undefined
@@ -157,6 +159,9 @@ function App() {
             )
         }
       </main>
+      <footer className={classes.appStatusBar}>
+        <StatusPanel />
+      </footer>
     </div>
   )
 }

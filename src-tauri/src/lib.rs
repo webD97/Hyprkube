@@ -20,7 +20,9 @@ pub fn run() {
         .setup(|app| {
             app.manage(Arc::new(RendererRegistry::new()));
             app.manage(Mutex::new(app_state::KubernetesClientRegistry::new()));
-            app.manage(Arc::new(Mutex::new(JoinHandleStore::default())));
+            app.manage(Arc::new(Mutex::new(JoinHandleStore::new(
+                app.handle().clone(),
+            ))));
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

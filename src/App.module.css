@@ -1,16 +1,34 @@
 .container {
     display: grid;
     grid-template-columns: 15fr minmax(0, 85fr);
-    grid-template-rows: 1fr;
+    grid-template-rows: 4fr minmax(0, auto) 1.5rem;
     gap: 1rem;
     grid-template-areas:
         "nav main"
-        "nav bottom";
+        "nav bottom"
+        "footer footer";
 
     width: 100vw;
     height: 100vh;
-    padding: 0 0.5rem;
+    padding: 0;
     overflow: hidden;
+}
+
+footer {
+    grid-area: footer;
+    background-color: dodgerblue;
+    height: 1.5rem;
+    width: 100%;
+    padding: 0 0.5rem;
+    display: flex;
+}
+
+.appStatusBar>div {
+    margin-right: 1em;
+}
+
+.appStatusBar>div:last-child {
+    margin-right: 0;
 }
 
 table {
@@ -52,6 +70,7 @@ nav {
     grid-area: nav;
     overflow: scroll;
     border-right: 1px #333333 solid;
+    padding: 0 0.5rem;
 }
 
 nav ul {
@@ -90,6 +109,7 @@ nav details summary:hover {
 .mainArea {
     grid-area: main;
     overflow: scroll;
+    padding: 0 0.5rem;
 }
 
 .bottomPanel {

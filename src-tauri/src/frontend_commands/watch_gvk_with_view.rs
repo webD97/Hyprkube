@@ -140,16 +140,5 @@ pub async fn watch_gvk_with_view(
     let mut join_handle_store = join_handle_store.lock().unwrap();
     join_handle_store.insert(channel_id, handle);
 
-    println!(
-        "Now there are {} channels with a handle. Total handles: {}",
-        join_handle_store.handles.len(),
-        join_handle_store
-            .handles
-            .values()
-            .map(|v| v.len())
-            .reduce(|p, n| p + n)
-            .unwrap()
-    );
-
     Ok(())
 }
