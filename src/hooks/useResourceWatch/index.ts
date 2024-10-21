@@ -1,7 +1,6 @@
 import { Channel, invoke } from "@tauri-apps/api/core";
-import { useEffect, useReducer, useState } from "react";
+import { useEffect, useState } from "react";
 import { Gvk, KubernetesClient } from "../../model/k8s";
-import { listen } from "@tauri-apps/api/event";
 
 type ResourceField =
     {
@@ -75,22 +74,11 @@ export default function useKubernetesResourceWatch(kubernetesClient: KubernetesC
     const [columnTitles, setColumnTitles] = useState<string[]>([]);
     const [resources, setResources] = useState<ResourceViewData>({});
 
-    const [forced, forceUpdate] = useReducer(x => x + 1, 0);
-
     useEffect(() => {
-        listen<string>('view_definition_changed', (event) => {
-            console.log({ event });
-            forceUpdate();
-        });
-    }, []);
-
-    useEffect(() => {
+        console.log({ gvk, kubernetesClient, viewName });
         if (gvk === undefined) return;
         if (kubernetesClient === undefined) return;
         if (viewName === '') return;
-
-        setResources({});
-        setColumnTitles([]);
 
         const channel = new Channel<WatchEvent>();
 
@@ -124,11 +112,23 @@ export default function useKubernetesResourceWatch(kubernetesClient: KubernetesC
                     return newData;
                 });
             }
-        }
+        };
 
+        setResources({});
+        setColumnTitles([]);
+
+        console.log("Creating watch for channel " + channel.id)
         invoke('watch_gvk_with_view', { clientId: kubernetesClient.id, gvk, channel, viewName })
             .catch(e => alert(e));
-    }, [gvk, kubernetesClient, forced, viewName]);
+
+        // Cleanup has a nasty race condition: If it is called before the backend even saved the
+        // JoinHandle for the stream, the clean up does nothing. Then the JoinHandle is saved and
+        // the stream keeps running.
+        return () => {
+            console.log("Cleaning up channel " + channel.id)
+            invoke('cleanup_channel', { channel });
+        };
+    }, [gvk, kubernetesClient, viewName]);
 
     return [columnTitles, resources];
 }

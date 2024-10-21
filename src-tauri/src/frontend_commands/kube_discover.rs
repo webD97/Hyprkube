@@ -1,4 +1,7 @@
-use std::{collections::HashMap, sync::Mutex};
+use std::{
+    collections::HashMap,
+    sync::{Arc, Mutex},
+};
 
 use k8s_openapi::apiextensions_apiserver::pkg::apis::apiextensions::v1::{
     CustomResourceColumnDefinition, CustomResourceDefinition,
@@ -41,7 +44,7 @@ pub struct DiscoveryResult {
 #[tauri::command]
 pub async fn kube_discover(
     app: tauri::AppHandle,
-    view_registry: State<'_, RendererRegistry>,
+    view_registry: State<'_, Arc<RendererRegistry>>,
     client_id: Uuid,
 ) -> Result<DiscoveryResult, BackendError> {
     let client = {
