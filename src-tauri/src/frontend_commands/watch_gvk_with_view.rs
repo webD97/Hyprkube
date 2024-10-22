@@ -54,18 +54,11 @@ pub async fn watch_gvk_with_view(
         .try_clone(&client_id)
         .unwrap();
 
-    let disovery = kube::Discovery::new(client.clone()).run().await.unwrap();
-
-    let (api_resource, _) = disovery
-        .resolve_gvk(&gvk)
-        .ok_or(BackendError::Generic(format!(
-            "API resource {:?} not found",
-            gvk
-        )))
+    let (api_resource, _) = kube::discovery::oneshot::pinned_kind(&client, &gvk)
+        .await
         .unwrap();
 
-    let api: kube::Api<kube::api::DynamicObject> =
-        kube::Api::all_with(client.clone(), &api_resource);
+    let api: kube::Api<kube::api::DynamicObject> = kube::Api::all_with(client, &api_resource);
 
     let views = Arc::clone(&views);
 
