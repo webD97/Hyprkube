@@ -1,7 +1,4 @@
-use std::{
-    collections::HashMap,
-    sync::{Arc, Mutex},
-};
+use std::{collections::HashMap, sync::Arc};
 
 use k8s_openapi::apiextensions_apiserver::pkg::apis::apiextensions::v1::CustomResourceDefinition;
 use kube::api::{GroupVersionKind, ListParams};
@@ -45,10 +42,8 @@ pub async fn kube_discover(
     client_id: Uuid,
 ) -> Result<DiscoveryResult, BackendError> {
     let client = {
-        let client_registry = app.state::<Mutex<KubernetesClientRegistry>>();
-        let client_registry = client_registry
-            .lock()
-            .map_err(|x| BackendError::Generic(x.to_string()))?;
+        let client_registry = app.state::<tokio::sync::Mutex<KubernetesClientRegistry>>();
+        let client_registry = client_registry.lock().await;
 
         client_registry.try_clone(&client_id)?
     };
@@ -95,7 +90,7 @@ pub async fn kube_discover(
             }
 
             let gvk = GroupVersionKind::gvk(&ar.group, &ar.version, &ar.kind);
-            let views = view_registry.get_renderers(&gvk);
+            let views = view_registry.get_renderers(&client_id, &gvk).await;
 
             result
                 .gvks

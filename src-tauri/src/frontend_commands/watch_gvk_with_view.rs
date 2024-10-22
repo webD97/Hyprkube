@@ -37,7 +37,7 @@ pub enum WatchStreamEvent {
 
 #[tauri::command]
 pub async fn watch_gvk_with_view(
-    client_registry_arc: State<'_, Mutex<KubernetesClientRegistry>>,
+    client_registry_arc: State<'_, tokio::sync::Mutex<KubernetesClientRegistry>>,
     join_handle_store: State<'_, Arc<Mutex<JoinHandleStore>>>,
     views: State<'_, Arc<RendererRegistry>>,
     client_id: Uuid,
@@ -50,7 +50,7 @@ pub async fn watch_gvk_with_view(
 
     let client = client_registry_arc
         .lock()
-        .unwrap()
+        .await
         .try_clone(&client_id)
         .unwrap();
 
@@ -69,7 +69,9 @@ pub async fn watch_gvk_with_view(
             .unwrap()
             .boxed();
 
-        let view = views.get_renderer(&gvk, view_name.as_str());
+        let view = views
+            .get_renderer(&client_id, &gvk, view_name.as_str())
+            .await;
 
         let column_titles = view.titles();
 

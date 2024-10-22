@@ -20,8 +20,10 @@ pub fn run() {
         .setup(|app| {
             let app_handle = app.handle().clone();
 
-            app.manage(Arc::new(RendererRegistry::new()));
-            app.manage(Mutex::new(app_state::KubernetesClientRegistry::new()));
+            app.manage(Arc::new(RendererRegistry::new(app_handle.clone())));
+            app.manage(tokio::sync::Mutex::new(
+                app_state::KubernetesClientRegistry::new(),
+            ));
             app.manage(Arc::new(Mutex::new(JoinHandleStore::new(
                 app_handle.clone(),
             ))));

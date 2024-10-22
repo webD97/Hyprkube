@@ -4,9 +4,15 @@ use kube::api::GroupVersionKind;
 use rust_embed::Embed;
 use scan_dir::ScanDir;
 
-use crate::{dirs::get_views_dir, resource_rendering::ScriptedResourceView};
+use tauri::Manager as _;
+use uuid::Uuid;
 
-use super::{fallback_resource_renderer::FallbackRenderer, ResourceRenderer};
+use crate::{
+    app_state::KubernetesClientRegistry, dirs::get_views_dir,
+    resource_rendering::ScriptedResourceView,
+};
+
+use super::{fallback_resource_renderer::FallbackRenderer, CrdRenderer, ResourceRenderer};
 
 #[derive(Embed)]
 #[folder = "views/"]
@@ -15,12 +21,14 @@ struct BuiltinScripts;
 pub struct RendererRegistry {
     pub mappings: HashMap<GroupVersionKind, Vec<Box<dyn ResourceRenderer>>>,
     generic_renderer: Box<dyn ResourceRenderer>,
+    crd_renderer: Box<dyn ResourceRenderer>,
+    app_handle: tauri::AppHandle,
 }
 
 impl RendererRegistry {
     const EMPTY_VEC: &Vec<Box<dyn ResourceRenderer>> = &Vec::new();
 
-    pub fn new() -> RendererRegistry {
+    pub fn new(app_handle: tauri::AppHandle) -> RendererRegistry {
         let mut renderers: HashMap<GroupVersionKind, Vec<Box<dyn ResourceRenderer>>> =
             HashMap::new();
 
@@ -72,24 +80,46 @@ impl RendererRegistry {
         RendererRegistry {
             mappings: renderers,
             generic_renderer: Box::new(FallbackRenderer {}),
+            crd_renderer: Box::new(CrdRenderer::default()),
+            app_handle,
         }
     }
 
     /// Returns the names of all available renderers for the given GVK
-    pub fn get_renderers(&self, gvk: &GroupVersionKind) -> Vec<String> {
+    pub async fn get_renderers(
+        &self,
+        kube_client_id: &Uuid,
+        gvk: &GroupVersionKind,
+    ) -> Vec<String> {
         let renderers = self.mappings.get(gvk).or(Some(Self::EMPTY_VEC)).unwrap();
+
+        let kubernetes_client_registry = self
+            .app_handle
+            .state::<tokio::sync::Mutex<KubernetesClientRegistry>>();
+
+        let kubernetes_client_registry = &kubernetes_client_registry.lock().await;
+
+        let crds: &Vec<GroupVersionKind> = kubernetes_client_registry
+            .registered
+            .get(&kube_client_id)
+            .unwrap()
+            .1
+            .crds
+            .as_ref();
 
         renderers
             .iter()
             .map(|v| v.display_name().to_owned())
-            .chain(std::iter::once(
-                self.generic_renderer.display_name().to_owned(),
-            ))
+            .chain(std::iter::once(match crds.contains(gvk) {
+                false => self.generic_renderer.display_name().to_owned(),
+                true => self.crd_renderer.display_name().to_owned(),
+            }))
             .collect()
     }
 
-    pub fn get_renderer(
+    pub async fn get_renderer(
         &self,
+        kube_client_id: &Uuid,
         gvk: &GroupVersionKind,
         view_name: &str,
     ) -> &Box<dyn ResourceRenderer> {
@@ -101,9 +131,28 @@ impl RendererRegistry {
             .iter()
             .find(|view| view.display_name() == view_name);
 
+        let kubernetes_client_registry = self
+            .app_handle
+            .state::<tokio::sync::Mutex<KubernetesClientRegistry>>();
+
+        let kubernetes_client_registry = &kubernetes_client_registry.lock().await;
+
+        let crds: &Vec<GroupVersionKind> = kubernetes_client_registry
+            .registered
+            .get(&kube_client_id)
+            .unwrap()
+            .1
+            .crds
+            .as_ref();
+
         match specific_view {
             Some(view) => return view.to_owned(),
-            None => return &self.generic_renderer,
+            None => {
+                return match crds.contains(gvk) {
+                    false => &self.generic_renderer,
+                    true => &self.crd_renderer,
+                }
+            }
         }
     }
 }

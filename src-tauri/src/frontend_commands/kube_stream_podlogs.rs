@@ -27,17 +27,14 @@ pub enum LogStreamEvent {
 
 #[tauri::command]
 pub async fn kube_stream_podlogs(
-    client_registry_arc: State<'_, Mutex<KubernetesClientRegistry>>,
+    client_registry_arc: State<'_, tokio::sync::Mutex<KubernetesClientRegistry>>,
     join_handle_store: State<'_, Arc<Mutex<JoinHandleStore>>>,
     client_id: Uuid,
     namespace: &str,
     name: &str,
     channel: tauri::ipc::Channel<LogStreamEvent>,
 ) -> Result<(), BackendError> {
-    let client = client_registry_arc
-        .lock()
-        .map_err(|x| BackendError::Generic(x.to_string()))?
-        .try_clone(&client_id)?;
+    let client = client_registry_arc.lock().await.try_clone(&client_id)?;
 
     let pods: kube::Api<Pod> = kube::Api::namespaced(client, namespace);
 
