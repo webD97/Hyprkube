@@ -3,9 +3,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use k8s_openapi::apiextensions_apiserver::pkg::apis::apiextensions::v1::{
-    CustomResourceColumnDefinition, CustomResourceDefinition,
-};
+use k8s_openapi::apiextensions_apiserver::pkg::apis::apiextensions::v1::CustomResourceDefinition;
 use kube::api::{GroupVersionKind, ListParams};
 use serde::Serialize;
 use tauri::{Manager as _, State};
@@ -29,7 +27,6 @@ pub struct DiscoveredGroup {
 pub struct DiscoveredResource {
     pub version: String,
     pub kind: String,
-    pub additional_printer_columns: Option<Vec<CustomResourceColumnDefinition>>,
     pub views: Vec<String>,
 }
 
@@ -97,28 +94,6 @@ pub async fn kube_discover(
                 );
             }
 
-            let mut additional_printer_columns = None;
-
-            if is_crd {
-                let crd = crds
-                    .clone()
-                    .into_iter()
-                    .find(|crd| crd.spec.group == ar.group && crd.spec.names.kind == ar.kind)
-                    .unwrap();
-
-                let apc = crd
-                    .spec
-                    .versions
-                    .get(0)
-                    .unwrap()
-                    .additional_printer_columns
-                    .clone();
-
-                apc.map(|apc| {
-                    additional_printer_columns = Some(apc);
-                });
-            }
-
             let gvk = GroupVersionKind::gvk(&ar.group, &ar.version, &ar.kind);
             let views = view_registry.get_renderers(&gvk);
 
@@ -130,7 +105,6 @@ pub async fn kube_discover(
                 .push(DiscoveredResource {
                     kind: ar.kind.clone(),
                     version: ar.version.clone(),
-                    additional_printer_columns,
                     views,
                 });
         }
