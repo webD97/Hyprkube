@@ -1,4 +1,7 @@
+use async_trait::async_trait;
+use kube::api::GroupVersionKind;
 use thiserror::Error;
+use uuid::Uuid;
 
 use crate::{
     frontend_types::FrontendValue,
@@ -129,16 +132,28 @@ impl ScriptedResourceView {
     }
 }
 
+#[async_trait]
 impl ResourceRenderer for ScriptedResourceView {
     fn display_name(&self) -> &str {
         self.display_name()
     }
 
-    fn titles(&self) -> Vec<String> {
+    async fn titles(
+        &self,
+        _app_handle: tauri::AppHandle,
+        _client_id: &Uuid,
+        _gvk: &GroupVersionKind,
+    ) -> Vec<String> {
         self.render_titles()
     }
 
-    fn render(&self, obj: &kube::api::DynamicObject) -> Vec<Result<Vec<FrontendValue>, String>> {
+    async fn render(
+        &self,
+        _app_handle: tauri::AppHandle,
+        _client_id: &Uuid,
+        _gvk: &GroupVersionKind,
+        obj: &kube::api::DynamicObject,
+    ) -> Vec<Result<Vec<FrontendValue>, String>> {
         self.render_columns(obj)
     }
 }

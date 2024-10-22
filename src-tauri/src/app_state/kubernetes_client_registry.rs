@@ -28,7 +28,7 @@ pub struct DiscoveryResult {
     pub gvks: HashMap<String, DiscoveredGroup>,
     pub crd_apigroups: Vec<String>,
     pub builtin_apigroups: Vec<String>,
-    pub crds: Vec<GroupVersionKind>,
+    pub crds: HashMap<GroupVersionKind, CustomResourceDefinition>,
 }
 
 pub struct KubernetesClientRegistry {
@@ -68,7 +68,7 @@ impl KubernetesClientRegistry {
             gvks: HashMap::new(),
             crd_apigroups: vec![],
             builtin_apigroups: vec![],
-            crds: Vec::new(),
+            crds: HashMap::new(),
         };
 
         let api: kube::Api<CustomResourceDefinition> = kube::Api::all(client.clone());
@@ -78,12 +78,6 @@ impl KubernetesClientRegistry {
             if !result.crd_apigroups.contains(&crd.spec.group) {
                 result.crd_apigroups.push(crd.spec.group.clone());
             }
-
-            result.crds.push(GroupVersionKind {
-                group: crd.spec.group.clone(),
-                version: crd.spec.versions.first().unwrap().name.clone(),
-                kind: crd.spec.names.kind.clone(),
-            });
         }
 
         for group in discovery.groups() {
@@ -108,6 +102,21 @@ impl KubernetesClientRegistry {
                             is_crd,
                         },
                     );
+                }
+
+                if is_crd {
+                    let crd = &crds
+                        .iter()
+                        .find(|crd| crd.spec.group == ar.group && crd.spec.names.kind == ar.kind)
+                        .unwrap();
+
+                    let gvk = GroupVersionKind {
+                        group: crd.spec.group.clone(),
+                        version: crd.spec.versions.first().unwrap().name.clone(),
+                        kind: crd.spec.names.kind.clone(),
+                    };
+
+                    result.crds.insert(gvk, (*crd).to_owned());
                 }
 
                 result

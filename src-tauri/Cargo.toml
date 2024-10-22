@@ -41,6 +41,8 @@ dirs = "5.0.1"
 scan_dir = "0.3.3"
 rust-embed = "8.4.0"
 tauri-plugin-shell = "2.0.0-alpha.2"
+async-trait = "0.1.83"
+serde_json_path = "0.6.7"
 
 [features]
 # this feature is used for production builds or when `devPath` points to the filesystem and the built-in dev server is disabled.

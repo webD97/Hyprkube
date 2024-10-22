@@ -37,6 +37,7 @@ pub enum WatchStreamEvent {
 
 #[tauri::command]
 pub async fn watch_gvk_with_view(
+    app_handle: tauri::AppHandle,
     client_registry_arc: State<'_, tokio::sync::Mutex<KubernetesClientRegistry>>,
     join_handle_store: State<'_, Arc<Mutex<JoinHandleStore>>>,
     views: State<'_, Arc<RendererRegistry>>,
@@ -73,7 +74,7 @@ pub async fn watch_gvk_with_view(
             .get_renderer(&client_id, &gvk, view_name.as_str())
             .await;
 
-        let column_titles = view.titles();
+        let column_titles = view.titles(app_handle.clone(), &client_id, &gvk).await;
 
         channel
             .send(WatchStreamEvent::AnnounceColumns {
@@ -93,7 +94,9 @@ pub async fn watch_gvk_with_view(
 
             let to_send = match event {
                 Some(kube::api::WatchEvent::Added(obj)) => {
-                    let columns = view.render(&obj);
+                    let columns = view
+                        .render(app_handle.clone(), &client_id, &gvk, &obj)
+                        .await;
                     Some(WatchStreamEvent::Created {
                         uid: obj.metadata.uid.expect("no uid"),
                         namespace: obj.metadata.namespace.or(Some("".into())).unwrap(),
@@ -102,7 +105,9 @@ pub async fn watch_gvk_with_view(
                     })
                 }
                 Some(kube::api::WatchEvent::Modified(obj)) => {
-                    let columns = view.render(&obj);
+                    let columns = view
+                        .render(app_handle.clone(), &client_id, &gvk, &obj)
+                        .await;
                     Some(WatchStreamEvent::Updated {
                         uid: obj.metadata.uid.expect("no uid"),
                         namespace: obj.metadata.namespace.or(Some("".into())).unwrap(),

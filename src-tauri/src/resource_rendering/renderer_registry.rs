@@ -99,18 +99,19 @@ impl RendererRegistry {
 
         let kubernetes_client_registry = &kubernetes_client_registry.lock().await;
 
-        let crds: &Vec<GroupVersionKind> = kubernetes_client_registry
+        let crds: Vec<&GroupVersionKind> = kubernetes_client_registry
             .registered
             .get(&kube_client_id)
             .unwrap()
             .1
             .crds
-            .as_ref();
+            .keys()
+            .collect();
 
         renderers
             .iter()
             .map(|v| v.display_name().to_owned())
-            .chain(std::iter::once(match crds.contains(gvk) {
+            .chain(std::iter::once(match crds.contains(&gvk) {
                 false => self.generic_renderer.display_name().to_owned(),
                 true => self.crd_renderer.display_name().to_owned(),
             }))
@@ -137,18 +138,19 @@ impl RendererRegistry {
 
         let kubernetes_client_registry = &kubernetes_client_registry.lock().await;
 
-        let crds: &Vec<GroupVersionKind> = kubernetes_client_registry
+        let crds: Vec<&GroupVersionKind> = kubernetes_client_registry
             .registered
             .get(&kube_client_id)
             .unwrap()
             .1
             .crds
-            .as_ref();
+            .keys()
+            .collect();
 
         match specific_view {
             Some(view) => return view.to_owned(),
             None => {
-                return match crds.contains(gvk) {
+                return match crds.contains(&gvk) {
                     false => &self.generic_renderer,
                     true => &self.crd_renderer,
                 }
