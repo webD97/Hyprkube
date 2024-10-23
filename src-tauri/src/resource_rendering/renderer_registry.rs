@@ -8,7 +8,7 @@ use tauri::Manager as _;
 use uuid::Uuid;
 
 use crate::{
-    app_state::KubernetesClientRegistry, dirs::get_views_dir,
+    app_state::KubernetesClientRegistryState, dirs::get_views_dir,
     resource_rendering::ScriptedResourceView,
 };
 
@@ -93,9 +93,7 @@ impl RendererRegistry {
     ) -> Vec<String> {
         let renderers = self.mappings.get(gvk).or(Some(Self::EMPTY_VEC)).unwrap();
 
-        let kubernetes_client_registry = self
-            .app_handle
-            .state::<tokio::sync::Mutex<KubernetesClientRegistry>>();
+        let kubernetes_client_registry = self.app_handle.state::<KubernetesClientRegistryState>();
 
         let kubernetes_client_registry = &kubernetes_client_registry.lock().await;
 
@@ -132,9 +130,7 @@ impl RendererRegistry {
             .iter()
             .find(|view| view.display_name() == view_name);
 
-        let kubernetes_client_registry = self
-            .app_handle
-            .state::<tokio::sync::Mutex<KubernetesClientRegistry>>();
+        let kubernetes_client_registry = self.app_handle.state::<KubernetesClientRegistryState>();
 
         let kubernetes_client_registry = &kubernetes_client_registry.lock().await;
 

@@ -6,7 +6,7 @@ use tauri::State;
 use uuid::Uuid;
 
 use crate::{
-    app_state::{JoinHandleStore, KubernetesClientRegistry},
+    app_state::{JoinHandleStore, KubernetesClientRegistryState},
     frontend_types::{BackendError, FrontendValue},
     resource_rendering::RendererRegistry,
 };
@@ -37,8 +37,7 @@ pub enum WatchStreamEvent {
 
 #[tauri::command]
 pub async fn watch_gvk_with_view(
-    app_handle: tauri::AppHandle,
-    client_registry_arc: State<'_, tokio::sync::Mutex<KubernetesClientRegistry>>,
+    client_registry_arc: State<'_, KubernetesClientRegistryState>,
     join_handle_store: State<'_, Arc<Mutex<JoinHandleStore>>>,
     views: State<'_, Arc<RendererRegistry>>,
     client_id: Uuid,
@@ -53,28 +52,40 @@ pub async fn watch_gvk_with_view(
         .lock()
         .await
         .try_clone(&client_id)
-        .unwrap();
+        .map_err(|e| BackendError::Generic(e.to_string()))?;
 
     let (api_resource, _) = kube::discovery::oneshot::pinned_kind(&client, &gvk)
         .await
-        .unwrap();
+        .map_err(|e| BackendError::Generic(e.to_string()))?;
 
     let api: kube::Api<kube::api::DynamicObject> = kube::Api::all_with(client, &api_resource);
 
     let views = Arc::clone(&views);
+    let client_registry_arc = Arc::clone(&client_registry_arc);
+
+    let mut stream = api
+        .watch(&kube::api::WatchParams::default(), "0")
+        .await
+        .map_err(|e| BackendError::Generic(e.to_string()))?
+        .boxed();
 
     let handle = tauri::async_runtime::spawn(async move {
-        let mut stream = api
-            .watch(&kube::api::WatchParams::default(), "0")
-            .await
-            .unwrap()
-            .boxed();
-
         let view = views
             .get_renderer(&client_id, &gvk, view_name.as_str())
             .await;
 
-        let column_titles = view.titles(app_handle.clone(), &client_id, &gvk).await;
+        let kubernetes_client_registry = client_registry_arc.lock().await;
+
+        let (_, discovery) = &kubernetes_client_registry
+            .registered
+            .get(&client_id)
+            .ok_or("Client not found")
+            .map_err(|e| BackendError::Generic(e.to_owned()))
+            .unwrap();
+
+        let crd = discovery.crds.get(&gvk);
+
+        let column_titles = view.titles(&gvk, crd);
 
         channel
             .send(WatchStreamEvent::AnnounceColumns {
@@ -94,10 +105,7 @@ pub async fn watch_gvk_with_view(
 
             let to_send = match event {
                 Some(kube::api::WatchEvent::Added(obj)) => {
-                    let columns = view
-                        .render(app_handle.clone(), &client_id, &gvk, &obj)
-                        .await
-                        .unwrap();
+                    let columns = view.render(&gvk, crd, &obj).unwrap();
                     Some(WatchStreamEvent::Created {
                         uid: obj.metadata.uid.expect("no uid"),
                         namespace: obj.metadata.namespace.or(Some("".into())).unwrap(),
@@ -106,10 +114,7 @@ pub async fn watch_gvk_with_view(
                     })
                 }
                 Some(kube::api::WatchEvent::Modified(obj)) => {
-                    let columns = view
-                        .render(app_handle.clone(), &client_id, &gvk, &obj)
-                        .await
-                        .unwrap();
+                    let columns = view.render(&gvk, crd, &obj).unwrap();
                     Some(WatchStreamEvent::Updated {
                         uid: obj.metadata.uid.expect("no uid"),
                         namespace: obj.metadata.namespace.or(Some("".into())).unwrap(),

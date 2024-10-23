@@ -1,45 +1,24 @@
 use super::ResourceRenderer;
-use crate::{
-    app_state::KubernetesClientRegistry,
-    frontend_types::{BackendError, FrontendValue},
-};
-use async_trait::async_trait;
+use crate::frontend_types::{BackendError, FrontendValue};
+use k8s_openapi::apiextensions_apiserver::pkg::apis::apiextensions::v1::CustomResourceDefinition;
 use kube::api::GroupVersionKind;
 use serde_json::json;
 use serde_json_path::JsonPath;
-use tauri::Manager as _;
-use uuid::Uuid;
 
 #[derive(Default)]
 pub struct CrdRenderer {}
 
-#[async_trait]
 impl ResourceRenderer for CrdRenderer {
     fn display_name(&self) -> &str {
         "Custom resource default view"
     }
 
-    async fn titles(
+    fn titles(
         &self,
-        app_handle: tauri::AppHandle,
-        client_id: &Uuid,
-        gvk: &GroupVersionKind,
+        _gvk: &GroupVersionKind,
+        crd: Option<&CustomResourceDefinition>,
     ) -> Result<Vec<String>, BackendError> {
-        let kubernetes_client_registry =
-            app_handle.state::<tokio::sync::Mutex<KubernetesClientRegistry>>();
-        let kubernetes_client_registry = kubernetes_client_registry.lock().await;
-
-        let (_, discovery) = &kubernetes_client_registry
-            .registered
-            .get(&client_id)
-            .ok_or("Client not found")
-            .map_err(|e| BackendError::Generic(e.to_owned()))?;
-
-        let crd = discovery
-            .crds
-            .get(&gvk)
-            .ok_or("CRD not found")
-            .map_err(|e| BackendError::Generic(e.to_owned()))?;
+        let crd = crd.expect("must pass a CustomResourceDefinition");
 
         let crd_version = crd
             .spec
@@ -65,28 +44,13 @@ impl ResourceRenderer for CrdRenderer {
         Ok(columns)
     }
 
-    async fn render(
+    fn render(
         &self,
-        app_handle: tauri::AppHandle,
-        client_id: &Uuid,
-        gvk: &GroupVersionKind,
+        _gvk: &GroupVersionKind,
+        crd: Option<&CustomResourceDefinition>,
         obj: &kube::api::DynamicObject,
     ) -> Result<Vec<Result<Vec<FrontendValue>, String>>, BackendError> {
-        let kubernetes_client_registry =
-            app_handle.state::<tokio::sync::Mutex<KubernetesClientRegistry>>();
-        let kubernetes_client_registry = kubernetes_client_registry.lock().await;
-
-        let (_, discovery) = &kubernetes_client_registry
-            .registered
-            .get(&client_id)
-            .ok_or("Client not found")
-            .map_err(|e| BackendError::Generic(e.to_owned()))?;
-
-        let crd = discovery
-            .crds
-            .get(&gvk)
-            .ok_or("CRD not found")
-            .map_err(|e| BackendError::Generic(e.to_owned()))?;
+        let crd = crd.expect("must pass a CustomResourceDefinition");
 
         let crd_version = crd
             .spec

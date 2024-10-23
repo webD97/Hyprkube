@@ -1,11 +1,11 @@
 use crate::{
-    app_state::KubernetesClientRegistry,
+    app_state::KubernetesClientRegistryState,
     frontend_types::{BackendError, KubernetesClient},
 };
 
 #[tauri::command]
 pub async fn initialize_kube_client(
-    client_registry: tauri::State<'_, tokio::sync::Mutex<KubernetesClientRegistry>>,
+    client_registry: tauri::State<'_, KubernetesClientRegistryState>,
 ) -> Result<KubernetesClient, BackendError> {
     let client = kube::Client::try_default().await?;
 

@@ -1,7 +1,6 @@
-use async_trait::async_trait;
+use k8s_openapi::apiextensions_apiserver::pkg::apis::apiextensions::v1::CustomResourceDefinition;
 use kube::api::GroupVersionKind;
 use thiserror::Error;
-use uuid::Uuid;
 
 use crate::{
     frontend_types::{BackendError, FrontendValue},
@@ -132,26 +131,23 @@ impl ScriptedResourceView {
     }
 }
 
-#[async_trait]
 impl ResourceRenderer for ScriptedResourceView {
     fn display_name(&self) -> &str {
         self.display_name()
     }
 
-    async fn titles(
+    fn titles(
         &self,
-        _app_handle: tauri::AppHandle,
-        _client_id: &Uuid,
         _gvk: &GroupVersionKind,
+        _crd: Option<&CustomResourceDefinition>,
     ) -> Result<Vec<String>, BackendError> {
         Ok(self.render_titles())
     }
 
-    async fn render(
+    fn render(
         &self,
-        _app_handle: tauri::AppHandle,
-        _client_id: &Uuid,
         _gvk: &GroupVersionKind,
+        _crd: Option<&CustomResourceDefinition>,
         obj: &kube::api::DynamicObject,
     ) -> Result<Vec<Result<Vec<FrontendValue>, String>>, BackendError> {
         Ok(self.render_columns(obj))

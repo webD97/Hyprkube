@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 
 use k8s_openapi::apiextensions_apiserver::pkg::apis::apiextensions::v1::CustomResourceDefinition;
 use kube::api::{GroupVersionKind, ListParams};
@@ -30,6 +30,8 @@ pub struct DiscoveryResult {
     pub builtin_apigroups: Vec<String>,
     pub crds: HashMap<GroupVersionKind, CustomResourceDefinition>,
 }
+
+pub type KubernetesClientRegistryState = Arc<tokio::sync::Mutex<KubernetesClientRegistry>>;
 
 pub struct KubernetesClientRegistry {
     pub registered: HashMap<Uuid, (kube::Client, DiscoveryResult)>,

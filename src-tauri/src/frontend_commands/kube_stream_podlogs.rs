@@ -8,7 +8,7 @@ use tokio_util::compat::FuturesAsyncReadCompatExt;
 use uuid::Uuid;
 
 use crate::{
-    app_state::{JoinHandleStore, KubernetesClientRegistry},
+    app_state::{JoinHandleStore, KubernetesClientRegistryState},
     frontend_types::BackendError,
 };
 
@@ -27,7 +27,7 @@ pub enum LogStreamEvent {
 
 #[tauri::command]
 pub async fn kube_stream_podlogs(
-    client_registry_arc: State<'_, tokio::sync::Mutex<KubernetesClientRegistry>>,
+    client_registry_arc: State<'_, KubernetesClientRegistryState>,
     join_handle_store: State<'_, Arc<Mutex<JoinHandleStore>>>,
     client_id: Uuid,
     namespace: &str,
