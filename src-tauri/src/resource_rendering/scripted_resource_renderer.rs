@@ -4,7 +4,7 @@ use thiserror::Error;
 use uuid::Uuid;
 
 use crate::{
-    frontend_types::FrontendValue,
+    frontend_types::{BackendError, FrontendValue},
     resource_rendering::{ColoredBox, ColoredString, RelativeTime},
 };
 
@@ -143,8 +143,8 @@ impl ResourceRenderer for ScriptedResourceView {
         _app_handle: tauri::AppHandle,
         _client_id: &Uuid,
         _gvk: &GroupVersionKind,
-    ) -> Vec<String> {
-        self.render_titles()
+    ) -> Result<Vec<String>, BackendError> {
+        Ok(self.render_titles())
     }
 
     async fn render(
@@ -153,7 +153,7 @@ impl ResourceRenderer for ScriptedResourceView {
         _client_id: &Uuid,
         _gvk: &GroupVersionKind,
         obj: &kube::api::DynamicObject,
-    ) -> Vec<Result<Vec<FrontendValue>, String>> {
-        self.render_columns(obj)
+    ) -> Result<Vec<Result<Vec<FrontendValue>, String>>, BackendError> {
+        Ok(self.render_columns(obj))
     }
 }

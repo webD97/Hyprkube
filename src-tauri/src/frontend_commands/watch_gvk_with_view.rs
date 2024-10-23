@@ -78,7 +78,7 @@ pub async fn watch_gvk_with_view(
 
         channel
             .send(WatchStreamEvent::AnnounceColumns {
-                titles: column_titles,
+                titles: column_titles.unwrap(),
             })
             .unwrap();
 
@@ -96,7 +96,8 @@ pub async fn watch_gvk_with_view(
                 Some(kube::api::WatchEvent::Added(obj)) => {
                     let columns = view
                         .render(app_handle.clone(), &client_id, &gvk, &obj)
-                        .await;
+                        .await
+                        .unwrap();
                     Some(WatchStreamEvent::Created {
                         uid: obj.metadata.uid.expect("no uid"),
                         namespace: obj.metadata.namespace.or(Some("".into())).unwrap(),
@@ -107,7 +108,8 @@ pub async fn watch_gvk_with_view(
                 Some(kube::api::WatchEvent::Modified(obj)) => {
                     let columns = view
                         .render(app_handle.clone(), &client_id, &gvk, &obj)
-                        .await;
+                        .await
+                        .unwrap();
                     Some(WatchStreamEvent::Updated {
                         uid: obj.metadata.uid.expect("no uid"),
                         namespace: obj.metadata.namespace.or(Some("".into())).unwrap(),

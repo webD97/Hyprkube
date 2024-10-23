@@ -1,5 +1,8 @@
 use super::ResourceRenderer;
-use crate::{app_state::KubernetesClientRegistry, frontend_types::FrontendValue};
+use crate::{
+    app_state::KubernetesClientRegistry,
+    frontend_types::{BackendError, FrontendValue},
+};
 use async_trait::async_trait;
 use kube::api::GroupVersionKind;
 use serde_json::json;
@@ -21,7 +24,7 @@ impl ResourceRenderer for CrdRenderer {
         app_handle: tauri::AppHandle,
         client_id: &Uuid,
         gvk: &GroupVersionKind,
-    ) -> Vec<String> {
+    ) -> Result<Vec<String>, BackendError> {
         let kubernetes_client_registry =
             app_handle.state::<tokio::sync::Mutex<KubernetesClientRegistry>>();
         let kubernetes_client_registry = kubernetes_client_registry.lock().await;
@@ -29,10 +32,21 @@ impl ResourceRenderer for CrdRenderer {
         let (_, discovery) = &kubernetes_client_registry
             .registered
             .get(&client_id)
-            .unwrap();
+            .ok_or("Client not found")
+            .map_err(|e| BackendError::Generic(e.to_owned()))?;
 
-        let crd = discovery.crds.get(&gvk).unwrap();
-        let crd_version = crd.spec.versions.first().unwrap();
+        let crd = discovery
+            .crds
+            .get(&gvk)
+            .ok_or("CRD not found")
+            .map_err(|e| BackendError::Generic(e.to_owned()))?;
+
+        let crd_version = crd
+            .spec
+            .versions
+            .first()
+            .ok_or("CRD version not found")
+            .map_err(|e| BackendError::Generic(e.to_owned()))?;
 
         let mut columns = vec!["Name".to_owned()];
 
@@ -48,7 +62,7 @@ impl ResourceRenderer for CrdRenderer {
 
         columns.push("Age".to_owned());
 
-        columns
+        Ok(columns)
     }
 
     async fn render(
@@ -57,7 +71,7 @@ impl ResourceRenderer for CrdRenderer {
         client_id: &Uuid,
         gvk: &GroupVersionKind,
         obj: &kube::api::DynamicObject,
-    ) -> Vec<Result<Vec<crate::frontend_types::FrontendValue>, String>> {
+    ) -> Result<Vec<Result<Vec<FrontendValue>, String>>, BackendError> {
         let kubernetes_client_registry =
             app_handle.state::<tokio::sync::Mutex<KubernetesClientRegistry>>();
         let kubernetes_client_registry = kubernetes_client_registry.lock().await;
@@ -65,10 +79,21 @@ impl ResourceRenderer for CrdRenderer {
         let (_, discovery) = &kubernetes_client_registry
             .registered
             .get(&client_id)
-            .unwrap();
+            .ok_or("Client not found")
+            .map_err(|e| BackendError::Generic(e.to_owned()))?;
 
-        let crd = discovery.crds.get(&gvk).unwrap();
-        let crd_version = crd.spec.versions.first().unwrap();
+        let crd = discovery
+            .crds
+            .get(&gvk)
+            .ok_or("CRD not found")
+            .map_err(|e| BackendError::Generic(e.to_owned()))?;
+
+        let crd_version = crd
+            .spec
+            .versions
+            .first()
+            .ok_or("CRD version not found")
+            .map_err(|e| BackendError::Generic(e.to_owned()))?;
 
         let mut values: Vec<Result<Vec<crate::frontend_types::FrontendValue>, String>> = vec![];
 
@@ -120,7 +145,7 @@ impl ResourceRenderer for CrdRenderer {
                 .to_owned(),
         })]));
 
-        values
+        Ok(values)
     }
 }
 

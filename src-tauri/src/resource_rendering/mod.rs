@@ -5,7 +5,7 @@ mod renderer_registry;
 mod resource_view_definition;
 mod scripted_resource_renderer;
 
-use crate::frontend_types::FrontendValue;
+use crate::frontend_types::{BackendError, FrontendValue};
 use async_trait::async_trait;
 pub use crd_renderer::*;
 pub use frontend::*;
@@ -22,7 +22,7 @@ pub trait ResourceRenderer: Send + Sync {
         app_handle: tauri::AppHandle,
         client_id: &Uuid,
         gvk: &GroupVersionKind,
-    ) -> Vec<String>;
+    ) -> Result<Vec<String>, BackendError>;
 
     async fn render(
         &self,
@@ -30,5 +30,5 @@ pub trait ResourceRenderer: Send + Sync {
         client_id: &Uuid,
         gvk: &GroupVersionKind,
         obj: &kube::api::DynamicObject,
-    ) -> Vec<Result<Vec<FrontendValue>, String>>;
+    ) -> Result<Vec<Result<Vec<FrontendValue>, String>>, BackendError>;
 }

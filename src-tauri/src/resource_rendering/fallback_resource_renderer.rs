@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use kube::api::GroupVersionKind;
 use uuid::Uuid;
 
-use crate::frontend_types::FrontendValue;
+use crate::frontend_types::{BackendError, FrontendValue};
 
 use super::ResourceRenderer;
 
@@ -19,8 +19,8 @@ impl ResourceRenderer for FallbackRenderer {
         _app_handle: tauri::AppHandle,
         _client_id: &Uuid,
         _gvk: &GroupVersionKind,
-    ) -> Vec<String> {
-        vec!["Namespace".into(), "Name".into(), "Age".into()]
+    ) -> Result<Vec<String>, BackendError> {
+        Ok(vec!["Namespace".into(), "Name".into(), "Age".into()])
     }
 
     async fn render(
@@ -29,8 +29,8 @@ impl ResourceRenderer for FallbackRenderer {
         _client_id: &Uuid,
         _gvk: &GroupVersionKind,
         obj: &kube::api::DynamicObject,
-    ) -> Vec<Result<Vec<FrontendValue>, String>> {
-        vec![
+    ) -> Result<Vec<Result<Vec<FrontendValue>, String>>, BackendError> {
+        Ok(vec![
             Ok(vec![FrontendValue::PlainString(
                 obj.metadata.clone().namespace.or(Some("".into())).unwrap(),
             )]),
@@ -43,6 +43,6 @@ impl ResourceRenderer for FallbackRenderer {
                     .creation_timestamp
                     .map_or("".into(), |v| v.0.to_rfc3339()),
             )]),
-        ]
+        ])
     }
 }
