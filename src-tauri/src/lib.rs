@@ -36,8 +36,7 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
-            frontend_commands::kube_discover,
-            frontend_commands::initialize_kube_client,
+            frontend_commands::discover_kubernetes_cluster,
             frontend_commands::kube_stream_podlogs,
             frontend_commands::watch_gvk_with_view,
             frontend_commands::cleanup_channel

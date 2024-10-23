@@ -1,20 +1,20 @@
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 
-import { Gvk, KubernetesClient, NamespaceAndName } from './model/k8s';
 import { useEffect, useState } from 'react';
+import { Gvk, NamespaceAndName } from './model/k8s';
 
+import { DiscoveredCluster, DiscoveryResult } from './api/DiscoveredCluster';
 import classes from './App.module.css';
-import GvkList from './components/GvkList';
-import { getDefaultKubernetesClient } from './api/KubernetesClient';
-import { useGvks } from './hooks/useGvks';
 import EmojiHint from './components/EmojiHint';
-import useResourceWatch from './hooks/useResourceWatch';
-import ResourceView from './components/ResourceView';
+import GvkList from './components/GvkList';
 import LogPanel from './components/LogPanel';
-import StatusPanel from './containers/StatusPanel';
+import ResourceView from './components/ResourceView';
 import TabView, { Tab } from './components/TabView';
 import { useTabs } from './components/TabView/hooks';
+import StatusPanel from './containers/StatusPanel';
+import useResourceWatch from './hooks/useResourceWatch';
+import { invoke } from '@tauri-apps/api/core';
 
 const defaultPinnedGvks: Gvk[] = [
   { group: '', version: 'v1', kind: 'Node' },
@@ -33,31 +33,32 @@ const defaultPinnedGvks: Gvk[] = [
 ];
 
 function App() {
-  const [kubernetesClient, setKubernetesClient] = useState<KubernetesClient | undefined>(undefined);
-  const gvks = useGvks(kubernetesClient);
+  const [clientId, setClientId] = useState<string>();
+  const [discovery, setDiscovery] = useState<DiscoveryResult>();
   const [currentGvk, setCurrentGvk] = useState<Gvk>();
   const [pinnedGvks, setPinnedGvks] = useState<Gvk[]>(defaultPinnedGvks);
   const [selectedResource, setSelectedResource] = useState<NamespaceAndName>({ namespace: '', name: '' });
   const [selectedView, setSelectedView] = useState("");
-  const [columnTitles, resources] = useResourceWatch(kubernetesClient, currentGvk, selectedView);
+  const [columnTitles, resources] = useResourceWatch(clientId, currentGvk, selectedView);
 
-
-  // const [tabs, setTabs] = useState<ReactElement<TabProps>[]>([]);
   const [tabs, activeTab, pushTab, removeTab, setActiveTab] = useTabs();
 
   useEffect(() => {
     if (!currentGvk) return;
 
-    const availableViews = gvks?.gvks[currentGvk.group].kinds.find(k => k.kind === currentGvk.kind)?.views || [];
+    const availableViews = discovery?.gvks[currentGvk.group].kinds.find(k => k.kind === currentGvk.kind)?.views || [];
 
     if (availableViews?.length < 1) return;
 
     setSelectedView(availableViews[0]);
-  }, [selectedResource, currentGvk, gvks?.gvks]);
+  }, [selectedResource, currentGvk, discovery?.gvks]);
 
   useEffect(() => {
-    getDefaultKubernetesClient()
-      .then(client => setKubernetesClient(client))
+    (invoke('discover_kubernetes_cluster') as Promise<DiscoveredCluster>)
+      .then(discoveredCluster => {
+        setClientId(discoveredCluster.clientId);
+        setDiscovery(discoveredCluster.discovery);
+      })
       .catch(e => alert(e));
   }, []);
 
@@ -84,7 +85,7 @@ function App() {
 
         <h2>Builtin resources</h2>
         {
-          Object.values(gvks?.gvks || [])
+          Object.values(discovery?.gvks || [])
             .filter((group) => !group.isCrd)
             .sort((groupA, groupB) => groupA.name.localeCompare(groupB.name))
             .map(({ name: groupName, kinds }, idx) => {
@@ -105,7 +106,7 @@ function App() {
 
         <h2>Custom resources</h2>
         {
-          Object.values(gvks?.gvks || [])
+          Object.values(discovery?.gvks || [])
             .filter((group) => group.isCrd)
             .sort((groupA, groupB) => groupA.name.localeCompare(groupB.name))
             .map(({ name: groupName, kinds }) => {
@@ -143,7 +144,7 @@ function App() {
                   <h2>{currentGvk?.kind}</h2>
                   <select value={selectedView} onChange={(e) => setSelectedView(e.target.value)}>
                     {
-                      gvks?.gvks[currentGvk.group].kinds.find(v => v.kind === currentGvk.kind)?.views.map(view => (
+                      discovery?.gvks[currentGvk.group].kinds.find(v => v.kind === currentGvk.kind)?.views.map(view => (
                         <option key={view}>{view}</option>
                       ))
                     }
@@ -161,7 +162,7 @@ function App() {
                           {
                             () => (
                               <LogPanel
-                                kubernetesClient={kubernetesClient}
+                                kubernetesClientId={clientId}
                                 namespace={resources[uid].namespace}
                                 name={resources[uid].name}
                               />

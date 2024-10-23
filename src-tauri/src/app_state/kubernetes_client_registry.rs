@@ -7,7 +7,7 @@ use uuid::Uuid;
 
 use crate::frontend_types::BackendError;
 
-#[derive(Serialize)]
+#[derive(Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct DiscoveredGroup {
     pub name: String,
@@ -15,14 +15,14 @@ pub struct DiscoveredGroup {
     pub kinds: Vec<DiscoveredResource>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct DiscoveredResource {
     pub version: String,
     pub kind: String,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct DiscoveryResult {
     pub gvks: HashMap<String, DiscoveredGroup>,
@@ -44,14 +44,17 @@ impl KubernetesClientRegistry {
         }
     }
 
-    pub async fn manage(&mut self, client: kube::Client) -> Result<Uuid, BackendError> {
+    pub async fn manage(
+        &mut self,
+        client: kube::Client,
+    ) -> Result<(Uuid, DiscoveryResult), BackendError> {
         let id = Uuid::new_v4();
 
         let discovery = Self::run_discovery(client.clone()).await?;
 
-        self.registered.insert(id, (client, discovery));
+        self.registered.insert(id, (client, discovery.clone()));
 
-        Ok(id)
+        Ok((id, discovery))
     }
 
     pub fn try_clone(&self, id: &Uuid) -> Result<kube::Client, BackendError> {

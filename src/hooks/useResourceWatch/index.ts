@@ -1,6 +1,6 @@
 import { Channel, invoke } from "@tauri-apps/api/core";
 import { useEffect, useState } from "react";
-import { Gvk, KubernetesClient } from "../../model/k8s";
+import { Gvk } from "../../model/k8s";
 
 type ResourceField =
     {
@@ -70,13 +70,13 @@ export type ResourceViewData = {
     [key: string]: Payload
 };
 
-export default function useKubernetesResourceWatch(kubernetesClient: KubernetesClient | undefined, gvk: Gvk | undefined, viewName: string): [string[], ResourceViewData] {
+export default function useKubernetesResourceWatch(kubernetesClientId: string | undefined, gvk: Gvk | undefined, viewName: string): [string[], ResourceViewData] {
     const [columnTitles, setColumnTitles] = useState<string[]>([]);
     const [resources, setResources] = useState<ResourceViewData>({});
 
     useEffect(() => {
         if (gvk === undefined) return;
-        if (kubernetesClient === undefined) return;
+        if (kubernetesClientId === undefined) return;
         if (viewName === '') return;
 
         const channel = new Channel<WatchEvent>();
@@ -116,13 +116,13 @@ export default function useKubernetesResourceWatch(kubernetesClient: KubernetesC
         setResources({});
         setColumnTitles([]);
 
-        invoke('watch_gvk_with_view', { clientId: kubernetesClient.id, gvk, channel, viewName })
+        invoke('watch_gvk_with_view', { clientId: kubernetesClientId, gvk, channel, viewName })
             .catch(e => alert(e));
 
         return () => {
             invoke('cleanup_channel', { channel });
         };
-    }, [gvk, kubernetesClient, viewName]);
+    }, [gvk, kubernetesClientId, viewName]);
 
     return [columnTitles, resources];
 }

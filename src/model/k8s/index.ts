@@ -16,7 +16,3 @@ export interface NamespaceAndName {
     namespace?: string,
     name?: string
 }
-
-export type KubernetesClient = {
-    id: string
-};
