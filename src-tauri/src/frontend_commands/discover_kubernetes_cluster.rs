@@ -1,80 +1,51 @@
-use std::{collections::HashMap, sync::Arc};
+use std::sync::Arc;
 
 use kube::api::GroupVersionKind;
 use serde::Serialize;
+use tauri::{async_runtime::Mutex, State};
 
 use crate::{
-    app_state::KubernetesClientRegistryState,
+    app_state::{
+        AsyncDiscoveryResult, DiscoveredResource, JoinHandleStore, KubernetesClientRegistryState,
+    },
     frontend_types::{BackendError, DiscoveredCluster},
     resource_rendering::RendererRegistry,
 };
 
-#[derive(Serialize)]
+#[derive(Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
-pub struct DiscoveredGroup {
-    pub name: String,
-    pub is_crd: bool,
-    pub kinds: Vec<DiscoveredResource>,
-}
-
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct DiscoveredResource {
-    pub version: String,
-    pub kind: String,
-    pub views: Vec<String>,
-}
-
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct DiscoveryResult {
-    pub gvks: HashMap<String, DiscoveredGroup>,
-    pub crd_apigroups: Vec<String>,
-    pub builtin_apigroups: Vec<String>,
+pub enum DiscoveryResult {
+    DiscoveredResource((DiscoveredResource, Vec<String>)),
 }
 
 #[tauri::command]
 pub async fn discover_kubernetes_cluster(
     client_registry: tauri::State<'_, KubernetesClientRegistryState>,
     view_registry: tauri::State<'_, Arc<RendererRegistry>>,
+    join_handle_store: State<'_, Arc<Mutex<JoinHandleStore>>>,
+    channel: tauri::ipc::Channel<DiscoveryResult>,
 ) -> Result<DiscoveredCluster, BackendError> {
     let config = kube::Config::infer().await.unwrap();
     let client = kube::Client::try_default().await?;
-    let (client_id, internal_discovery) = client_registry.lock().await.manage(client, config).await?;
+    let (client_id, mut internal_discovery, disovery_handle) =
+        client_registry.lock().await.manage(client, config).await?;
 
-    let mut gvks: HashMap<String, DiscoveredGroup> = HashMap::new();
+    join_handle_store
+        .lock()
+        .await
+        .insert(channel.id(), disovery_handle);
 
-    for (name, group) in internal_discovery.gvks {
-        let mut discovered_kinds: Vec<DiscoveredResource> = Vec::new();
-
-        for k in group.kinds {
-            let gvk = GroupVersionKind::gvk(&name, &k.version, &k.kind);
-            let views = view_registry.get_renderers(&client_id, &gvk).await;
-
-            discovered_kinds.push(DiscoveredResource {
-                version: k.version,
-                kind: k.kind,
-                views,
-            });
-        }
-
-        let discovered_group = DiscoveredGroup {
-            name: name.clone(),
-            is_crd: group.is_crd,
-            kinds: discovered_kinds,
+    while let Some(discovery) = internal_discovery.recv().await {
+        let send_result = match discovery {
+            AsyncDiscoveryResult::DiscoveredResource(resource) => {
+                let gvk = GroupVersionKind::gvk(&resource.group, &resource.version, &resource.kind);
+                let views = view_registry.get_renderers(&client_id, &gvk).await;
+                channel.send(DiscoveryResult::DiscoveredResource((resource, views)))
+            }
         };
 
-        gvks.insert(name.to_owned(), discovered_group);
+        send_result.unwrap();
     }
 
-    let discovery = DiscoveryResult {
-        builtin_apigroups: internal_discovery.builtin_apigroups,
-        crd_apigroups: internal_discovery.crd_apigroups,
-        gvks,
-    };
-
-    Ok(DiscoveredCluster {
-        client_id,
-        discovery,
-    })
+    Ok(DiscoveredCluster { client_id })
 }

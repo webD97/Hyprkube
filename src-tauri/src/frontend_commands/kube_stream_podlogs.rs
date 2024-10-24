@@ -1,4 +1,5 @@
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+use tauri::async_runtime::Mutex;
 
 use k8s_openapi::api::core::v1::Pod;
 use serde::Serialize;
@@ -34,7 +35,11 @@ pub async fn kube_stream_podlogs(
     name: &str,
     channel: tauri::ipc::Channel<LogStreamEvent>,
 ) -> Result<(), BackendError> {
-    let client = client_registry_arc.lock().await.try_clone(&client_id)?;
+    let client = client_registry_arc
+        .lock()
+        .await
+        .try_clone(&client_id)
+        .await?;
 
     let pods: kube::Api<Pod> = kube::Api::namespaced(client, namespace);
 
@@ -78,7 +83,7 @@ pub async fn kube_stream_podlogs(
         }
     });
 
-    join_handle_store.lock().unwrap().insert(channel_id, handle);
+    join_handle_store.lock().await.insert(channel_id, handle);
 
     Ok(())
 }

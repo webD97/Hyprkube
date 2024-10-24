@@ -24,9 +24,9 @@ pub fn run() {
             app.manage(Arc::new(tokio::sync::Mutex::new(
                 app_state::KubernetesClientRegistry::new(),
             )));
-            app.manage(Arc::new(Mutex::new(JoinHandleStore::new(
-                app_handle.clone(),
-            ))));
+            app.manage(Arc::new(tauri::async_runtime::Mutex::new(
+                JoinHandleStore::new(app_handle.clone()),
+            )));
 
             app.listen("frontend-onbeforeunload", move |_event| {
                 println!("ONBEFOREUNLOAD");

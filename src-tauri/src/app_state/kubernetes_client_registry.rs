@@ -3,6 +3,7 @@ use std::{collections::HashMap, sync::Arc};
 use k8s_openapi::apiextensions_apiserver::pkg::apis::apiextensions::v1::CustomResourceDefinition;
 use kube::api::{GroupVersionKind, ListParams};
 use serde::Serialize;
+use tauri::async_runtime::{channel, spawn, JoinHandle, Mutex, Receiver};
 use uuid::Uuid;
 
 use crate::frontend_types::BackendError;
@@ -18,139 +19,224 @@ pub struct DiscoveredGroup {
 #[derive(Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct DiscoveredResource {
+    pub group: String,
     pub version: String,
     pub kind: String,
+    pub source: ApiGroupSource,
 }
 
 #[derive(Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct DiscoveryResult {
     pub gvks: HashMap<String, DiscoveredGroup>,
-    pub crd_apigroups: Vec<String>,
-    pub builtin_apigroups: Vec<String>,
     pub crds: HashMap<GroupVersionKind, CustomResourceDefinition>,
 }
 
-pub type KubernetesClientRegistryState = Arc<tokio::sync::Mutex<KubernetesClientRegistry>>;
+#[derive(Serialize, Clone)]
+pub enum ApiGroupSource {
+    Builtin,
+    CustomResource,
+}
+
+#[derive(Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub enum AsyncDiscoveryResult {
+    DiscoveredResource(DiscoveredResource),
+}
+
+pub type KubernetesClientRegistryState = Arc<Mutex<KubernetesClientRegistry>>;
 
 pub struct KubernetesClientRegistry {
-    pub registered: HashMap<Uuid, (kube::Client, kube::Config, DiscoveryResult)>,
+    pub registered: Arc<Mutex<HashMap<Uuid, (kube::Client, kube::Config, DiscoveryResult)>>>,
 }
 
 impl KubernetesClientRegistry {
     pub fn new() -> KubernetesClientRegistry {
         KubernetesClientRegistry {
-            registered: HashMap::new(),
+            registered: Arc::new(Mutex::new(HashMap::new())),
         }
     }
 
     pub async fn manage(
         &mut self,
         new_client: kube::Client,
-        new_config: kube::Config
-    ) -> Result<(Uuid, DiscoveryResult), BackendError> {
-        for existing_client in &self.registered {
-            let (uuid, (_, config, discovery)) = existing_client;
-
-            if config.cluster_url == new_config.cluster_url {
-                println!("Reusing client {}", uuid);
-                return Ok((uuid.to_owned(), discovery.to_owned()));
-            }
-        }
-
+        new_config: kube::Config,
+    ) -> Result<(Uuid, Receiver<AsyncDiscoveryResult>, JoinHandle<()>), BackendError> {
         let id = Uuid::new_v4();
 
-        let discovery = Self::run_discovery(new_client.clone()).await?;
+        let (mut discovery_rx, discovery_handle) = Self::run_discovery(new_client.clone()).await?;
 
-        self.registered.insert(id, (new_client, new_config, discovery.clone()));
+        self.registered.lock().await.insert(
+            id,
+            (
+                new_client,
+                new_config,
+                DiscoveryResult {
+                    crds: HashMap::new(),
+                    gvks: HashMap::new(),
+                },
+            ),
+        );
+
+        let (downstream_tx, downstream_rx) = channel::<AsyncDiscoveryResult>(100);
+
+        let registered_arc = Arc::clone(&self.registered);
+
+        spawn(async move {
+            while let Some(result) = discovery_rx.recv().await {
+                let mut registered = registered_arc.lock().await;
+                let (_, _, discovery) = registered.get_mut(&id).unwrap();
+                downstream_tx.send(result.clone()).await.unwrap();
+                match result {
+                    AsyncDiscoveryResult::DiscoveredResource(resource) => {
+                        discovery
+                            .gvks
+                            .entry(resource.group.clone())
+                            .or_insert(DiscoveredGroup {
+                                name: resource.group.clone(),
+                                kinds: Vec::new(),
+                                is_crd: matches!(resource.source, ApiGroupSource::CustomResource),
+                            })
+                            .kinds
+                            .push(resource);
+                    }
+                }
+            }
+        });
 
         println!("Managing new client {}", id);
-        Ok((id, discovery))
+        Ok((id, downstream_rx, discovery_handle))
     }
 
-    pub fn try_clone(&self, id: &Uuid) -> Result<kube::Client, BackendError> {
+    async fn run_discovery(
+        client: kube::Client,
+    ) -> Result<(Receiver<AsyncDiscoveryResult>, JoinHandle<()>), BackendError> {
+        let (result_tx, result_rx) = channel::<AsyncDiscoveryResult>(100);
+
+        let handle = spawn(async move {
+            println!("Starting discovery");
+            let discovery = kube::Discovery::new(client.clone()).run().await.unwrap();
+            println!("Discovery done");
+
+            let api: kube::Api<CustomResourceDefinition> = kube::Api::all(client.clone());
+            println!("Listing CRDs");
+
+            let mut continuation_token: Option<String> = None;
+
+            let mut builtin_group_names: Vec<String> = Vec::new();
+            let mut crd_group_names: Vec<String> = Vec::new();
+
+            let mut crds: Vec<CustomResourceDefinition> = Vec::new();
+
+            loop {
+                let crd_list = api
+                    .list(&ListParams {
+                        limit: Some(15),
+                        timeout: Some(60),
+                        continue_token: continuation_token,
+                        ..ListParams::default()
+                    })
+                    .await
+                    .unwrap();
+
+                // Handle groups for custom resources
+                for crd in &crd_list.items {
+                    crds.push(crd.clone());
+
+                    if crd_group_names.contains(&crd.spec.group) {
+                        continue;
+                    }
+
+                    let latest = crd.spec.versions.first().unwrap();
+
+                    crd_group_names.push(crd.spec.group.clone());
+
+                    result_tx
+                        .send(AsyncDiscoveryResult::DiscoveredResource(
+                            DiscoveredResource {
+                                group: crd.spec.group.to_owned(),
+                                kind: crd.spec.names.kind.to_owned(),
+                                version: latest.name.to_owned(),
+                                source: ApiGroupSource::CustomResource,
+                            },
+                        ))
+                        .await
+                        .unwrap();
+                }
+
+                // Handle groups for builtin resources
+                for group in discovery
+                    .groups()
+                    .filter(|g| !crd_group_names.contains(&g.name().to_owned()))
+                {
+                    for (ar, capabilities) in group.recommended_resources() {
+                        if !capabilities.supports_operation(kube::discovery::verbs::WATCH) {
+                            continue;
+                        }
+
+                        if !builtin_group_names.contains(&ar.group) {
+                            builtin_group_names.push(ar.group.clone());
+                            continue;
+                        }
+                    }
+                }
+
+                continuation_token = crd_list.metadata.continue_;
+
+                if continuation_token.is_none() {
+                    println!("Finished listing CRDs");
+                    break;
+                }
+
+                println!(
+                    "Still listing ({:?}) remaining",
+                    crd_list.metadata.remaining_item_count
+                );
+            }
+
+            // Handle resources themselves
+            for group in discovery.groups() {
+                for (ar, capabilities) in group.recommended_resources() {
+                    if !capabilities.supports_operation(kube::discovery::verbs::WATCH) {
+                        continue;
+                    }
+
+                    let crd = &crds
+                        .iter()
+                        .find(|crd| crd.spec.group == ar.group && crd.spec.names.kind == ar.kind);
+
+                    if crd.is_some() {
+                        continue;
+                    }
+
+                    result_tx
+                        .send(AsyncDiscoveryResult::DiscoveredResource(
+                            DiscoveredResource {
+                                group: ar.group.clone(),
+                                kind: ar.kind.clone(),
+                                version: ar.version.clone(),
+                                source: ApiGroupSource::Builtin,
+                            },
+                        ))
+                        .await
+                        .unwrap();
+                }
+            }
+
+            println!("End of future")
+        });
+
+        Ok((result_rx, handle))
+    }
+
+    pub async fn try_clone(&self, id: &Uuid) -> Result<kube::Client, BackendError> {
         self.registered
+            .lock()
+            .await
             .get(id)
             .map(|(client, _, _)| client.clone())
             .ok_or(BackendError::Generic(format!(
                 "Kubernetes client with id {id} not found."
             )))
-    }
-
-    async fn run_discovery(client: kube::Client) -> Result<DiscoveryResult, BackendError> {
-        println!("Starting discovery");
-        let discovery = kube::Discovery::new(client.clone()).run().await?;
-        println!("Discovery done");
-
-        let mut result = DiscoveryResult {
-            gvks: HashMap::new(),
-            crd_apigroups: vec![],
-            builtin_apigroups: vec![],
-            crds: HashMap::new(),
-        };
-
-        let api: kube::Api<CustomResourceDefinition> = kube::Api::all(client.clone());
-        println!("Listing CRDs");
-        let crds = api.list(&ListParams::default()).await?.items;
-        println!("Listing CRDs done");
-
-        for crd in &crds {
-            if !result.crd_apigroups.contains(&crd.spec.group) {
-                result.crd_apigroups.push(crd.spec.group.clone());
-            }
-        }
-
-        for group in discovery.groups() {
-            for (ar, capabilities) in group.recommended_resources() {
-                if !capabilities.supports_operation(kube::discovery::verbs::WATCH) {
-                    continue;
-                }
-
-                let is_crd = result.crd_apigroups.contains(&ar.group);
-
-                if !is_crd && !result.builtin_apigroups.contains(&ar.group) {
-                    result.builtin_apigroups.push(ar.group);
-                    continue;
-                }
-
-                if !result.gvks.contains_key(&ar.group) {
-                    result.gvks.insert(
-                        ar.group.clone(),
-                        DiscoveredGroup {
-                            name: ar.group.clone(),
-                            kinds: vec![],
-                            is_crd,
-                        },
-                    );
-                }
-
-                if is_crd {
-                    let crd = &crds
-                        .iter()
-                        .find(|crd| crd.spec.group == ar.group && crd.spec.names.kind == ar.kind)
-                        .unwrap();
-
-                    let gvk = GroupVersionKind {
-                        group: crd.spec.group.clone(),
-                        version: crd.spec.versions.first().unwrap().name.clone(),
-                        kind: crd.spec.names.kind.clone(),
-                    };
-
-                    result.crds.insert(gvk, (*crd).to_owned());
-                }
-
-                result
-                    .gvks
-                    .get_mut(&ar.group)
-                    .unwrap()
-                    .kinds
-                    .push(DiscoveredResource {
-                        kind: ar.kind.clone(),
-                        version: ar.version.clone(),
-                    });
-            }
-        }
-
-        Ok(result)
     }
 }

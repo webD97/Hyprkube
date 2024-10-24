@@ -1,4 +1,5 @@
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+use tauri::async_runtime::Mutex;
 
 use futures::{StreamExt as _, TryStreamExt as _};
 use serde::Serialize;
@@ -52,6 +53,7 @@ pub async fn watch_gvk_with_view(
         .lock()
         .await
         .try_clone(&client_id)
+        .await
         .map_err(|e| BackendError::Generic(e.to_string()))?;
 
     let (api_resource, _) = kube::discovery::oneshot::pinned_kind(&client, &gvk)
@@ -75,9 +77,8 @@ pub async fn watch_gvk_with_view(
             .await;
 
         let kubernetes_client_registry = client_registry_arc.lock().await;
-
-        let (_, _, discovery) = &kubernetes_client_registry
-            .registered
+        let registered = kubernetes_client_registry.registered.lock().await;
+        let (_, _, discovery) = &registered
             .get(&client_id)
             .ok_or("Client not found")
             .map_err(|e| BackendError::Generic(e.to_owned()))
@@ -144,7 +145,7 @@ pub async fn watch_gvk_with_view(
         }
     });
 
-    let mut join_handle_store = join_handle_store.lock().unwrap();
+    let mut join_handle_store = join_handle_store.lock().await;
     join_handle_store.insert(channel_id, handle);
 
     Ok(())

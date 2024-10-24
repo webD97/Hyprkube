@@ -4,7 +4,6 @@ import relativeTime from 'dayjs/plugin/relativeTime';
 import { useEffect, useState } from 'react';
 import { Gvk, NamespaceAndName } from './model/k8s';
 
-import { DiscoveredCluster, DiscoveryResult } from './api/DiscoveredCluster';
 import classes from './App.module.css';
 import EmojiHint from './components/EmojiHint';
 import GvkList from './components/GvkList';
@@ -13,8 +12,8 @@ import ResourceView from './components/ResourceView';
 import TabView, { Tab } from './components/TabView';
 import { useTabs } from './components/TabView/hooks';
 import StatusPanel from './containers/StatusPanel';
+import { useClusterDiscovery } from './hooks/useClusterDiscovery';
 import useResourceWatch from './hooks/useResourceWatch';
-import { invoke } from '@tauri-apps/api/core';
 
 const defaultPinnedGvks: Gvk[] = [
   { group: '', version: 'v1', kind: 'Node' },
@@ -33,12 +32,11 @@ const defaultPinnedGvks: Gvk[] = [
 ];
 
 function App() {
-  const [clientId, setClientId] = useState<string>();
-  const [discovery, setDiscovery] = useState<DiscoveryResult>();
   const [currentGvk, setCurrentGvk] = useState<Gvk>();
   const [pinnedGvks, setPinnedGvks] = useState<Gvk[]>(defaultPinnedGvks);
   const [selectedResource, setSelectedResource] = useState<NamespaceAndName>({ namespace: '', name: '' });
   const [selectedView, setSelectedView] = useState("");
+  const { discovery, clientId } = useClusterDiscovery();
   const [columnTitles, resources] = useResourceWatch(clientId, currentGvk, selectedView);
 
   const [tabs, activeTab, pushTab, removeTab, setActiveTab] = useTabs();
@@ -52,15 +50,6 @@ function App() {
 
     setSelectedView(availableViews[0]);
   }, [selectedResource, currentGvk, discovery?.gvks]);
-
-  useEffect(() => {
-    (invoke('discover_kubernetes_cluster') as Promise<DiscoveredCluster>)
-      .then(discoveredCluster => {
-        setClientId(discoveredCluster.clientId);
-        setDiscovery(discoveredCluster.discovery);
-      })
-      .catch(e => alert(e));
-  }, []);
 
   dayjs.extend(relativeTime);
 

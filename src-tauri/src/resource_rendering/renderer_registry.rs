@@ -97,8 +97,9 @@ impl RendererRegistry {
 
         let kubernetes_client_registry = &kubernetes_client_registry.lock().await;
 
-        let crds: Vec<&GroupVersionKind> = kubernetes_client_registry
-            .registered
+        let registered = kubernetes_client_registry.registered.lock().await;
+
+        let crds: Vec<&GroupVersionKind> = registered
             .get(&kube_client_id)
             .unwrap()
             .2
@@ -134,8 +135,9 @@ impl RendererRegistry {
 
         let kubernetes_client_registry = &kubernetes_client_registry.lock().await;
 
-        let crds: Vec<&GroupVersionKind> = kubernetes_client_registry
-            .registered
+        let registered = kubernetes_client_registry.registered.lock().await;
+
+        let crds: Vec<&GroupVersionKind> = registered
             .get(&kube_client_id)
             .unwrap()
             .2
