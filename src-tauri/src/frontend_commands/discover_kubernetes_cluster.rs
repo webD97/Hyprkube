@@ -38,8 +38,9 @@ pub async fn discover_kubernetes_cluster(
     client_registry: tauri::State<'_, KubernetesClientRegistryState>,
     view_registry: tauri::State<'_, Arc<RendererRegistry>>,
 ) -> Result<DiscoveredCluster, BackendError> {
+    let config = kube::Config::infer().await.unwrap();
     let client = kube::Client::try_default().await?;
-    let (client_id, internal_discovery) = client_registry.lock().await.manage(client).await?;
+    let (client_id, internal_discovery) = client_registry.lock().await.manage(client, config).await?;
 
     let mut gvks: HashMap<String, DiscoveredGroup> = HashMap::new();
 

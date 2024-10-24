@@ -34,7 +34,7 @@ pub struct DiscoveryResult {
 pub type KubernetesClientRegistryState = Arc<tokio::sync::Mutex<KubernetesClientRegistry>>;
 
 pub struct KubernetesClientRegistry {
-    pub registered: HashMap<Uuid, (kube::Client, DiscoveryResult)>,
+    pub registered: HashMap<Uuid, (kube::Client, kube::Config, DiscoveryResult)>,
 }
 
 impl KubernetesClientRegistry {
@@ -46,28 +46,41 @@ impl KubernetesClientRegistry {
 
     pub async fn manage(
         &mut self,
-        client: kube::Client,
+        new_client: kube::Client,
+        new_config: kube::Config
     ) -> Result<(Uuid, DiscoveryResult), BackendError> {
+        for existing_client in &self.registered {
+            let (uuid, (_, config, discovery)) = existing_client;
+
+            if config.cluster_url == new_config.cluster_url {
+                println!("Reusing client {}", uuid);
+                return Ok((uuid.to_owned(), discovery.to_owned()));
+            }
+        }
+
         let id = Uuid::new_v4();
 
-        let discovery = Self::run_discovery(client.clone()).await?;
+        let discovery = Self::run_discovery(new_client.clone()).await?;
 
-        self.registered.insert(id, (client, discovery.clone()));
+        self.registered.insert(id, (new_client, new_config, discovery.clone()));
 
+        println!("Managing new client {}", id);
         Ok((id, discovery))
     }
 
     pub fn try_clone(&self, id: &Uuid) -> Result<kube::Client, BackendError> {
         self.registered
             .get(id)
-            .map(|(client, _)| client.clone())
+            .map(|(client, _, _)| client.clone())
             .ok_or(BackendError::Generic(format!(
                 "Kubernetes client with id {id} not found."
             )))
     }
 
     async fn run_discovery(client: kube::Client) -> Result<DiscoveryResult, BackendError> {
+        println!("Starting discovery");
         let discovery = kube::Discovery::new(client.clone()).run().await?;
+        println!("Discovery done");
 
         let mut result = DiscoveryResult {
             gvks: HashMap::new(),
@@ -77,7 +90,9 @@ impl KubernetesClientRegistry {
         };
 
         let api: kube::Api<CustomResourceDefinition> = kube::Api::all(client.clone());
+        println!("Listing CRDs");
         let crds = api.list(&ListParams::default()).await?.items;
+        println!("Listing CRDs done");
 
         for crd in &crds {
             if !result.crd_apigroups.contains(&crd.spec.group) {

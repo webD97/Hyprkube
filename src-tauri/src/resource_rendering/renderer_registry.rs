@@ -101,7 +101,7 @@ impl RendererRegistry {
             .registered
             .get(&kube_client_id)
             .unwrap()
-            .1
+            .2
             .crds
             .keys()
             .collect();
@@ -138,7 +138,7 @@ impl RendererRegistry {
             .registered
             .get(&kube_client_id)
             .unwrap()
-            .1
+            .2
             .crds
             .keys()
             .collect();

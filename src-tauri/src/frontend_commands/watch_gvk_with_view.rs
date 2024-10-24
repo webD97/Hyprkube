@@ -76,7 +76,7 @@ pub async fn watch_gvk_with_view(
 
         let kubernetes_client_registry = client_registry_arc.lock().await;
 
-        let (_, discovery) = &kubernetes_client_registry
+        let (_, _, discovery) = &kubernetes_client_registry
             .registered
             .get(&client_id)
             .ok_or("Client not found")
