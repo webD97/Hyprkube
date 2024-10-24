@@ -20,12 +20,7 @@ impl ResourceRenderer for CrdRenderer {
     ) -> Result<Vec<String>, BackendError> {
         let crd = crd.expect("must pass a CustomResourceDefinition");
 
-        let crd_version = crd
-            .spec
-            .versions
-            .first()
-            .ok_or("CRD version not found")
-            .map_err(|e| BackendError::Generic(e.to_owned()))?;
+        let crd_version = crd.spec.versions.first().ok_or("CRD version not found")?;
 
         let mut columns = vec!["Name".to_owned()];
 
@@ -56,8 +51,7 @@ impl ResourceRenderer for CrdRenderer {
             .spec
             .versions
             .first()
-            .ok_or("CRD version not found")
-            .map_err(|e| BackendError::Generic(e.to_owned()))?;
+            .ok_or(BackendError::from("CRD version not found"))?;
 
         let mut values: Vec<Result<Vec<crate::frontend_types::FrontendValue>, String>> = vec![];
 

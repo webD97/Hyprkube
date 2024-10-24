@@ -20,3 +20,15 @@ impl serde::Serialize for BackendError {
         serializer.serialize_str(self.to_string().as_ref())
     }
 }
+
+impl From<String> for BackendError {
+    fn from(value: String) -> Self {
+        Self::Generic(value)
+    }
+}
+
+impl From<&str> for BackendError {
+    fn from(value: &str) -> Self {
+        Self::Generic(value.to_owned())
+    }
+}

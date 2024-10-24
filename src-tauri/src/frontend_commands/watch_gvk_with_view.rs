@@ -53,12 +53,9 @@ pub async fn watch_gvk_with_view(
         .lock()
         .await
         .try_clone(&client_id)
-        .await
-        .map_err(|e| BackendError::Generic(e.to_string()))?;
+        .await?;
 
-    let (api_resource, _) = kube::discovery::oneshot::pinned_kind(&client, &gvk)
-        .await
-        .map_err(|e| BackendError::Generic(e.to_string()))?;
+    let (api_resource, _) = kube::discovery::oneshot::pinned_kind(&client, &gvk).await?;
 
     let api: kube::Api<kube::api::DynamicObject> = kube::Api::all_with(client, &api_resource);
 
@@ -67,8 +64,7 @@ pub async fn watch_gvk_with_view(
 
     let mut stream = api
         .watch(&kube::api::WatchParams::default(), "0")
-        .await
-        .map_err(|e| BackendError::Generic(e.to_string()))?
+        .await?
         .boxed();
 
     let handle = tauri::async_runtime::spawn(async move {
@@ -78,11 +74,7 @@ pub async fn watch_gvk_with_view(
 
         let kubernetes_client_registry = client_registry_arc.lock().await;
         let registered = kubernetes_client_registry.registered.lock().await;
-        let (_, _, discovery) = &registered
-            .get(&client_id)
-            .ok_or("Client not found")
-            .map_err(|e| BackendError::Generic(e.to_owned()))
-            .unwrap();
+        let (_, _, discovery) = &registered.get(&client_id).unwrap();
 
         let crd = discovery.crds.get(&gvk);
 

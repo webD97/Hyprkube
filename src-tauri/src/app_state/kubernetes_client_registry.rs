@@ -235,8 +235,6 @@ impl KubernetesClientRegistry {
             .await
             .get(id)
             .map(|(client, _, _)| client.clone())
-            .ok_or(BackendError::Generic(format!(
-                "Kubernetes client with id {id} not found."
-            )))
+            .ok_or(format!("Kubernetes client with id {id} not found.").into())
     }
 }
