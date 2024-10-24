@@ -79,6 +79,9 @@ nav ul {
 nav details summary {
     height: 2.25em;
     line-height: 2.25em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 nav details>summary::before {
