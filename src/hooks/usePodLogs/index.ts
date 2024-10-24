@@ -1,6 +1,22 @@
 import { Channel, invoke } from "@tauri-apps/api/core";
 import { useState, useEffect } from "react";
-import { LogStreamEvent } from "../../api/LogStreamEvent";
+
+export type LogStreamEvent =
+    | {
+        event: 'newLine',
+        data: {
+            lines: string[]
+        }
+    }
+    | {
+        event: 'endOfStream'
+    }
+    | {
+        event: 'error'
+        data: {
+            msg: string
+        }
+    };
 
 export const usePodLogs = (kubernetesClientId: string | undefined, namespace: string, name: string) => {
     const [text, setText] = useState('');
