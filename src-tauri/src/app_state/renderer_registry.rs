@@ -1,4 +1,4 @@
-use std::{collections::HashMap, path::PathBuf};
+use std::{collections::HashMap, path::PathBuf, sync::Arc};
 
 use kube::api::GroupVersionKind;
 use rust_embed::Embed;
@@ -9,14 +9,14 @@ use uuid::Uuid;
 
 use crate::{
     app_state::KubernetesClientRegistryState, dirs::get_views_dir,
-    resource_rendering::ScriptedResourceView,
+    resource_rendering::{CrdRenderer, FallbackRenderer, ResourceRenderer, ScriptedResourceView},
 };
-
-use super::{fallback_resource_renderer::FallbackRenderer, CrdRenderer, ResourceRenderer};
 
 #[derive(Embed)]
 #[folder = "views/"]
 struct BuiltinScripts;
+
+pub type RendererRegistryState = Arc<RendererRegistry>;
 
 pub struct RendererRegistry {
     pub mappings: HashMap<GroupVersionKind, Vec<Box<dyn ResourceRenderer>>>,
@@ -27,6 +27,10 @@ pub struct RendererRegistry {
 
 impl RendererRegistry {
     const EMPTY_VEC: &Vec<Box<dyn ResourceRenderer>> = &Vec::new();
+
+    pub fn new_state(app_handle: tauri::AppHandle) -> RendererRegistryState {
+        Arc::new(Self::new(app_handle))
+    }
 
     pub fn new(app_handle: tauri::AppHandle) -> RendererRegistry {
         let mut renderers: HashMap<GroupVersionKind, Vec<Box<dyn ResourceRenderer>>> =

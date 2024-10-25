@@ -7,10 +7,7 @@ mod frontend_commands;
 mod frontend_types;
 mod resource_rendering;
 
-use std::sync::Arc;
-
-use app_state::{JoinHandleStore, JoinHandleStoreState, KubernetesClientRegistry};
-use resource_rendering::RendererRegistry;
+use app_state::{JoinHandleStore, JoinHandleStoreState, KubernetesClientRegistry, RendererRegistry};
 use tauri::{async_runtime::spawn, Listener, Manager};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -20,7 +17,7 @@ pub fn run() {
         .setup(|app| {
             let app_handle = app.handle().clone();
 
-            app.manage(Arc::new(RendererRegistry::new(app_handle.clone())));
+            app.manage(RendererRegistry::new_state(app_handle.clone()));
             app.manage(KubernetesClientRegistry::new_state());
             app.manage(JoinHandleStore::new_state(app_handle.clone()));
 

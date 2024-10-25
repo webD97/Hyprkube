@@ -6,9 +6,8 @@ use tauri::State;
 use uuid::Uuid;
 
 use crate::{
-    app_state::{JoinHandleStoreState, KubernetesClientRegistryState},
+    app_state::{JoinHandleStoreState, KubernetesClientRegistryState, RendererRegistry},
     frontend_types::{BackendError, FrontendValue},
-    resource_rendering::RendererRegistry,
 };
 
 #[derive(Clone, Serialize)]

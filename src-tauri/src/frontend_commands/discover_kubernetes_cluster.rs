@@ -6,10 +6,9 @@ use tauri::State;
 
 use crate::{
     app_state::{
-        AsyncDiscoveryResult, DiscoveredResource, JoinHandleStoreState, KubernetesClientRegistryState
+        AsyncDiscoveryResult, DiscoveredResource, JoinHandleStoreState, KubernetesClientRegistryState, RendererRegistry
     },
     frontend_types::{BackendError, DiscoveredCluster},
-    resource_rendering::RendererRegistry,
 };
 
 #[derive(Serialize, Clone)]
