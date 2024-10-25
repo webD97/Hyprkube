@@ -47,5 +47,7 @@ pub async fn discover_kubernetes_cluster(
         send_result.unwrap();
     }
 
+    join_handle_store.lock().await.abort(channel.id());
+
     Ok(DiscoveredCluster { client_id })
 }
