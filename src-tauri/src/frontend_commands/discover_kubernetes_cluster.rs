@@ -2,11 +2,11 @@ use std::sync::Arc;
 
 use kube::api::GroupVersionKind;
 use serde::Serialize;
-use tauri::{async_runtime::Mutex, State};
+use tauri::State;
 
 use crate::{
     app_state::{
-        AsyncDiscoveryResult, DiscoveredResource, JoinHandleStore, KubernetesClientRegistryState,
+        AsyncDiscoveryResult, DiscoveredResource, JoinHandleStoreState, KubernetesClientRegistryState
     },
     frontend_types::{BackendError, DiscoveredCluster},
     resource_rendering::RendererRegistry,
@@ -22,7 +22,7 @@ pub enum DiscoveryResult {
 pub async fn discover_kubernetes_cluster(
     client_registry: tauri::State<'_, KubernetesClientRegistryState>,
     view_registry: tauri::State<'_, Arc<RendererRegistry>>,
-    join_handle_store: State<'_, Arc<Mutex<JoinHandleStore>>>,
+    join_handle_store: State<'_, JoinHandleStoreState>,
     channel: tauri::ipc::Channel<DiscoveryResult>,
 ) -> Result<DiscoveredCluster, BackendError> {
     let config = kube::Config::infer().await.unwrap();

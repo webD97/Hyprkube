@@ -7,11 +7,11 @@ mod frontend_commands;
 mod frontend_types;
 mod resource_rendering;
 
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
-use app_state::JoinHandleStore;
+use app_state::{JoinHandleStore, JoinHandleStoreState};
 use resource_rendering::RendererRegistry;
-use tauri::{Listener, Manager};
+use tauri::{async_runtime::spawn, Listener, Manager};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -24,13 +24,14 @@ pub fn run() {
             app.manage(Arc::new(tokio::sync::Mutex::new(
                 app_state::KubernetesClientRegistry::new(),
             )));
-            app.manage(Arc::new(tauri::async_runtime::Mutex::new(
-                JoinHandleStore::new(app_handle.clone()),
-            )));
+            app.manage(JoinHandleStore::new_state(app_handle.clone()));
 
             app.listen("frontend-onbeforeunload", move |_event| {
                 println!("ONBEFOREUNLOAD");
-                reset_state(app_handle.clone());
+                let app_handle = app_handle.clone();
+                spawn(async move {
+                    reset_state(app_handle).await;
+                });
             });
 
             Ok(())
@@ -45,10 +46,10 @@ pub fn run() {
         .expect("error while running tauri application");
 }
 
-fn reset_state(app_handle: tauri::AppHandle) {
-    let join_handle_store = app_handle.state::<Arc<Mutex<JoinHandleStore>>>();
+async fn reset_state(app_handle: tauri::AppHandle) {
+    let join_handle_store = app_handle.state::<JoinHandleStoreState>();
 
-    let mut join_handle_store = join_handle_store.lock().unwrap();
+    let mut join_handle_store = join_handle_store.lock().await;
 
     let _ = std::mem::replace(
         &mut *join_handle_store,

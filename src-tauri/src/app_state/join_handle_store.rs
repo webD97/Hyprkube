@@ -1,7 +1,10 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
+use tauri::async_runtime::Mutex;
 
 use serde::Serialize;
 use tauri::Emitter;
+
+pub type JoinHandleStoreState = Arc<Mutex<JoinHandleStore>>;
 
 pub struct JoinHandleStore {
     pub handles: HashMap<u32, Vec<tauri::async_runtime::JoinHandle<()>>>,
@@ -22,6 +25,10 @@ impl Drop for JoinHandleStore {
 }
 
 impl JoinHandleStore {
+    pub fn new_state(app_handle: tauri::AppHandle) -> JoinHandleStoreState {
+        Arc::new(Mutex::new(JoinHandleStore::new(app_handle)))
+    }
+
     pub fn new(app_handle: tauri::AppHandle) -> Self {
         Self {
             handles: HashMap::default(),

@@ -1,5 +1,4 @@
 use std::sync::Arc;
-use tauri::async_runtime::Mutex;
 
 use futures::{StreamExt as _, TryStreamExt as _};
 use serde::Serialize;
@@ -7,7 +6,7 @@ use tauri::State;
 use uuid::Uuid;
 
 use crate::{
-    app_state::{JoinHandleStore, KubernetesClientRegistryState},
+    app_state::{JoinHandleStoreState, KubernetesClientRegistryState},
     frontend_types::{BackendError, FrontendValue},
     resource_rendering::RendererRegistry,
 };
@@ -39,7 +38,7 @@ pub enum WatchStreamEvent {
 #[tauri::command]
 pub async fn watch_gvk_with_view(
     client_registry_arc: State<'_, KubernetesClientRegistryState>,
-    join_handle_store: State<'_, Arc<Mutex<JoinHandleStore>>>,
+    join_handle_store: State<'_, JoinHandleStoreState>,
     views: State<'_, Arc<RendererRegistry>>,
     client_id: Uuid,
     gvk: kube::api::GroupVersionKind,

@@ -1,6 +1,3 @@
-use std::sync::Arc;
-use tauri::async_runtime::Mutex;
-
 use k8s_openapi::api::core::v1::Pod;
 use serde::Serialize;
 use tauri::State;
@@ -9,7 +6,7 @@ use tokio_util::compat::FuturesAsyncReadCompatExt;
 use uuid::Uuid;
 
 use crate::{
-    app_state::{JoinHandleStore, KubernetesClientRegistryState},
+    app_state::{JoinHandleStoreState, KubernetesClientRegistryState},
     frontend_types::BackendError,
 };
 
@@ -29,7 +26,7 @@ pub enum LogStreamEvent {
 #[tauri::command]
 pub async fn kube_stream_podlogs(
     client_registry_arc: State<'_, KubernetesClientRegistryState>,
-    join_handle_store: State<'_, Arc<Mutex<JoinHandleStore>>>,
+    join_handle_store: State<'_, JoinHandleStoreState>,
     client_id: Uuid,
     namespace: &str,
     name: &str,

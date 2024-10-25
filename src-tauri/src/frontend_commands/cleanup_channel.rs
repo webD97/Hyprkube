@@ -1,13 +1,10 @@
-use std::sync::Arc;
-use tauri::async_runtime::Mutex;
-
 use tauri::State;
 
-use crate::{app_state::JoinHandleStore, frontend_types::BackendError};
+use crate::{app_state::JoinHandleStoreState, frontend_types::BackendError};
 
 #[tauri::command]
 pub async fn cleanup_channel(
-    join_handle_store: State<'_, Arc<Mutex<JoinHandleStore>>>,
+    join_handle_store: State<'_, JoinHandleStoreState>,
     channel: tauri::ipc::Channel<()>,
 ) -> Result<(), BackendError> {
     let mut join_handle_store = join_handle_store.lock().await;
