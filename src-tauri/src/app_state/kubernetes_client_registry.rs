@@ -57,6 +57,10 @@ impl KubernetesClientRegistry {
         }
     }
 
+    pub fn new_state() -> KubernetesClientRegistryState {
+        Arc::new(Mutex::new(KubernetesClientRegistry::new()))
+    }
+
     pub async fn manage(
         &mut self,
         new_client: kube::Client,

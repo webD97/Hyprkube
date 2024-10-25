@@ -9,7 +9,7 @@ mod resource_rendering;
 
 use std::sync::Arc;
 
-use app_state::{JoinHandleStore, JoinHandleStoreState};
+use app_state::{JoinHandleStore, JoinHandleStoreState, KubernetesClientRegistry};
 use resource_rendering::RendererRegistry;
 use tauri::{async_runtime::spawn, Listener, Manager};
 
@@ -21,9 +21,7 @@ pub fn run() {
             let app_handle = app.handle().clone();
 
             app.manage(Arc::new(RendererRegistry::new(app_handle.clone())));
-            app.manage(Arc::new(tokio::sync::Mutex::new(
-                app_state::KubernetesClientRegistry::new(),
-            )));
+            app.manage(KubernetesClientRegistry::new_state());
             app.manage(JoinHandleStore::new_state(app_handle.clone()));
 
             app.listen("frontend-onbeforeunload", move |_event| {
