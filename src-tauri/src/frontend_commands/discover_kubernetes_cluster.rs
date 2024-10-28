@@ -6,8 +6,7 @@ use tauri::State;
 
 use crate::{
     app_state::{
-        AsyncDiscoveryResult, DiscoveredResource, JoinHandleStoreState,
-        KubernetesClientRegistryState, RendererRegistry,
+        AsyncDiscoveryResult, DiscoveredResource, JoinHandleStoreState, KubernetesClientRegistryState, RendererRegistry
     },
     frontend_types::{BackendError, DiscoveredCluster},
 };
@@ -28,7 +27,7 @@ pub async fn discover_kubernetes_cluster(
     let config = kube::Config::infer().await.unwrap();
     let client = kube::Client::try_default().await?;
     let (client_id, mut internal_discovery, disovery_handle) =
-        client_registry.manage(client, config).await?;
+        client_registry.lock().await.manage(client, config).await?;
 
     join_handle_store
         .lock()

@@ -3,8 +3,7 @@ use std::{collections::HashMap, sync::Arc};
 use k8s_openapi::apiextensions_apiserver::pkg::apis::apiextensions::v1::CustomResourceDefinition;
 use kube::api::{GroupVersionKind, ListParams};
 use serde::Serialize;
-use tauri::async_runtime::{channel, spawn, JoinHandle, Receiver};
-use tokio::sync::RwLock;
+use tauri::async_runtime::{channel, spawn, JoinHandle, Mutex, Receiver};
 use uuid::Uuid;
 
 use crate::frontend_types::BackendError;
@@ -45,27 +44,25 @@ pub enum AsyncDiscoveryResult {
     DiscoveredResource(DiscoveredResource),
 }
 
-pub type KubernetesClientRegistryState = Arc<KubernetesClientRegistry>;
-
-pub type ClusterState = (kube::Client, kube::Config, DiscoveryResult);
+pub type KubernetesClientRegistryState = Arc<Mutex<KubernetesClientRegistry>>;
 
 pub struct KubernetesClientRegistry {
-    registered: Arc<RwLock<HashMap<Uuid, ClusterState>>>,
+    pub registered: Arc<Mutex<HashMap<Uuid, (kube::Client, kube::Config, DiscoveryResult)>>>,
 }
 
 impl KubernetesClientRegistry {
     pub fn new() -> KubernetesClientRegistry {
         KubernetesClientRegistry {
-            registered: Arc::new(RwLock::new(HashMap::new())),
+            registered: Arc::new(Mutex::new(HashMap::new())),
         }
     }
 
     pub fn new_state() -> KubernetesClientRegistryState {
-        Arc::new(KubernetesClientRegistry::new())
+        Arc::new(Mutex::new(KubernetesClientRegistry::new()))
     }
 
     pub async fn manage(
-        &self,
+        &mut self,
         new_client: kube::Client,
         new_config: kube::Config,
     ) -> Result<(Uuid, Receiver<AsyncDiscoveryResult>, JoinHandle<()>), BackendError> {
@@ -73,7 +70,7 @@ impl KubernetesClientRegistry {
 
         let (mut discovery_rx, discovery_handle) = Self::run_discovery(new_client.clone()).await?;
 
-        self.registered.write().await.insert(
+        self.registered.lock().await.insert(
             id,
             (
                 new_client,
@@ -90,9 +87,8 @@ impl KubernetesClientRegistry {
         let registered_arc = Arc::clone(&self.registered);
 
         spawn(async move {
-            let mut registered = registered_arc.write().await;
-
             while let Some(result) = discovery_rx.recv().await {
+                let mut registered = registered_arc.lock().await;
                 let (_, _, discovery) = registered.get_mut(&id).unwrap();
                 downstream_tx.send(result.clone()).await.unwrap();
                 match result {
@@ -239,19 +235,10 @@ impl KubernetesClientRegistry {
 
     pub async fn try_clone(&self, id: &Uuid) -> Result<kube::Client, BackendError> {
         self.registered
-            .read()
+            .lock()
             .await
             .get(id)
             .map(|(client, _, _)| client.clone())
             .ok_or(format!("Kubernetes client with id {id} not found.").into())
-    }
-
-    pub async fn get_cluster(&self, id: &Uuid) -> Result<ClusterState, BackendError> {
-        self.registered
-            .read()
-            .await
-            .get(id)
-            .ok_or(format!("No cluster state found for ID {}", id).into())
-            .cloned()
     }
 }

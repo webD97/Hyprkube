@@ -32,9 +32,11 @@ pub async fn kube_stream_podlogs(
     name: &str,
     channel: tauri::ipc::Channel<LogStreamEvent>,
 ) -> Result<(), BackendError> {
-    println!("kube_stream_podlogs: Getting client");
-    let client = client_registry_arc.try_clone(&client_id).await?;
-    println!("kube_stream_podlogs: Got client");
+    let client = client_registry_arc
+        .lock()
+        .await
+        .try_clone(&client_id)
+        .await?;
 
     let pods: kube::Api<Pod> = kube::Api::namespaced(client, namespace);
 
@@ -45,9 +47,7 @@ pub async fn kube_stream_podlogs(
         ..Default::default()
     };
 
-    println!("kube_stream_podlogs: Setting up stream");
     let logs = pods.log_stream(name, &log_params).await?;
-    println!("kube_stream_podlogs: Stream set up");
 
     let log_stream = logs.compat();
     let mut reader = BufReader::new(log_stream).lines();
