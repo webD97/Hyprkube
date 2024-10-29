@@ -1,15 +1,13 @@
 use std::{
     collections::HashMap,
+    future::Future,
     sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard},
 };
 
 use futures::future::{AbortHandle, Abortable};
 
 use serde::Serialize;
-use tauri::{
-    async_runtime::{spawn, JoinHandle},
-    Emitter,
-};
+use tauri::{async_runtime::spawn, Emitter};
 
 pub type JoinHandleStoreState = Arc<ChannelTasks>;
 
@@ -53,18 +51,21 @@ impl ChannelTasks {
         }
     }
 
-    pub fn submit(&self, channel_id: u32, handle: JoinHandle<()>) {
+    pub fn submit<F>(&self, channel_id: u32, future: F)
+    where
+        F: Future + Send + 'static,
+        F::Output: Send,
+    {
         // Check if we can already kill this task
         if self.to_kill.try_read().unwrap().contains(&channel_id) {
-            println!("Early aborting handle of channel {}", &channel_id);
-            handle.abort();
+            println!("Ignoring future of channel {}", &channel_id);
             self.to_kill.write().unwrap().retain(|&el| el != channel_id);
             return;
         }
 
-        // Task may keep running, track it
+        // Task may run, track it
         let (abort_handle, abort_registration) = AbortHandle::new_pair();
-        let abortable = Abortable::new(handle, abort_registration);
+        let abortable = Abortable::new(future, abort_registration);
 
         let join_handle = spawn(abortable);
 

@@ -51,7 +51,7 @@ pub async fn kube_stream_podlogs(
     let channel_id = channel.id();
     println!("kube_stream_podlogs: channel {namespace}/{name} to {channel_id}");
 
-    let handle = tauri::async_runtime::spawn(async move {
+    let stream_task = async move {
         loop {
             match reader.next_line().await {
                 Ok(Some(mut line)) => {
@@ -74,9 +74,9 @@ pub async fn kube_stream_podlogs(
                 }
             }
         }
-    });
+    };
 
-    join_handle_store.submit(channel_id, handle);
+    join_handle_store.submit(channel_id, stream_task);
 
     Ok(())
 }

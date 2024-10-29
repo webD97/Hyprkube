@@ -61,7 +61,7 @@ pub async fn watch_gvk_with_view(
         .await?
         .boxed();
 
-    let handle = tauri::async_runtime::spawn(async move {
+    let stream = async move {
         let view = views
             .get_renderer(&client_id, &gvk, view_name.as_str())
             .await;
@@ -127,9 +127,9 @@ pub async fn watch_gvk_with_view(
                 }
             }
         }
-    });
+    };
 
-    join_handle_store.submit(channel_id, handle);
+    join_handle_store.submit(channel_id, stream);
 
     Ok(())
 }
