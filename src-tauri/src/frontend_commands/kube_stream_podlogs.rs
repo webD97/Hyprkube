@@ -32,11 +32,7 @@ pub async fn kube_stream_podlogs(
     name: &str,
     channel: tauri::ipc::Channel<LogStreamEvent>,
 ) -> Result<(), BackendError> {
-    let client = client_registry_arc
-        .lock()
-        .await
-        .try_clone(&client_id)
-        .await?;
+    let client = client_registry_arc.try_clone(&client_id)?;
 
     let pods: kube::Api<Pod> = kube::Api::namespaced(client, namespace);
 
@@ -80,7 +76,7 @@ pub async fn kube_stream_podlogs(
         }
     });
 
-    join_handle_store.lock().await.insert(channel_id, handle);
+    join_handle_store.submit(channel_id, handle);
 
     Ok(())
 }

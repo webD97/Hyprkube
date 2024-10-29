@@ -47,11 +47,7 @@ pub async fn watch_gvk_with_view(
     let channel_id = channel.id();
     println!("Streaming {:?} to channel {channel_id}", gvk);
 
-    let client = client_registry_arc
-        .lock()
-        .await
-        .try_clone(&client_id)
-        .await?;
+    let client = client_registry_arc.try_clone(&client_id)?;
 
     let (api_resource, _) = kube::discovery::oneshot::pinned_kind(&client, &gvk).await?;
 
@@ -70,9 +66,7 @@ pub async fn watch_gvk_with_view(
             .get_renderer(&client_id, &gvk, view_name.as_str())
             .await;
 
-        let kubernetes_client_registry = client_registry_arc.lock().await;
-        let registered = kubernetes_client_registry.registered.lock().await;
-        let (_, _, discovery) = &registered.get(&client_id).unwrap();
+        let (_, _, discovery) = client_registry_arc.get_cluster(&client_id).unwrap();
 
         let crd = discovery.crds.get(&gvk);
 
@@ -135,8 +129,7 @@ pub async fn watch_gvk_with_view(
         }
     });
 
-    let mut join_handle_store = join_handle_store.lock().await;
-    join_handle_store.insert(channel_id, handle);
+    join_handle_store.submit(channel_id, handle);
 
     Ok(())
 }

@@ -8,7 +8,8 @@ use tauri::Manager as _;
 use uuid::Uuid;
 
 use crate::{
-    app_state::KubernetesClientRegistryState, dirs::get_views_dir,
+    app_state::KubernetesClientRegistryState,
+    dirs::get_views_dir,
     resource_rendering::{CrdRenderer, FallbackRenderer, ResourceRenderer, ScriptedResourceView},
 };
 
@@ -99,17 +100,11 @@ impl RendererRegistry {
 
         let kubernetes_client_registry = self.app_handle.state::<KubernetesClientRegistryState>();
 
-        let kubernetes_client_registry = &kubernetes_client_registry.lock().await;
+        let registered = kubernetes_client_registry
+            .get_cluster(&kube_client_id)
+            .unwrap();
 
-        let registered = kubernetes_client_registry.registered.lock().await;
-
-        let crds: Vec<&GroupVersionKind> = registered
-            .get(&kube_client_id)
-            .unwrap()
-            .2
-            .crds
-            .keys()
-            .collect();
+        let crds: Vec<&GroupVersionKind> = registered.2.crds.keys().collect();
 
         renderers
             .iter()
@@ -137,17 +132,11 @@ impl RendererRegistry {
 
         let kubernetes_client_registry = self.app_handle.state::<KubernetesClientRegistryState>();
 
-        let kubernetes_client_registry = &kubernetes_client_registry.lock().await;
+        let registered = kubernetes_client_registry
+            .get_cluster(&kube_client_id)
+            .unwrap();
 
-        let registered = kubernetes_client_registry.registered.lock().await;
-
-        let crds: Vec<&GroupVersionKind> = registered
-            .get(&kube_client_id)
-            .unwrap()
-            .2
-            .crds
-            .keys()
-            .collect();
+        let crds: Vec<&GroupVersionKind> = registered.2.crds.keys().collect();
 
         match specific_view {
             Some(view) => return view.to_owned(),

@@ -7,7 +7,7 @@ mod frontend_commands;
 mod frontend_types;
 mod resource_rendering;
 
-use app_state::{JoinHandleStore, JoinHandleStoreState, KubernetesClientRegistry, RendererRegistry};
+use app_state::{ChannelTasks, JoinHandleStoreState, KubernetesClientRegistry, RendererRegistry};
 use tauri::{async_runtime::spawn, Listener, Manager};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -19,7 +19,7 @@ pub fn run() {
 
             app.manage(RendererRegistry::new_state(app_handle.clone()));
             app.manage(KubernetesClientRegistry::new_state());
-            app.manage(JoinHandleStore::new_state(app_handle.clone()));
+            app.manage(ChannelTasks::new_state(app_handle.clone()));
 
             app.listen("frontend-onbeforeunload", move |_event| {
                 println!("ONBEFOREUNLOAD");
@@ -43,11 +43,5 @@ pub fn run() {
 
 async fn reset_state(app_handle: tauri::AppHandle) {
     let join_handle_store = app_handle.state::<JoinHandleStoreState>();
-
-    let mut join_handle_store = join_handle_store.lock().await;
-
-    let _ = std::mem::replace(
-        &mut *join_handle_store,
-        JoinHandleStore::new(app_handle.clone()),
-    );
+    join_handle_store.abort_all();
 }
