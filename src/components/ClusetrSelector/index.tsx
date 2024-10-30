@@ -13,7 +13,7 @@ export const ClusterSelector: React.FC<ClusterSelectorProps> = (props) => {
         <div style={{ display: 'flex', alignItems: 'center' }}>
             <label htmlFor="clusterSelector">Cluster:</label>
             <select id="clusterSelector" style={{ flexGrow: 1, marginLeft: '1em' }}
-                value={selectedCluster || -1}
+                value={contextSources.findIndex(cs => cs == selectedCluster)}
                 onChange={(e) => onSelect(contextSources[parseInt(e.target.value)])}
             >
                 <option disabled value={-1}></option>
