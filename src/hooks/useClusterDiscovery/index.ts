@@ -1,5 +1,6 @@
 import { Channel, invoke } from "@tauri-apps/api/core";
 import { useEffect, useState } from "react";
+import { KubeContextSource } from "../useContextDiscovery";
 
 export type ClusterDiscovery = {
     clientId?: string,
@@ -33,11 +34,13 @@ export type AsyncDiscovery =
         apiGroup: [string, boolean]
     };
 
-export function useClusterDiscovery(): ClusterDiscovery {
+export function useClusterDiscovery(contextSource: KubeContextSource | undefined): ClusterDiscovery {
     const [clientId, setClientId] = useState<string>();
     const [discovery, setDiscovery] = useState<DiscoveryResult>({ gvks: {} });
 
     useEffect(() => {
+        if (contextSource === undefined) return;
+
         const channel = new Channel<AsyncDiscovery>();
 
         channel.onmessage = (message) => {
@@ -69,14 +72,14 @@ export function useClusterDiscovery(): ClusterDiscovery {
             }
         };
 
-        (invoke('discover_kubernetes_cluster', { channel }) as Promise<{ clientId: string }>)
+        (invoke('discover_kubernetes_cluster', { channel, contextSource }) as Promise<{ clientId: string }>)
             .then(({ clientId }) => setClientId(clientId))
             .catch(e => alert(e));
 
         return () => {
             invoke('cleanup_channel', { channel });
         };
-    }, []);
+    }, [contextSource]);
 
     return {
         discovery, clientId

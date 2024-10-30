@@ -15,6 +15,8 @@ import StatusPanel from './containers/StatusPanel';
 import { useClusterDiscovery } from './hooks/useClusterDiscovery';
 import useResourceWatch from './hooks/useResourceWatch';
 import NavHeader from './components/NavHeader';
+import { KubeContextSource, useContextDiscovery } from './hooks/useContextDiscovery';
+import { ClusterSelector } from './components/ClusetrSelector';
 
 const defaultPinnedGvks: Gvk[] = [
   { group: '', version: 'v1', kind: 'Node' },
@@ -33,14 +35,24 @@ const defaultPinnedGvks: Gvk[] = [
 ];
 
 function App() {
+  const contextSources = useContextDiscovery();
   const [currentGvk, setCurrentGvk] = useState<Gvk>();
   const [pinnedGvks, setPinnedGvks] = useState<Gvk[]>(defaultPinnedGvks);
   const [selectedResource, setSelectedResource] = useState<NamespaceAndName>({ namespace: '', name: '' });
   const [selectedView, setSelectedView] = useState("");
-  const { discovery, clientId } = useClusterDiscovery();
+  const [selectedContext, setSelectedContext] = useState<KubeContextSource>();
+  const { discovery, clientId } = useClusterDiscovery(selectedContext);
   const [columnTitles, resources] = useResourceWatch(clientId, currentGvk, selectedView);
 
   const [tabs, activeTab, pushTab, removeTab, setActiveTab] = useTabs();
+
+  // If we have only 1 context, auto-select it
+  useEffect(() => {
+    if (contextSources.length !== 1) return;
+    if (selectedContext !== undefined) return;
+
+    setSelectedContext(contextSources[0]);
+  }, [contextSources, selectedContext]);
 
   useEffect(() => {
     if (!currentGvk) return;
@@ -58,18 +70,29 @@ function App() {
     <div className={classes.container}>
       <nav>
         <NavHeader />
+        <hr />
+        {
+          selectedContext === undefined
+            ? null
+            : (
+              <ClusterSelector
+                selectedCluster={selectedContext}
+                onSelect={(contextSource) => setSelectedContext(contextSource)}
+                contextSources={contextSources}
+              />
+            )
+        }
+        <hr />
+        <h2>Pinned resources</h2>
         {
           pinnedGvks.length == 0
             ? null
             : (
-              <>
-                <h2>Pinned resources</h2>
-                <GvkList withGroupName
-                  gvks={pinnedGvks}
-                  onResourceClicked={(gvk) => setCurrentGvk(gvk)}
-                  onPinButtonClicked={({ group, kind }) => setPinnedGvks(currentlyPinned => currentlyPinned.filter(clickedGvk => clickedGvk.group !== group || clickedGvk.kind !== kind))}
-                />
-              </>
+              <GvkList withGroupName
+                gvks={pinnedGvks}
+                onResourceClicked={(gvk) => setCurrentGvk(gvk)}
+                onPinButtonClicked={({ group, kind }) => setPinnedGvks(currentlyPinned => currentlyPinned.filter(clickedGvk => clickedGvk.group !== group || clickedGvk.kind !== kind))}
+              />
             )
         }
 
@@ -125,6 +148,17 @@ function App() {
         </TabView>
       </section>
       <main className={classes.mainArea}>
+        {
+          selectedContext !== undefined
+            ? null
+            : (
+              <ClusterSelector
+                selectedCluster={selectedContext}
+                onSelect={(contextSource) => setSelectedContext(contextSource)}
+                contextSources={contextSources}
+              />
+            )
+        }
         {
           currentGvk === undefined
             ? <EmojiHint emoji="🔍">Select a resource to get started.</EmojiHint>

@@ -71,9 +71,9 @@ impl KubernetesClientRegistry {
 
     pub fn manage(
         &self,
-        new_client: kube::Client,
         new_config: kube::Config,
     ) -> Result<(Uuid, Receiver<AsyncDiscoveryResult>, JoinHandle<()>), BackendError> {
+        let new_client = kube::Client::try_from(new_config.clone()).unwrap();
         let id = Uuid::new_v4();
 
         let (downstream_tx, downstream_rx) = channel::<AsyncDiscoveryResult>();

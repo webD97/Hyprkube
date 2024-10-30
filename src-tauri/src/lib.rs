@@ -35,7 +35,8 @@ pub fn run() {
             frontend_commands::discover_kubernetes_cluster,
             frontend_commands::kube_stream_podlogs,
             frontend_commands::watch_gvk_with_view,
-            frontend_commands::cleanup_channel
+            frontend_commands::cleanup_channel,
+            frontend_commands::discover_contexts
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
