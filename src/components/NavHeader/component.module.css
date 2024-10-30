@@ -1,0 +1,19 @@
+.container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 3rem;
+    padding-top: 1rem;
+}
+
+.container>*:last-child {
+    margin-right: 0.5em;
+}
+
+.container>*:first-child {
+    margin-left: 0.5em;
+}
+
+.container>* {
+    margin: 0;
+}

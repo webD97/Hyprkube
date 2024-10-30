@@ -14,6 +14,7 @@ import { useTabs } from './components/TabView/hooks';
 import StatusPanel from './containers/StatusPanel';
 import { useClusterDiscovery } from './hooks/useClusterDiscovery';
 import useResourceWatch from './hooks/useResourceWatch';
+import NavHeader from './components/NavHeader';
 
 const defaultPinnedGvks: Gvk[] = [
   { group: '', version: 'v1', kind: 'Node' },
@@ -56,7 +57,7 @@ function App() {
   return (
     <div className={classes.container}>
       <nav>
-        <h1>🧊&nbsp;Hyprkube</h1>
+        <NavHeader />
         {
           pinnedGvks.length == 0
             ? null

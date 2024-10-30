@@ -1,11 +1,9 @@
 :root {
-  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-family: system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
   line-height: 1.5;
   font-weight: 400;
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+  color-scheme: dark light;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -17,7 +15,12 @@
   -webkit-user-select: none;
 }
 
-body, html {
+.dark-mode {
+  color-scheme: dark;
+}
+
+body,
+html {
   margin: 0;
   padding: 0;
 }
@@ -26,11 +29,12 @@ body, html {
   box-sizing: border-box;
 }
 
-h1, h2, h3, h4, h5, h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
   cursor: default;
   margin-bottom: 0.2em;
-}
-
-h1 {
-  text-indent: 1em;
 }
