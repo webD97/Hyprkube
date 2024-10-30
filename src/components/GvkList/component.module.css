@@ -6,8 +6,8 @@
 }
 
 .container ul li {
-    height: 2.25em;
-    line-height: 2.25em;
+    height: 2em;
+    line-height: 2em;
     display: flex;
 }
 
@@ -40,7 +40,7 @@
 }
 
 .container ul li button:hover {
-    transform: scale(1.5);
+    transform: scale(1.25);
     transition: transform 100ms;
 }
 
