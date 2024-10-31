@@ -98,7 +98,6 @@ impl KubernetesClientRegistry {
             let builtins: Vec<&str> = apigroups
                 .groups
                 .iter()
-                .inspect(|g| println!("{}", g.name))
                 .filter(|group| group.name.ends_with(".k8s.io") || !group.name.contains("."))
                 .map(|group| group.name.as_str())
                 .chain(Some(""))
