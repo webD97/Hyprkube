@@ -6,6 +6,9 @@ pub enum BackendError {
     KubeClientError(#[from] kube::Error),
 
     #[error(transparent)]
+    KubeconfigError(#[from] kube::config::KubeconfigError),
+
+    #[error(transparent)]
     ResourceViewError(#[from] ResourceViewError),
 
     #[error("{0}")]

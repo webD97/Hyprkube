@@ -32,7 +32,7 @@ pub async fn discover_kubernetes_cluster(
     context_source: KubeContextSource,
 ) -> Result<DiscoveredCluster, BackendError> {
     let (kubeconfig_path, context_name) = context_source;
-    let kubeconfig = Kubeconfig::read_from(kubeconfig_path).unwrap();
+    let kubeconfig = Kubeconfig::read_from(kubeconfig_path)?;
 
     let kubeconfig_options = &KubeConfigOptions {
         context: Some(context_name),
@@ -40,8 +40,7 @@ pub async fn discover_kubernetes_cluster(
     };
 
     let client_config = kube::Config::from_custom_kubeconfig(kubeconfig, &kubeconfig_options)
-        .await
-        .unwrap();
+        .await?;
 
     let (client_id, internal_discovery, discovery_handle) =
         client_registry.manage(client_config)?;
