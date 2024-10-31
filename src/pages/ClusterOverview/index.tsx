@@ -4,7 +4,10 @@ import classes from './styles.module.css';
 import { useContextDiscovery } from "../../hooks/useContextDiscovery";
 import { useMemo } from "react";
 
-type GroupedContextSources = { [key: string]: string[] };
+type GroupedContextSources = { [key: string]: {
+    realSource: string,
+    contexts: string[]
+} };
 
 const ClusterOverview: React.FC = () => {
     const contextSources = useContextDiscovery();
@@ -13,11 +16,20 @@ const ClusterOverview: React.FC = () => {
         const groupedContextSources: GroupedContextSources = {};
 
         contextSources.forEach(([source, contextName]) => {
-            if (!(source in groupedContextSources)) {
-                groupedContextSources[source] = [];
+            let displayName = source;
+
+            if (source.includes('Lens/')) {
+                displayName = source.substring(0, source.lastIndexOf('/'));
             }
 
-            groupedContextSources[source].push(contextName);
+            if (!(displayName in groupedContextSources)) {
+                groupedContextSources[displayName] = {
+                    realSource: source,
+                    contexts: []
+                };
+            }
+
+            groupedContextSources[displayName].contexts.push(contextName);
         });
 
         return groupedContextSources;
@@ -25,17 +37,17 @@ const ClusterOverview: React.FC = () => {
 
     return (
         <div className={classes.container}>
+            <h2>Your clusters</h2>
             <div>
-                <h2>Your clusters</h2>
                 {
-                    Object.entries(groupedContextSources).map(([source, contextNames]) => (
+                    Object.entries(groupedContextSources).map(([source, contextGroup]) => (
                         <div key={source}>
-                            <h6>{source}</h6>
-                            <ul>
+                            <h4>{source}</h4>
+                            <ul className={classes.clusterList}>
                                 {
-                                    contextNames.map(contextName => (
+                                    contextGroup.contexts.map(contextName => (
                                         <li key={contextName}>
-                                            <Link to={`cluster?source=${source}&context=${contextName}`}>{contextName}</Link>
+                                            <Link to={`cluster?source=${contextGroup.realSource}&context=${contextName}`}>{contextName}</Link>
                                         </li>
                                     ))
                                 }

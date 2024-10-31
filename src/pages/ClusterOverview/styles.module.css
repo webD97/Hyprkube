@@ -6,6 +6,19 @@
     align-items: center;
 }
 
-.container>div {
-    width: 33%;
+.clusterList {
+    list-style: none;
+    padding: 0;
+    display: grid;
+    grid-template-columns: auto auto auto auto;
+    gap: 1em 2em;
+}
+
+.clusterList li {
+    height: 2em;
+    line-height: 2em;
+}
+
+.clusterList a {
+    text-decoration: none;
 }
