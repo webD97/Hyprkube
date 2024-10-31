@@ -93,141 +93,124 @@ impl KubernetesClientRegistry {
         let registered_arc = Arc::clone(&self.registered);
 
         let discovery_handle = spawn(async move {
-            println!("Starting discovery");
-            let discovery = kube::Discovery::new(new_client.clone())
-                .run()
-                .await
-                .unwrap();
-            println!("Discovery done");
+            println!("Discovering builtins");
+            let apigroups = new_client.clone().list_api_groups().await.unwrap();
+            let builtins: Vec<&str> = apigroups
+                .groups
+                .iter()
+                .inspect(|g| println!("{}", g.name))
+                .filter(|group| group.name.ends_with(".k8s.io") || !group.name.contains("."))
+                .map(|group| group.name.as_str())
+                .chain(Some(""))
+                .collect();
+            println!("Finished discovering builtins");
 
-            let api: kube::Api<CustomResourceDefinition> = kube::Api::all(new_client.clone());
-            println!("Listing CRDs");
-
-            let mut continuation_token: Option<String> = None;
-
-            let mut builtin_group_names: Vec<String> = Vec::new();
-            let mut crd_group_names: Vec<String> = Vec::new();
-
-            let mut crds: Vec<CustomResourceDefinition> = Vec::new();
-
-            loop {
-                let crd_list = api
-                    .list(&ListParams {
-                        limit: Some(15),
-                        timeout: Some(60),
-                        continue_token: continuation_token,
-                        ..ListParams::default()
-                    })
+            // Discover builtin resources
+            println!("Starting discovery of builtin resources");
+            {
+                let discovery_builtins = kube::Discovery::new(new_client.clone())
+                    .filter(&builtins)
+                    .run()
                     .await
                     .unwrap();
 
-                // Handle groups for custom resources
-                for crd in &crd_list.items {
-                    crds.push(crd.clone());
-
-                    let latest = crd.spec.versions.first().unwrap();
-
-                    if !crd_group_names.contains(&crd.spec.group) {
-                        crd_group_names.push(crd.spec.group.clone());
-                    }
-
-                    let resource = DiscoveredResource {
-                        group: crd.spec.group.to_owned(),
-                        kind: crd.spec.names.kind.to_owned(),
-                        version: latest.name.to_owned(),
-                        source: ApiGroupSource::CustomResource,
-                    };
-
-                    let mut registered = registered_arc.write().unwrap();
-                    let (_, _, discovery) = registered.get_mut(&id).unwrap();
-
-                    downstream_tx
-                        .send(AsyncDiscoveryResult::DiscoveredResource(resource.clone()))
-                        .unwrap();
-
-                    discovery
-                        .gvks
-                        .entry(resource.group.clone())
-                        .or_insert(DiscoveredGroup {
-                            name: resource.group.clone(),
-                            kinds: Vec::new(),
-                            is_crd: matches!(resource.source, ApiGroupSource::CustomResource),
-                        })
-                        .kinds
-                        .push(resource);
-                }
-
-                // Handle groups for builtin resources
-                for group in discovery
-                    .groups()
-                    .filter(|g| !crd_group_names.contains(&g.name().to_owned()))
-                {
+                for group in discovery_builtins.groups() {
                     for (ar, capabilities) in group.recommended_resources() {
                         if !capabilities.supports_operation(kube::discovery::verbs::WATCH) {
                             continue;
                         }
 
-                        if !builtin_group_names.contains(&ar.group) {
-                            builtin_group_names.push(ar.group.clone());
+                        let resource = DiscoveredResource {
+                            group: ar.group.clone(),
+                            kind: ar.kind.clone(),
+                            version: ar.version.clone(),
+                            source: ApiGroupSource::Builtin,
+                        };
+
+                        downstream_tx
+                            .send(AsyncDiscoveryResult::DiscoveredResource(resource.clone()))
+                            .unwrap();
+
+                        let mut registered = registered_arc.write().unwrap();
+                        let (_, _, discovery) = registered.get_mut(&id).unwrap();
+
+                        discovery
+                            .gvks
+                            .entry(resource.group.clone())
+                            .or_insert(DiscoveredGroup {
+                                name: resource.group.clone(),
+                                kinds: Vec::new(),
+                                is_crd: false,
+                            })
+                            .kinds
+                            .push(resource);
+                    }
+                }
+            }
+            println!("Finished discovery of builtin resources");
+
+            // Discover custom resources
+            println!("Starting discovery of custom resources");
+            {
+                let discovery_builtins = kube::Discovery::new(new_client.clone())
+                    .exclude(&builtins)
+                    .run()
+                    .await
+                    .unwrap();
+
+                for group in discovery_builtins.groups() {
+                    for (ar, capabilities) in group.recommended_resources() {
+                        if !capabilities.supports_operation(kube::discovery::verbs::WATCH) {
                             continue;
                         }
+
+                        let resource = DiscoveredResource {
+                            group: ar.group.clone(),
+                            kind: ar.kind.clone(),
+                            version: ar.version.clone(),
+                            source: ApiGroupSource::CustomResource,
+                        };
+
+                        downstream_tx
+                            .send(AsyncDiscoveryResult::DiscoveredResource(resource.clone()))
+                            .unwrap();
+
+                        let mut registered = registered_arc.write().unwrap();
+                        let (_, _, discovery) = registered.get_mut(&id).unwrap();
+
+                        discovery
+                            .gvks
+                            .entry(resource.group.clone())
+                            .or_insert(DiscoveredGroup {
+                                name: resource.group.clone(),
+                                kinds: Vec::new(),
+                                is_crd: true,
+                            })
+                            .kinds
+                            .push(resource);
                     }
                 }
-
-                continuation_token = crd_list.metadata.continue_;
-
-                if continuation_token.is_none() {
-                    println!("Finished listing CRDs");
-                    break;
-                }
-
-                println!(
-                    "Still listing ({:?}) remaining",
-                    crd_list.metadata.remaining_item_count
-                );
             }
+            println!("Finished discovery of custom resources");
 
-            // Handle resources themselves
-            for group in discovery.groups() {
-                for (ar, capabilities) in group.recommended_resources() {
-                    if !capabilities.supports_operation(kube::discovery::verbs::WATCH) {
-                        continue;
-                    }
+            // Cache custom resource definitions
+            println!("Starting caching of custom resource definitions");
+            {
+                let api: kube::Api<CustomResourceDefinition> = kube::Api::all(new_client.clone());
+                let crd_list = api.list(&ListParams::default()).await.unwrap();
 
-                    let crd = &crds
-                        .iter()
-                        .find(|crd| crd.spec.group == ar.group && crd.spec.names.kind == ar.kind);
-
-                    if crd.is_some() {
-                        continue;
-                    }
-
-                    let resource = DiscoveredResource {
-                        group: ar.group.clone(),
-                        kind: ar.kind.clone(),
-                        version: ar.version.clone(),
-                        source: ApiGroupSource::Builtin,
-                    };
-
+                // Handle groups for custom resources
+                for crd in crd_list.items {
                     let mut registered = registered_arc.write().unwrap();
                     let (_, _, discovery) = registered.get_mut(&id).unwrap();
 
-                    downstream_tx
-                        .send(AsyncDiscoveryResult::DiscoveredResource(resource.clone()))
-                        .unwrap();
-
-                    discovery
-                        .gvks
-                        .entry(resource.group.clone())
-                        .or_insert(DiscoveredGroup {
-                            name: resource.group.clone(),
-                            kinds: Vec::new(),
-                            is_crd: matches!(resource.source, ApiGroupSource::CustomResource),
-                        })
-                        .kinds
-                        .push(resource);
+                    let latest = crd.spec.versions.first().unwrap();
+                    let gvk =
+                        GroupVersionKind::gvk(&crd.spec.group, &latest.name, &crd.spec.names.kind);
+                    discovery.crds.insert(gvk, crd);
                 }
             }
+            println!("Finished caching of custom resource definitions");
 
             println!("End of future")
         });
