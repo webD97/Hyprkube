@@ -1,0 +1,36 @@
+.container {
+    display: grid;
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr 1.5rem;
+    grid-template-areas:
+        "main"
+        "footer";
+
+    width: 100vw;
+    height: 100vh;
+    padding: 0;
+    overflow: hidden;
+}
+
+.footer {
+    grid-area: footer;
+    background-color: dodgerblue;
+    height: 1.5rem;
+    width: 100%;
+    padding: 0 0.5rem;
+    display: flex;
+}
+
+.footer>div {
+    margin-right: 1em;
+}
+
+.footer>div:last-child {
+    margin-right: 0;
+}
+
+.main {
+    grid-area: main;
+    overflow: scroll;
+    padding: 0 0.5rem;
+}

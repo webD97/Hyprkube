@@ -1,33 +1,14 @@
 .container {
     display: grid;
     grid-template-columns: 15fr minmax(0, 85fr);
-    grid-template-rows: 4fr minmax(0, auto) 1.5rem;
+    grid-template-rows: 4fr minmax(0, auto);
     grid-template-areas:
         "nav main"
-        "nav bottom"
-        "footer footer";
-
-    width: 100vw;
-    height: 100vh;
+        "nav bottom";
     padding: 0;
-    overflow: hidden;
-}
 
-footer {
-    grid-area: footer;
-    background-color: dodgerblue;
-    height: 1.5rem;
     width: 100%;
-    padding: 0 0.5rem;
-    display: flex;
-}
-
-.appStatusBar>div {
-    margin-right: 1em;
-}
-
-.appStatusBar>div:last-child {
-    margin-right: 0;
+    height: 100%;
 }
 
 table {
@@ -67,6 +48,7 @@ table tbody tr:hover {
 
 nav {
     grid-area: nav;
+    max-height: 100%;
     overflow: scroll;
     border-right: 1px #333333 solid;
     padding: 0 0.5rem;
@@ -110,12 +92,13 @@ nav details summary:hover {
 
 .mainArea {
     grid-area: main;
+    max-height: 100%;
     overflow: scroll;
     padding: 0 0.5rem;
 }
 
 .bottomPanel {
-    grid-area: "bottom";
+    grid-area: bottom;
 }
 
 .topBar {
