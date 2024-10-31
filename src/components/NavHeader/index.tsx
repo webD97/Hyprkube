@@ -1,23 +1,32 @@
+import { useLocation, useNavigate } from "react-router-dom";
 import ThemeToggle from "../ThemeToggle";
 
 import classes from './component.module.css';
+import { useEffect, useState } from "react";
 
 export interface NavHeaderProps {
-    variant?: 'normal' | 'big'
 }
 
-const NavHeader: React.FC<NavHeaderProps> = (props) => {
-    const {
-        variant = 'normal'
-    } = props;
+const NavHeader: React.FC<NavHeaderProps> = (_props) => {
+    const location = useLocation();
+    const navigate = useNavigate();
 
-    const headerClassName = variant === 'big' ? classes.big : undefined;
+    const [canGoBack, setCanGoBack] = useState(false);
+
+    // Disable the back button if we cannot go back further
+    useEffect(() => {
+        setCanGoBack(location.key !== "default");
+    }, [location]);
 
     return (
-        <header className={classes.container}>
-            <h1 className={headerClassName}>🧊&nbsp; Hyprkube </h1>
-            <ThemeToggle />
-        </header>
+        <div className={classes.container}>
+            <button disabled={!canGoBack} onClick={() => navigate(-1)}>&larr;</button>
+            <button disabled={!canGoBack} onClick={() => navigate(1)}>&rarr;</button>
+            <h2>🧊&nbsp; Hyprkube </h2>
+            <div>
+                <ThemeToggle />
+            </div>
+        </div>
     );
 };
 

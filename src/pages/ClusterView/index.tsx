@@ -3,19 +3,17 @@ import relativeTime from 'dayjs/plugin/relativeTime';
 
 import { useEffect, useState } from 'react';
 
-import { ClusterSelector } from '../../components/ClusetrSelector';
 import EmojiHint from '../../components/EmojiHint';
 import GvkList from '../../components/GvkList';
 import LogPanel from '../../components/LogPanel';
-import NavHeader from '../../components/NavHeader';
 import ResourceView from '../../components/ResourceView';
 import TabView, { Tab } from '../../components/TabView';
 import { useTabs } from '../../components/TabView/hooks';
 import { useClusterDiscovery } from '../../hooks/useClusterDiscovery';
-import { KubeContextSource, useContextDiscovery } from '../../hooks/useContextDiscovery';
 import useResourceWatch from '../../hooks/useResourceWatch';
 import { Gvk, NamespaceAndName } from '../../model/k8s';
 import classes from './styles.module.css';
+import { useSearchParams } from 'react-router-dom';
 
 const defaultPinnedGvks: Gvk[] = [
     { group: '', version: 'v1', kind: 'Node' },
@@ -34,24 +32,18 @@ const defaultPinnedGvks: Gvk[] = [
 ];
 
 const ClusterView: React.FC = () => {
-    const contextSources = useContextDiscovery();
+    const [searchParams] = useSearchParams();
+    const source = searchParams.get('source');
+    const context = searchParams.get('context');
+
     const [currentGvk, setCurrentGvk] = useState<Gvk>();
     const [pinnedGvks, setPinnedGvks] = useState<Gvk[]>(defaultPinnedGvks);
     const [selectedResource, setSelectedResource] = useState<NamespaceAndName>({ namespace: '', name: '' });
     const [selectedView, setSelectedView] = useState("");
-    const [selectedContext, setSelectedContext] = useState<KubeContextSource>();
-    const { discovery, clientId } = useClusterDiscovery(selectedContext);
+    const { discovery, clientId } = useClusterDiscovery(source, context);
     const [columnTitles, resources] = useResourceWatch(clientId, currentGvk, selectedView);
 
     const [tabs, activeTab, pushTab, removeTab, setActiveTab] = useTabs();
-
-    // If we have only 1 context, auto-select it
-    useEffect(() => {
-        if (contextSources.length !== 1) return;
-        if (selectedContext !== undefined) return;
-
-        setSelectedContext(contextSources[0]);
-    }, [contextSources, selectedContext]);
 
     useEffect(() => {
         if (!currentGvk) return;
@@ -68,20 +60,7 @@ const ClusterView: React.FC = () => {
     return (
         <div className={classes.container}>
             <nav>
-                <NavHeader />
-                <hr />
-                {
-                    selectedContext === undefined
-                        ? null
-                        : (
-                            <ClusterSelector
-                                selectedCluster={selectedContext}
-                                onSelect={(contextSource) => setSelectedContext(contextSource)}
-                                contextSources={contextSources}
-                            />
-                        )
-                }
-                <hr />
+                <span>{context}</span>
                 <h2>Pinned resources</h2>
                 {
                     pinnedGvks.length == 0
@@ -147,17 +126,6 @@ const ClusterView: React.FC = () => {
                 </TabView>
             </section>
             <section className={classes.mainArea}>
-                {
-                    selectedContext !== undefined
-                        ? null
-                        : (
-                            <ClusterSelector
-                                selectedCluster={selectedContext}
-                                onSelect={(contextSource) => setSelectedContext(contextSource)}
-                                contextSources={contextSources}
-                            />
-                        )
-                }
                 {
                     currentGvk === undefined
                         ? <EmojiHint emoji="🔍">Select a resource to get started.</EmojiHint>

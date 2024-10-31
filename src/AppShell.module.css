@@ -1,8 +1,9 @@
 .container {
     display: grid;
     grid-template-columns: 1fr;
-    grid-template-rows: 1fr 1.5rem;
+    grid-template-rows: auto 1fr auto;
     grid-template-areas:
+        "header"
         "main"
         "footer";
 
@@ -10,6 +11,10 @@
     height: 100vh;
     padding: 0;
     overflow: hidden;
+}
+
+.header {
+    grid-area: header;
 }
 
 .footer {
