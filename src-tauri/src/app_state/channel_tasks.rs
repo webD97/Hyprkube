@@ -53,8 +53,7 @@ impl ChannelTasks {
 
     pub fn submit<F>(&self, channel_id: u32, future: F)
     where
-        F: Future + Send + 'static,
-        F::Output: Send,
+        F: Future<Output = ()> + Send + 'static,
     {
         // Check if we can already kill this task
         if self.to_kill.try_read().unwrap().contains(&channel_id) {

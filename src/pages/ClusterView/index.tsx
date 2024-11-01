@@ -40,7 +40,7 @@ const ClusterView: React.FC = () => {
     const [pinnedGvks, setPinnedGvks] = useState<Gvk[]>(defaultPinnedGvks);
     const [selectedResource, setSelectedResource] = useState<NamespaceAndName>({ namespace: '', name: '' });
     const [selectedView, setSelectedView] = useState("");
-    const { discovery, clientId } = useClusterDiscovery(source, context);
+    const { discovery, clientId, lastError, loading } = useClusterDiscovery(source, context);
     const [columnTitles, resources] = useResourceWatch(clientId, currentGvk, selectedView);
 
     const [tabs, activeTab, pushTab, removeTab, setActiveTab] = useTabs();
@@ -127,45 +127,49 @@ const ClusterView: React.FC = () => {
             </section>
             <section className={classes.mainArea}>
                 {
-                    currentGvk === undefined
-                        ? <EmojiHint emoji="🔍">Select a resource to get started.</EmojiHint>
-                        : (
-                            <>
-                                <div className={classes.topBar}>
-                                    <h2>{currentGvk?.kind}</h2>
-                                    <select value={selectedView} onChange={(e) => setSelectedView(e.target.value)}>
-                                        {
-                                            discovery?.gvks[currentGvk.group].kinds.find(v => v.kind === currentGvk.kind)?.views.map(view => (
-                                                <option key={view}>{view}</option>
-                                            ))
-                                        }
-                                    </select>
-                                </div>
-                                <ResourceView
-                                    columnTitles={columnTitles || []}
-                                    resourceData={resources}
-                                    onResourceClicked={(uid) => {
-                                        setSelectedResource(resources[uid]);
+                    loading
+                        ? <EmojiHint emoji="⏳">Loading...</EmojiHint>
+                        : lastError !== undefined
+                            ? <EmojiHint emoji="💩"><span style={{ color: 'red' }}>{lastError}</span></EmojiHint>
+                            : currentGvk === undefined
+                                ? <EmojiHint emoji="🔍">Select a resource to get started.</EmojiHint>
+                                : (
+                                    <>
+                                        <div className={classes.topBar}>
+                                            <h2>{currentGvk?.kind}</h2>
+                                            <select value={selectedView} onChange={(e) => setSelectedView(e.target.value)}>
+                                                {
+                                                    discovery?.gvks[currentGvk.group].kinds.find(v => v.kind === currentGvk.kind)?.views.map(view => (
+                                                        <option key={view}>{view}</option>
+                                                    ))
+                                                }
+                                            </select>
+                                        </div>
+                                        <ResourceView
+                                            columnTitles={columnTitles || []}
+                                            resourceData={resources}
+                                            onResourceClicked={(uid) => {
+                                                setSelectedResource(resources[uid]);
 
-                                        if (currentGvk.kind === "Pod") {
-                                            pushTab(
-                                                <Tab title={resources[uid].name}>
-                                                    {
-                                                        () => (
-                                                            <LogPanel
-                                                                kubernetesClientId={clientId}
-                                                                namespace={resources[uid].namespace}
-                                                                name={resources[uid].name}
-                                                            />
-                                                        )
-                                                    }
-                                                </Tab>
-                                            );
-                                        }
-                                    }}
-                                />
-                            </>
-                        )
+                                                if (currentGvk.kind === "Pod") {
+                                                    pushTab(
+                                                        <Tab title={resources[uid].name}>
+                                                            {
+                                                                () => (
+                                                                    <LogPanel
+                                                                        kubernetesClientId={clientId}
+                                                                        namespace={resources[uid].namespace}
+                                                                        name={resources[uid].name}
+                                                                    />
+                                                                )
+                                                            }
+                                                        </Tab>
+                                                    );
+                                                }
+                                            }}
+                                        />
+                                    </>
+                                )
                 }
             </section>
         </div>

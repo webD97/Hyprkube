@@ -1,5 +1,6 @@
 use std::{
     collections::HashMap,
+    future::Future,
     sync::{
         mpsc::{channel, Receiver},
         Arc, RwLock,
@@ -9,7 +10,6 @@ use std::{
 use k8s_openapi::apiextensions_apiserver::pkg::apis::apiextensions::v1::CustomResourceDefinition;
 use kube::api::{GroupVersionKind, ListParams};
 use serde::Serialize;
-use tauri::async_runtime::{spawn, JoinHandle};
 use uuid::Uuid;
 
 use crate::frontend_types::BackendError;
@@ -72,8 +72,15 @@ impl KubernetesClientRegistry {
     pub fn manage(
         &self,
         new_config: kube::Config,
-    ) -> Result<(Uuid, Receiver<AsyncDiscoveryResult>, JoinHandle<()>), BackendError> {
-        let new_client = kube::Client::try_from(new_config.clone()).unwrap();
+    ) -> Result<
+        (
+            Uuid,
+            Receiver<AsyncDiscoveryResult>,
+            impl Future<Output = Result<(), BackendError>>,
+        ),
+        BackendError,
+    > {
+        let new_client = kube::Client::try_from(new_config.clone())?;
         let id = Uuid::new_v4();
 
         let (downstream_tx, downstream_rx) = channel::<AsyncDiscoveryResult>();
@@ -92,9 +99,9 @@ impl KubernetesClientRegistry {
 
         let registered_arc = Arc::clone(&self.registered);
 
-        let discovery_handle = spawn(async move {
+        let discovery_handle = async move {
             println!("Discovering builtins");
-            let apigroups = new_client.clone().list_api_groups().await.unwrap();
+            let apigroups = &new_client.list_api_groups().await?;
             let builtins: Vec<&str> = apigroups
                 .groups
                 .iter()
@@ -110,8 +117,7 @@ impl KubernetesClientRegistry {
                 let discovery_builtins = kube::Discovery::new(new_client.clone())
                     .filter(&builtins)
                     .run()
-                    .await
-                    .unwrap();
+                    .await?;
 
                 for group in discovery_builtins.groups() {
                     for (ar, capabilities) in group.recommended_resources() {
@@ -154,8 +160,7 @@ impl KubernetesClientRegistry {
                 let discovery_builtins = kube::Discovery::new(new_client.clone())
                     .exclude(&builtins)
                     .run()
-                    .await
-                    .unwrap();
+                    .await?;
 
                 for group in discovery_builtins.groups() {
                     for (ar, capabilities) in group.recommended_resources() {
@@ -196,23 +201,26 @@ impl KubernetesClientRegistry {
             println!("Starting caching of custom resource definitions");
             {
                 let api: kube::Api<CustomResourceDefinition> = kube::Api::all(new_client.clone());
-                let crd_list = api.list(&ListParams::default()).await.unwrap();
+                let crd_list = api.list(&ListParams::default()).await?;
 
                 // Handle groups for custom resources
                 for crd in crd_list.items {
                     let mut registered = registered_arc.write().unwrap();
                     let (_, _, discovery) = registered.get_mut(&id).unwrap();
 
-                    let latest = crd.spec.versions.first().unwrap();
+                    let latest = crd
+                        .spec
+                        .versions
+                        .first()
+                        .expect("there should always be a version");
                     let gvk =
                         GroupVersionKind::gvk(&crd.spec.group, &latest.name, &crd.spec.names.kind);
                     discovery.crds.insert(gvk, crd);
                 }
             }
             println!("Finished caching of custom resource definitions");
-
-            println!("End of future")
-        });
+            Ok(())
+        };
 
         println!("Managing new client {}", id);
         Ok((id, downstream_rx, discovery_handle))

@@ -5,7 +5,7 @@ use kube::{
     config::{KubeConfigOptions, Kubeconfig},
 };
 use serde::Serialize;
-use tauri::State;
+use tauri::{Emitter, State};
 
 use crate::{
     app_state::{
@@ -25,6 +25,7 @@ pub enum DiscoveryResult {
 
 #[tauri::command]
 pub async fn discover_kubernetes_cluster(
+    app_handle: tauri::AppHandle,
     client_registry: tauri::State<'_, KubernetesClientRegistryState>,
     view_registry: tauri::State<'_, Arc<RendererRegistry>>,
     join_handle_store: State<'_, JoinHandleStoreState>,
@@ -45,7 +46,12 @@ pub async fn discover_kubernetes_cluster(
     let (client_id, internal_discovery, discovery_handle) =
         client_registry.manage(client_config)?;
 
-    join_handle_store.submit(channel.id(), discovery_handle);
+    join_handle_store.submit(channel.id(), async move {
+        if let Err(e) = discovery_handle.await {
+            eprintln!("Error during cluster discovery: {e}");
+            app_handle.emit("ERR_CLUSTER_DISCOVERY", &e).unwrap();
+        }
+    });
 
     while let Ok(discovery) = internal_discovery.recv() {
         let send_result = match discovery {
