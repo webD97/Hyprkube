@@ -6,6 +6,8 @@ import EmojiHint from "../EmojiHint";
 import { open } from '@tauri-apps/plugin-shell';
 
 export interface ResourceViewProps {
+    namespace?: string,
+    resourceName?: string,
     columnTitles: string[],
     resourceData: ResourceViewData,
     onResourceClicked?: (uid: string) => void,
@@ -16,6 +18,8 @@ dayjs.extend(LocalizedFormat);
 
 const ResourceView: React.FC<ResourceViewProps> = (props) => {
     const {
+        namespace,
+        resourceName,
         columnTitles,
         resourceData = {},
         onResourceClicked = () => undefined,
@@ -86,7 +90,7 @@ const ResourceView: React.FC<ResourceViewProps> = (props) => {
             </table >
             {
                 Object.keys(resourceData).length == 0
-                    ? <EmojiHint emoji="🤷‍♀️">No resource of this type found.</EmojiHint>
+                    ? <EmojiHint emoji="⏳">No {resourceName + 's' || 'resources'} in namespace "{namespace}" yet</EmojiHint>
                     : null
             }
         </>

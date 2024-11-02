@@ -14,6 +14,9 @@ import useResourceWatch from '../../hooks/useResourceWatch';
 import { Gvk, NamespaceAndName } from '../../model/k8s';
 import classes from './styles.module.css';
 import { useSearchParams } from 'react-router-dom';
+import useKubernetesResourceWatchPlain from '../../hooks/useResourceWatchPlain';
+
+const namespace_gvk = { group: "", version: "v1", kind: "Namespace" };
 
 const defaultPinnedGvks: Gvk[] = [
     { group: '', version: 'v1', kind: 'Node' },
@@ -41,7 +44,9 @@ const ClusterView: React.FC = () => {
     const [selectedResource, setSelectedResource] = useState<NamespaceAndName>({ namespace: '', name: '' });
     const [selectedView, setSelectedView] = useState("");
     const { discovery, clientId, lastError, loading } = useClusterDiscovery(source, context);
-    const [columnTitles, resources] = useResourceWatch(clientId, currentGvk, selectedView);
+    const namespaces = useKubernetesResourceWatchPlain(clientId, namespace_gvk);
+    const [selectedNamespace, setSelectedNamespace] = useState('default');
+    const [columnTitles, resources] = useResourceWatch(clientId, currentGvk, selectedView, selectedNamespace);
 
     const [tabs, activeTab, pushTab, removeTab, setActiveTab] = useTabs();
 
@@ -144,8 +149,17 @@ const ClusterView: React.FC = () => {
                                                     ))
                                                 }
                                             </select>
+                                            <select value={selectedNamespace} onChange={(e) => setSelectedNamespace(e.target.value)}>
+                                                {
+                                                    Object.values(namespaces).map(({ name }) => (
+                                                        <option key={name}>{name}</option>
+                                                    ))
+                                                }
+                                            </select>
                                         </div>
                                         <ResourceView
+                                            resourceName={currentGvk.kind}
+                                            namespace={selectedNamespace}
                                             columnTitles={columnTitles || []}
                                             resourceData={resources}
                                             onResourceClicked={(uid) => {
