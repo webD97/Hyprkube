@@ -32,9 +32,6 @@ export type AsyncDiscovery =
             { group: string, version: string, kind: string, plural: string, source: 'Builtin' | 'CustomResource' },
             string[]
         ]
-    } |
-    {
-        apiGroup: [string, boolean]
     };
 
 export function useClusterDiscovery(source: string | null, context: string | null): ClusterDiscovery {
