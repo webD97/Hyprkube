@@ -18,6 +18,7 @@ export type DiscoveredGroup = {
 export type DiscoveredResource = {
     version: string,
     kind: string,
+    plural: string,
     views: string[]
 }
 
@@ -28,7 +29,7 @@ export type DiscoveryResult = {
 export type AsyncDiscovery =
     {
         discoveredResource: [
-            { group: string, version: string, kind: string, source: 'Builtin' | 'CustomResource' },
+            { group: string, version: string, kind: string, plural: string, source: 'Builtin' | 'CustomResource' },
             string[]
         ]
     } |
@@ -68,6 +69,7 @@ export function useClusterDiscovery(source: string | null, context: string | nul
                         updated.gvks[resource.group].kinds.push({
                             kind: resource.kind,
                             version: resource.version,
+                            plural: resource.plural,
                             views
                         });
                     }

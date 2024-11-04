@@ -28,6 +28,7 @@ pub struct DiscoveredResource {
     pub group: String,
     pub version: String,
     pub kind: String,
+    pub plural: String,
     pub source: ApiGroupSource,
 }
 
@@ -128,6 +129,7 @@ impl KubernetesClientRegistry {
                         let resource = DiscoveredResource {
                             group: ar.group.clone(),
                             kind: ar.kind.clone(),
+                            plural: ar.plural.clone(),
                             version: ar.version.clone(),
                             source: ApiGroupSource::Builtin,
                         };
@@ -171,6 +173,7 @@ impl KubernetesClientRegistry {
                         let resource = DiscoveredResource {
                             group: ar.group.clone(),
                             kind: ar.kind.clone(),
+                            plural: ar.plural.clone(),
                             version: ar.version.clone(),
                             source: ApiGroupSource::CustomResource,
                         };

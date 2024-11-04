@@ -62,6 +62,10 @@ const ClusterView: React.FC = () => {
 
     dayjs.extend(relativeTime);
 
+    function findResourcePlural(gvk: Gvk) {
+        return discovery.gvks[gvk.group]?.kinds.find(resource => resource.kind === gvk.kind)?.plural;
+    }
+
     return (
         <div className={classes.container}>
             <nav>
@@ -158,7 +162,7 @@ const ClusterView: React.FC = () => {
                                             </select>
                                         </div>
                                         <ResourceView
-                                            resourceName={currentGvk.kind}
+                                            resourceNamePlural={findResourcePlural(currentGvk)}
                                             namespace={selectedNamespace}
                                             columnTitles={columnTitles || []}
                                             resourceData={resources}
