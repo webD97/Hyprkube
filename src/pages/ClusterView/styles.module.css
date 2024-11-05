@@ -117,3 +117,7 @@ nav details summary:hover {
 .topBar>*:last-child {
     margin-right: 0;
 }
+
+.topBar h2 {
+    text-transform: capitalize;
+}

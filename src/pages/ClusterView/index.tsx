@@ -145,7 +145,7 @@ const ClusterView: React.FC = () => {
                                 : (
                                     <>
                                         <div className={classes.topBar}>
-                                            <h2>{currentGvk?.kind}</h2>
+                                            <h2>{findResourcePlural(currentGvk)}</h2>
                                             <select value={selectedView} onChange={(e) => setSelectedView(e.target.value)}>
                                                 {
                                                     discovery?.gvks[currentGvk.group].kinds.find(v => v.kind === currentGvk.kind)?.views.map(view => (
