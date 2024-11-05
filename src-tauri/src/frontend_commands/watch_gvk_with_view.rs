@@ -46,7 +46,10 @@ pub async fn watch_gvk_with_view(
     namespace: Option<&str>,
 ) -> Result<(), BackendError> {
     let channel_id = channel.id();
-    println!("Streaming {:?} to channel {channel_id}", gvk);
+    println!(
+        "Streaming {:?} in namespace {:?} to channel {channel_id}",
+        gvk, namespace
+    );
 
     let client = client_registry_arc.try_clone(&client_id)?;
 

@@ -154,6 +154,7 @@ const ClusterView: React.FC = () => {
                                                 }
                                             </select>
                                             <select value={selectedNamespace} onChange={(e) => setSelectedNamespace(e.target.value)}>
+                                                <option label="(All namespaces)"></option>
                                                 {
                                                     Object.values(namespaces).map(({ name }) => (
                                                         <option key={name}>{name}</option>
