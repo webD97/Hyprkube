@@ -70,7 +70,7 @@ export type ResourceViewData = {
     [key: string]: Payload
 };
 
-export default function useKubernetesResourceWatch(kubernetesClientId: string | undefined, gvk: Gvk | undefined, viewName: string, namespace?: string): [string[], ResourceViewData] {
+export default function useKubernetesResourceWatch(kubernetesClientId: string | undefined, gvk: Gvk | undefined, viewName: string, namespace: string): [string[], ResourceViewData] {
     const [columnTitles, setColumnTitles] = useState<string[]>([]);
     const [resources, setResources] = useState<ResourceViewData>({});
 

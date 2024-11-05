@@ -43,7 +43,7 @@ pub async fn watch_gvk_with_view(
     gvk: kube::api::GroupVersionKind,
     view_name: String,
     channel: tauri::ipc::Channel<WatchStreamEvent>,
-    namespace: Option<&str>,
+    namespace: &str,
 ) -> Result<(), BackendError> {
     let channel_id = channel.id();
     println!(
@@ -53,11 +53,14 @@ pub async fn watch_gvk_with_view(
 
     let client = client_registry_arc.try_clone(&client_id)?;
 
-    let (api_resource, _) = kube::discovery::oneshot::pinned_kind(&client, &gvk).await?;
+    let (api_resource, resource_capabilities) =
+        kube::discovery::oneshot::pinned_kind(&client, &gvk).await?;
 
-    let api: kube::Api<kube::api::DynamicObject> = match namespace {
-        None => kube::Api::all_with(client, &api_resource),
-        Some(namespace) => kube::Api::namespaced_with(client, namespace, &api_resource),
+    let api = match resource_capabilities.scope {
+        kube::discovery::Scope::Cluster => kube::Api::all_with(client, &api_resource),
+        kube::discovery::Scope::Namespaced => {
+            kube::Api::namespaced_with(client, namespace, &api_resource)
+        }
     };
 
     let views = Arc::clone(&views);

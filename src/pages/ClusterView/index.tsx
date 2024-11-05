@@ -66,6 +66,10 @@ const ClusterView: React.FC = () => {
         return discovery.gvks[gvk.group]?.kinds.find(resource => resource.kind === gvk.kind)?.plural;
     }
 
+    function findResourceScope(gvk: Gvk) {
+        return discovery.gvks[gvk.group]?.kinds.find(resource => resource.kind === gvk.kind)?.scope;
+    }
+
     return (
         <div className={classes.container}>
             <nav>
@@ -153,14 +157,20 @@ const ClusterView: React.FC = () => {
                                                     ))
                                                 }
                                             </select>
-                                            <select value={selectedNamespace} onChange={(e) => setSelectedNamespace(e.target.value)}>
-                                                <option label="(All namespaces)"></option>
-                                                {
-                                                    Object.values(namespaces).map(({ name }) => (
-                                                        <option key={name}>{name}</option>
-                                                    ))
-                                                }
-                                            </select>
+                                            {
+                                                findResourceScope(currentGvk) === 'cluster'
+                                                    ? null
+                                                    : (
+                                                        <select value={selectedNamespace} onChange={(e) => setSelectedNamespace(e.target.value)}>
+                                                            <option label="(All namespaces)"></option>
+                                                            {
+                                                                Object.values(namespaces).map(({ name }) => (
+                                                                    <option key={name}>{name}</option>
+                                                                ))
+                                                            }
+                                                        </select>
+                                                    )
+                                            }
                                         </div>
                                         <ResourceView
                                             resourceNamePlural={findResourcePlural(currentGvk)}

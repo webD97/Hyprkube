@@ -24,12 +24,29 @@ pub struct DiscoveredGroup {
 
 #[derive(Serialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
+pub enum Scope {
+    Cluster,
+    Namespaced,
+}
+
+impl From<kube::discovery::Scope> for Scope {
+    fn from(value: kube::discovery::Scope) -> Self {
+        match value {
+            kube::discovery::Scope::Cluster => Self::Cluster,
+            kube::discovery::Scope::Namespaced => Self::Namespaced,
+        }
+    }
+}
+
+#[derive(Serialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct DiscoveredResource {
     pub group: String,
     pub version: String,
     pub kind: String,
     pub plural: String,
     pub source: ApiGroupSource,
+    pub scope: Scope,
 }
 
 #[derive(Serialize, Clone)]
@@ -132,6 +149,7 @@ impl KubernetesClientRegistry {
                             plural: ar.plural.clone(),
                             version: ar.version.clone(),
                             source: ApiGroupSource::Builtin,
+                            scope: capabilities.scope.into(),
                         };
 
                         downstream_tx
@@ -176,6 +194,7 @@ impl KubernetesClientRegistry {
                             plural: ar.plural.clone(),
                             version: ar.version.clone(),
                             source: ApiGroupSource::CustomResource,
+                            scope: capabilities.scope.into(),
                         };
 
                         downstream_tx

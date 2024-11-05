@@ -19,6 +19,7 @@ export type DiscoveredResource = {
     version: string,
     kind: string,
     plural: string,
+    scope: 'namespaced' | 'cluster',
     views: string[]
 }
 
@@ -29,7 +30,7 @@ export type DiscoveryResult = {
 export type AsyncDiscovery =
     {
         discoveredResource: [
-            { group: string, version: string, kind: string, plural: string, source: 'Builtin' | 'CustomResource' },
+            { group: string, version: string, kind: string, plural: string, source: 'Builtin' | 'CustomResource', scope: 'cluster' | 'namespaced' },
             string[]
         ]
     };
@@ -63,12 +64,16 @@ export function useClusterDiscovery(source: string | null, context: string | nul
 
                     // Backend currently sends resources multiple times
                     if (updated.gvks[resource.group].kinds.findIndex(k => k.kind === resource.kind) === -1) {
-                        updated.gvks[resource.group].kinds.push({
+                        const x = {
                             kind: resource.kind,
                             version: resource.version,
                             plural: resource.plural,
+                            scope: resource.scope,
                             views
-                        });
+                        };
+
+                        console.log(x)
+                        updated.gvks[resource.group].kinds.push(x);
                     }
 
                     return updated;
