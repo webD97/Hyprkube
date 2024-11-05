@@ -18,7 +18,7 @@ const StatusPanel: React.FC = () => {
 
     return (
         <>
-            <div>Handles: {hdlCount}</div>
+            <div>Channels: {hdlCount}</div>
             <div>Location: {pathname}{search}</div>
         </>
     );
