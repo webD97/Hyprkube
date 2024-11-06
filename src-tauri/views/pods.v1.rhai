@@ -52,6 +52,10 @@
             accessor: |obj| {
                 let phase = obj.status.phase;
 
+                if "deletionTimestamp" in obj.metadata {
+                    return ColoredString("Terminating", "orange");
+                }
+
                 if phase == "Running" {
                     return ColoredString(phase, "lime");
                 }
