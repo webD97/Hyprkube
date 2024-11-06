@@ -5,12 +5,15 @@ import { ResourceViewData } from "../../hooks/useResourceWatch";
 import EmojiHint from "../EmojiHint";
 import { open } from '@tauri-apps/plugin-shell';
 
+import styles from './styles.module.css';
+
 export interface ResourceViewProps {
     namespace?: string,
     resourceNamePlural?: string,
     columnTitles: string[],
     resourceData: ResourceViewData,
     onResourceClicked?: (uid: string) => void,
+    onDeleteClicked?: (uid: string) => void,
 }
 
 dayjs.extend(RelativeTime);
@@ -23,10 +26,11 @@ const ResourceView: React.FC<ResourceViewProps> = (props) => {
         columnTitles,
         resourceData = {},
         onResourceClicked = () => undefined,
+        onDeleteClicked = () => undefined,
     } = props;
 
     return (
-        <>
+        <div className={styles.container}>
             <table>
                 <thead>
                     <tr>
@@ -37,6 +41,7 @@ const ResourceView: React.FC<ResourceViewProps> = (props) => {
                                 </th>
                             ))
                         }
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -83,6 +88,12 @@ const ResourceView: React.FC<ResourceViewProps> = (props) => {
                                         );
                                     })
                                 }
+                                <td className={styles.resourceQuickActions}>
+                                    <button onClick={(e) => {
+                                        e.stopPropagation();
+                                        onDeleteClicked(columnData.uid);
+                                    }}>Delete</button>
+                                </td>
                             </tr>
                         ))
                     }
@@ -93,7 +104,7 @@ const ResourceView: React.FC<ResourceViewProps> = (props) => {
                     ? <EmojiHint emoji="⏳">No {resourceNamePlural} in namespace "{namespace}" yet</EmojiHint>
                     : null
             }
-        </>
+        </div>
     );
 }
 

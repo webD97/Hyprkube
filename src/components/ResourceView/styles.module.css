@@ -1,0 +1,7 @@
+.container .resourceQuickActions>* {
+    display: none;
+}
+
+.container .resourceQuickActions:hover>* {
+    display: initial;
+}

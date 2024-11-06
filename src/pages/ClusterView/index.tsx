@@ -15,6 +15,7 @@ import { Gvk, NamespaceAndName } from '../../model/k8s';
 import classes from './styles.module.css';
 import { useSearchParams } from 'react-router-dom';
 import useKubernetesResourceWatchPlain from '../../hooks/useResourceWatchPlain';
+import { deleteResource } from '../../api/deleteResource';
 
 const namespace_gvk = { group: "", version: "v1", kind: "Namespace" };
 
@@ -177,6 +178,12 @@ const ClusterView: React.FC = () => {
                                             namespace={selectedNamespace}
                                             columnTitles={columnTitles || []}
                                             resourceData={resources}
+                                            onDeleteClicked={(uid) => {
+                                                const { namespace, name } = resources[uid];
+                                                if (window.confirm(`Do you really want to delete ${name}?`)) {
+                                                    deleteResource(clientId!, currentGvk, namespace, name);
+                                                }
+                                            }}
                                             onResourceClicked={(uid) => {
                                                 setSelectedResource(resources[uid]);
 
