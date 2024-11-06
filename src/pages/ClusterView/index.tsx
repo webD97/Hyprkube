@@ -14,7 +14,7 @@ import useResourceWatch from '../../hooks/useResourceWatch';
 import { Gvk, NamespaceAndName } from '../../model/k8s';
 import classes from './styles.module.css';
 import { useSearchParams } from 'react-router-dom';
-import useKubernetesResourceWatchPlain from '../../hooks/useResourceWatchPlain';
+import useClusterNamespaces from '../../hooks/useClusterNamespaces';
 import { deleteResource } from '../../api/deleteResource';
 
 const namespace_gvk = { group: "", version: "v1", kind: "Namespace" };
@@ -45,7 +45,7 @@ const ClusterView: React.FC = () => {
     const [selectedResource, setSelectedResource] = useState<NamespaceAndName>({ namespace: '', name: '' });
     const [selectedView, setSelectedView] = useState("");
     const { discovery, clientId, lastError, loading } = useClusterDiscovery(source, context);
-    const namespaces = useKubernetesResourceWatchPlain(clientId, namespace_gvk);
+    const namespaces = useClusterNamespaces(clientId, namespace_gvk);
     const [selectedNamespace, setSelectedNamespace] = useState('default');
     const [columnTitles, resources] = useResourceWatch(clientId, currentGvk, selectedView, selectedNamespace);
 
@@ -165,8 +165,8 @@ const ClusterView: React.FC = () => {
                                                         <select value={selectedNamespace} onChange={(e) => setSelectedNamespace(e.target.value)}>
                                                             <option label="(All namespaces)"></option>
                                                             {
-                                                                Object.values(namespaces).map(({ name }) => (
-                                                                    <option key={name}>{name}</option>
+                                                                Object.values(namespaces).map(namespace => (
+                                                                    <option key={namespace}>{namespace}</option>
                                                                 ))
                                                             }
                                                         </select>

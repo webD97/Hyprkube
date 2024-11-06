@@ -35,7 +35,7 @@ pub fn run() {
             frontend_commands::discover_kubernetes_cluster,
             frontend_commands::kube_stream_podlogs,
             frontend_commands::watch_gvk_with_view,
-            frontend_commands::watch_gvk_plain,
+            frontend_commands::watch_namespaces,
             frontend_commands::cleanup_channel,
             frontend_commands::discover_contexts,
             frontend_commands::delete_resource,
