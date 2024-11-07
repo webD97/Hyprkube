@@ -22,7 +22,6 @@ export const usePodLogs = (kubernetesClientId: string | undefined, namespace: st
     const [text, setText] = useState('');
 
     useEffect(() => {
-        console.log({ kubernetesClientId })
         if (!kubernetesClientId) return;
 
         setText('');

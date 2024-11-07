@@ -72,7 +72,6 @@ export function useClusterDiscovery(source: string | null, context: string | nul
                             views
                         };
 
-                        console.log(x)
                         updated.gvks[resource.group].kinds.push(x);
                     }
 

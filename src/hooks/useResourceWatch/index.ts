@@ -1,8 +1,9 @@
 import { Channel, invoke } from "@tauri-apps/api/core";
 import { useEffect, useState } from "react";
 import { Gvk } from "../../model/k8s";
+import dayjs from "dayjs";
 
-type ResourceField =
+type ResourceFieldComponent =
     {
         PlainString: string
     }
@@ -33,25 +34,37 @@ type ResourceField =
         }
     };
 
-type OkData = { "Ok": ResourceField[] };
-type ErrData = { "Err": string };
-type ColumnData = (OkData | ErrData)[];
+export type ResourceField = {
+    components: ResourceFieldComponent[],
+    sortableValue: string
+};
 
-type Payload = {
+export type OkData = { "Ok": ResourceFieldComponent[] };
+export type ErrData = { "Err": string };
+export type ColumnData = (OkData | ErrData)[];
+
+type Resource = {
     uid: string,
     namespace: string,
     name: string,
     columns: ColumnData
 }
 
+export type DisplayableResource = {
+    uid: string,
+    namespace: string,
+    name: string,
+    columns: ResourceField[]
+}
+
 export type WatchEvent =
     | {
         event: 'created';
-        data: Payload
+        data: Resource
     }
     | {
         event: 'updated';
-        data: Payload
+        data: Resource
     }
     | {
         event: 'deleted';
@@ -67,8 +80,36 @@ export type WatchEvent =
     }
 
 export type ResourceViewData = {
-    [key: string]: Payload
+    [key: string]: DisplayableResource
 };
+
+function resourceToDisplayableResource(resource: Resource): DisplayableResource {
+    return ({
+        namespace: resource.namespace,
+        name: resource.name,
+        uid: resource.uid,
+        columns: resource.columns.map((column) => {
+            if ("Err" in column) {
+                return ({ components: [{ PlainString: column.Err }], sortableValue: column.Err });
+            }
+            if ("Ok" in column) {
+                const components = column.Ok;
+                return ({
+                    components,
+                    sortableValue: components.map(component => {
+                        if ("RelativeTime" in component) {
+                            return dayjs(component.RelativeTime.iso).unix();
+                        }
+                        return component[Object.keys(component)[0] as keyof ResourceFieldComponent];
+                    }).join()
+                });
+            }
+
+            // We cannot reach this
+            return ({ components: [], sortableValue: "" });
+        })
+    });
+}
 
 export default function useKubernetesResourceWatch(kubernetesClientId: string | undefined, gvk: Gvk | undefined, viewName: string, namespace: string): [string[], ResourceViewData] {
     const [columnTitles, setColumnTitles] = useState<string[]>([]);
@@ -89,14 +130,14 @@ export default function useKubernetesResourceWatch(kubernetesClientId: string | 
                 const { uid } = message.data;
                 setResources(datasets => ({
                     ...datasets,
-                    [uid]: message.data
+                    [uid]: resourceToDisplayableResource(message.data)
                 }));
             }
             else if (message.event === 'updated') {
                 const { uid } = message.data;
                 setResources(datasets => ({
                     ...datasets,
-                    [uid]: message.data
+                    [uid]: resourceToDisplayableResource(message.data)
                 }));
             }
             else if (message.event === 'deleted') {

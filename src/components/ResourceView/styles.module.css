@@ -5,3 +5,7 @@
 .container .resourceQuickActions:hover>* {
     display: initial;
 }
+
+.sortable {
+    cursor: pointer;
+}
