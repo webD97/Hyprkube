@@ -1,3 +1,36 @@
+.container table {
+    font-family: monospace;
+    border-spacing: 0;
+    width: 100%;
+    table-layout: fixed;
+}
+
+.container table tr {
+    height: 2.5em;
+}
+
+.container table th {
+    text-align: left;
+    font-weight: bold;
+}
+
+.container table td,
+.container table th {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 150px;
+    padding: 0 0.5em;
+}
+
+.container table tbody tr:hover {
+    background-color: rgba(0, 0, 0, 0.25);
+}
+
+.container .resourceQuickActions {
+    width: 10%;
+}
+
 .container .resourceQuickActions>* {
     display: none;
 }

@@ -9,7 +9,7 @@ pub struct FallbackRenderer {}
 
 impl ResourceRenderer for FallbackRenderer {
     fn display_name(&self) -> &str {
-        "Minimal default"
+        "Simple list"
     }
 
     fn titles(
@@ -33,12 +33,13 @@ impl ResourceRenderer for FallbackRenderer {
             Ok(vec![FrontendValue::PlainString(
                 obj.metadata.clone().name.or(Some("".into())).unwrap(),
             )]),
-            Ok(vec![FrontendValue::PlainString(
-                obj.metadata
+            Ok(vec![FrontendValue::RelativeTime(super::RelativeTime {
+                iso: obj
+                    .metadata
                     .clone()
                     .creation_timestamp
                     .map_or("".into(), |v| v.0.to_rfc3339()),
-            )]),
+            })]),
         ])
     }
 }

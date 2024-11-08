@@ -11,41 +11,6 @@
     height: 100%;
 }
 
-table {
-    width: 100%;
-    max-width: 100%;
-}
-
-table {
-    font-family: monospace;
-    border-spacing: 0;
-    max-width: 100%;
-    table-layout: fixed;
-}
-
-table tr {
-    height: 2.5em;
-    max-width: 100%;
-}
-
-table th {
-    text-align: left;
-    font-weight: bold;
-}
-
-table td,
-table th {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    min-width: 150px;
-    padding: 0 0.5em;
-}
-
-table tbody tr:hover {
-    background-color: rgba(0, 0, 0, 0.25);
-}
-
 nav {
     grid-area: nav;
     max-height: 100%;
