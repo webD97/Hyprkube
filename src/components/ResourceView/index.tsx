@@ -14,7 +14,8 @@ import {
     getCoreRowModel,
     getSortedRowModel,
     SortingState,
-    useReactTable
+    useReactTable,
+    VisibilityState
 } from '@tanstack/react-table';
 
 export interface ResourceViewProps {
@@ -94,6 +95,16 @@ const ResourceView: React.FC<ResourceViewProps> = (props) => {
         }
     };
 
+    const columnVisibility: VisibilityState = useMemo(() => {
+        if (namespace === "") {
+            return {};
+        }
+
+        return {
+            [columnTitles.indexOf("Namespace")]: false
+        };
+    }, [namespace, columnTitles]);
+
     const table = useReactTable({
         columns,
         data,
@@ -102,7 +113,8 @@ const ResourceView: React.FC<ResourceViewProps> = (props) => {
         defaultColumn,
         onSortingChange: setSorting,
         state: {
-            sorting
+            sorting,
+            columnVisibility
         }
     });
 
@@ -135,7 +147,7 @@ const ResourceView: React.FC<ResourceViewProps> = (props) => {
                                     onResourceClicked(row.original[0])
                                 }}>
                                     {
-                                        row.getAllCells().map((cell) => {
+                                        row.getVisibleCells().map((cell) => {
                                             return (
                                                 <td key={cell.id}>
                                                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
