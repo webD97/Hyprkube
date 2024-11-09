@@ -1,6 +1,11 @@
 import { CellContext } from "@tanstack/react-table";
-import { DisplayableResource, ResourceField } from "../../hooks/useResourceWatch";
 import dayjs from "dayjs";
+import LocalizedFormat from "dayjs/plugin/localizedFormat";
+import RelativeTime from "dayjs/plugin/relativeTime";
+import { DisplayableResource, ResourceField } from "../../hooks/useResourceWatch";
+
+dayjs.extend(RelativeTime);
+dayjs.extend(LocalizedFormat);
 
 export const CustomCell: React.FC<CellContext<[string, DisplayableResource], unknown>> = (props) => {
     return (props.getValue() as ResourceField).components.map((inner, idx) => {

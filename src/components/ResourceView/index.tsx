@@ -1,6 +1,3 @@
-import dayjs from "dayjs";
-import LocalizedFormat from "dayjs/plugin/localizedFormat";
-import RelativeTime from "dayjs/plugin/relativeTime";
 import { DisplayableResource, ResourceViewData } from "../../hooks/useResourceWatch";
 import EmojiHint from "../EmojiHint";
 
@@ -26,9 +23,6 @@ export interface ResourceViewProps {
     onResourceClicked?: (uid: string) => void,
     onDeleteClicked?: (uid: string) => void,
 }
-
-dayjs.extend(RelativeTime);
-dayjs.extend(LocalizedFormat);
 
 function createColumns(titles: string[]) {
     const columnHelper = createColumnHelper<[string, DisplayableResource]>();
