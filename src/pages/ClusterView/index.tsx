@@ -18,6 +18,7 @@ import useClusterNamespaces from '../../hooks/useClusterNamespaces';
 import { deleteResource } from '../../api/deleteResource';
 import listResourceViews, { type ResourceViewDef } from '../../api/listResourceViews';
 import { confirm } from '@tauri-apps/plugin-dialog';
+import { Menu, MenuItem } from '@tauri-apps/api/menu';
 
 const namespace_gvk = { group: "", version: "v1", kind: "Namespace" };
 
@@ -185,32 +186,48 @@ const ClusterView: React.FC = () => {
                                             namespace={selectedNamespace}
                                             columnTitles={columnTitles || []}
                                             resourceData={resources}
-                                            onDeleteClicked={(uid) => {
-                                                const { namespace, name } = resources[uid];
+                                            onResourceContextMenu={async (resourceUID: string) => {
+                                                const itemPromises = [
+                                                    MenuItem.new({
+                                                        text: 'Delete',
+                                                        action: async () => {
+                                                            const { namespace, name } = resources[resourceUID];
 
-                                                confirm(`This action cannot be reverted. Are you sure?`, { kind: 'warning', title: `Permanently delete resource?` })
-                                                    .then((confirmed) => {
-                                                        if (confirmed) {
-                                                            deleteResource(clientId!, currentGvk, namespace, name);
+                                                            const confirmed = await confirm(`This action cannot be reverted. Are you sure?`, { kind: 'warning', title: `Permanently delete resource?` });
+
+                                                            if (confirmed) {
+                                                                deleteResource(clientId!, currentGvk, namespace, name);
+                                                            }
                                                         }
                                                     })
-                                            }}
-                                            onResourceClicked={(uid) => {
+                                                ];
+
                                                 if (currentGvk.kind === "Pod") {
-                                                    pushTab(
-                                                        <Tab title={resources[uid].name}>
-                                                            {
-                                                                () => (
-                                                                    <LogPanel
-                                                                        kubernetesClientId={clientId}
-                                                                        namespace={resources[uid].namespace}
-                                                                        name={resources[uid].name}
-                                                                    />
+                                                    itemPromises.push(
+                                                        MenuItem.new({
+                                                            text: 'Show logs',
+                                                            action: () => {
+                                                                pushTab(
+                                                                    <Tab title={resources[resourceUID].name}>
+                                                                        {
+                                                                            () => (
+                                                                                <LogPanel
+                                                                                    kubernetesClientId={clientId}
+                                                                                    namespace={resources[resourceUID].namespace}
+                                                                                    name={resources[resourceUID].name}
+                                                                                />
+                                                                            )
+                                                                        }
+                                                                    </Tab>
                                                                 )
                                                             }
-                                                        </Tab>
+                                                        })
                                                     );
                                                 }
+
+                                                const items = await Promise.all(itemPromises);
+
+                                                return Menu.new({ items });
                                             }}
                                         />
                                     </>

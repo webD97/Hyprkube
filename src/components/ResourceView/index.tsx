@@ -14,14 +14,15 @@ import {
     VisibilityState
 } from '@tanstack/react-table';
 import { CustomCell } from "./CustomCell";
+import { Menu } from "@tauri-apps/api/menu";
+import { isDev } from "../../utils/isDev";
 
 export interface ResourceViewProps {
     namespace?: string,
     resourceNamePlural?: string,
     columnTitles: string[],
     resourceData: ResourceViewData,
-    onResourceClicked?: (uid: string) => void,
-    onDeleteClicked?: (uid: string) => void,
+    onResourceContextMenu: (uid: string) => Promise<Menu>
 }
 
 function createColumns(titles: string[]) {
@@ -49,8 +50,7 @@ const ResourceView: React.FC<ResourceViewProps> = (props) => {
         resourceNamePlural,
         columnTitles,
         resourceData = {},
-        onResourceClicked = () => undefined,
-        onDeleteClicked = () => undefined,
+        onResourceContextMenu,
     } = props;
 
     const columns = useMemo(() => createColumns(columnTitles), [columnTitles]);
@@ -107,9 +107,14 @@ const ResourceView: React.FC<ResourceViewProps> = (props) => {
                     {
                         table.getRowModel().rows.map((row) => {
                             return (
-                                <tr key={row.id} onClick={() => {
-                                    onResourceClicked(row.original[0])
-                                }}>
+                                <tr key={row.id}
+                                    onContextMenu={(e) => {
+                                        if (!isDev()) {
+                                            e.preventDefault();
+                                        }
+                                        onResourceContextMenu(row.original[0]).then(menu => menu.popup());
+                                    }}
+                                >
                                     {
                                         row.getVisibleCells().map((cell) => {
                                             return (
@@ -119,10 +124,6 @@ const ResourceView: React.FC<ResourceViewProps> = (props) => {
                                             )
                                         })}
                                     <td className={styles.resourceQuickActions}>
-                                        <button onClick={(e) => {
-                                            e.stopPropagation();
-                                            onDeleteClicked(row.original[0]);
-                                        }}>Delete</button>
                                     </td>
                                 </tr>
                             )
