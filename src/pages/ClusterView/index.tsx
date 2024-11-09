@@ -18,7 +18,7 @@ import useClusterNamespaces from '../../hooks/useClusterNamespaces';
 import { deleteResource } from '../../api/deleteResource';
 import listResourceViews, { type ResourceViewDef } from '../../api/listResourceViews';
 import { confirm } from '@tauri-apps/plugin-dialog';
-import { Menu, MenuItem } from '@tauri-apps/api/menu';
+import { Menu, MenuItem, PredefinedMenuItem, Submenu } from '@tauri-apps/api/menu';
 
 const namespace_gvk = { group: "", version: "v1", kind: "Namespace" };
 
@@ -187,9 +187,17 @@ const ClusterView: React.FC = () => {
                                             columnTitles={columnTitles || []}
                                             resourceData={resources}
                                             onResourceContextMenu={async (resourceUID: string) => {
-                                                const itemPromises: Promise<MenuItem>[] = [
+                                                const itemPromises: Promise<MenuItem | PredefinedMenuItem>[] = [
                                                     MenuItem.new({
-                                                        text: 'Delete',
+                                                        text: 'Show YAML',
+                                                        enabled: false,
+                                                    }),
+                                                    MenuItem.new({
+                                                        text: 'Copy YAML',
+                                                        enabled: false,
+                                                    }),
+                                                    MenuItem.new({
+                                                        text: 'Delete resource',
                                                         action: async () => {
                                                             const { namespace, name } = resources[resourceUID];
 
@@ -199,13 +207,17 @@ const ClusterView: React.FC = () => {
                                                                 deleteResource(clientId!, currentGvk, namespace, name);
                                                             }
                                                         }
-                                                    })
+                                                    }),
+                                                    PredefinedMenuItem.new({ item: 'Separator' }),
                                                 ];
 
                                                 if (currentGvk.kind === "Pod") {
-                                                    itemPromises.push(
+                                                    const logItems: Promise<MenuItem>[] = [];
+                                                    const attachItems: Promise<MenuItem>[] = [];
+
+                                                    logItems.push(
                                                         MenuItem.new({
-                                                            text: 'Show logs',
+                                                            text: 'Container 0',
                                                             action: () => {
                                                                 pushTab(
                                                                     <Tab title={resources[resourceUID].name}>
@@ -223,6 +235,25 @@ const ClusterView: React.FC = () => {
                                                             }
                                                         })
                                                     );
+
+                                                    attachItems.push(
+                                                        MenuItem.new({
+                                                            text: 'Container 0',
+                                                            enabled: false
+                                                        })
+                                                    );
+
+                                                    const logsSubmenu = Submenu.new({
+                                                        text: 'Show logs',
+                                                        items: await Promise.all(logItems)
+                                                    })
+
+                                                    const attachSubmenu = Submenu.new({
+                                                        text: 'Open shell',
+                                                        items: await Promise.all(attachItems)
+                                                    });
+
+                                                    itemPromises.push(logsSubmenu, attachSubmenu);
                                                 }
 
                                                 const items = await Promise.all(itemPromises);
