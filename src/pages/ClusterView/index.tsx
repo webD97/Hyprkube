@@ -17,6 +17,7 @@ import { useSearchParams } from 'react-router-dom';
 import useClusterNamespaces from '../../hooks/useClusterNamespaces';
 import { deleteResource } from '../../api/deleteResource';
 import listResourceViews, { type ResourceViewDef } from '../../api/listResourceViews';
+import { confirm } from '@tauri-apps/plugin-dialog';
 
 const namespace_gvk = { group: "", version: "v1", kind: "Namespace" };
 
@@ -186,9 +187,13 @@ const ClusterView: React.FC = () => {
                                             resourceData={resources}
                                             onDeleteClicked={(uid) => {
                                                 const { namespace, name } = resources[uid];
-                                                if (window.confirm(`Do you really want to delete ${name}?`)) {
-                                                    deleteResource(clientId!, currentGvk, namespace, name);
-                                                }
+
+                                                confirm(`This action cannot be reverted. Are you sure?`, { kind: 'warning', title: `Permanently delete resource?` })
+                                                    .then((confirmed) => {
+                                                        if (confirmed) {
+                                                            deleteResource(clientId!, currentGvk, namespace, name);
+                                                        }
+                                                    })
                                             }}
                                             onResourceClicked={(uid) => {
                                                 if (currentGvk.kind === "Pod") {

@@ -14,6 +14,7 @@
     "@melloware/react-logviewer": "5.2.3",
     "@tanstack/react-table": "^8.20.5",
     "@tauri-apps/api": "2.0.3",
+    "@tauri-apps/plugin-dialog": "^2.0.1",
     "@tauri-apps/plugin-shell": "2.0.1",
     "dayjs": "1.11.13",
     "react": "18.3.1",
