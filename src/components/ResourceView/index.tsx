@@ -15,7 +15,6 @@ import {
 } from '@tanstack/react-table';
 import { CustomCell } from "./CustomCell";
 import { Menu } from "@tauri-apps/api/menu";
-import { isDev } from "../../utils/isDev";
 
 export interface ResourceViewProps {
     namespace?: string,
@@ -109,9 +108,7 @@ const ResourceView: React.FC<ResourceViewProps> = (props) => {
                             return (
                                 <tr key={row.id}
                                     onContextMenu={(e) => {
-                                        if (!isDev()) {
-                                            e.preventDefault();
-                                        }
+                                        e.preventDefault();
                                         onResourceContextMenu(row.original[0]).then(menu => menu.popup());
                                     }}
                                 >

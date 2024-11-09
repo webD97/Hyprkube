@@ -187,7 +187,7 @@ const ClusterView: React.FC = () => {
                                             columnTitles={columnTitles || []}
                                             resourceData={resources}
                                             onResourceContextMenu={async (resourceUID: string) => {
-                                                const itemPromises = [
+                                                const itemPromises: Promise<MenuItem>[] = [
                                                     MenuItem.new({
                                                         text: 'Delete',
                                                         action: async () => {
