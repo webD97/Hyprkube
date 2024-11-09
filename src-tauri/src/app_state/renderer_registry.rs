@@ -109,19 +109,26 @@ impl RendererRegistry {
         renderers
             .iter()
             .map(|v| v.display_name().to_owned())
-            .chain(std::iter::once(match crds.contains(&gvk) {
-                false => self.generic_renderer.display_name().to_owned(),
-                true => self.crd_renderer.display_name().to_owned(),
-            }))
+            .chain(match crds.contains(&gvk) {
+                true => Some(self.crd_renderer.display_name().to_owned()),
+                false => None,
+            })
+            .chain(Some(self.generic_renderer.display_name().to_owned()))
             .collect()
     }
 
     pub async fn get_renderer(
         &self,
-        kube_client_id: &Uuid,
         gvk: &GroupVersionKind,
         view_name: &str,
     ) -> &Box<dyn ResourceRenderer> {
+        if view_name == self.generic_renderer.display_name() {
+            return &self.generic_renderer;
+        }
+        if view_name == self.crd_renderer.display_name() {
+            return &self.crd_renderer;
+        }
+
         let specific_view = self
             .mappings
             .get(gvk)
@@ -130,21 +137,14 @@ impl RendererRegistry {
             .iter()
             .find(|view| view.display_name() == view_name);
 
-        let kubernetes_client_registry = self.app_handle.state::<KubernetesClientRegistryState>();
-
-        let registered = kubernetes_client_registry
-            .get_cluster(&kube_client_id)
-            .unwrap();
-
-        let crds: Vec<&GroupVersionKind> = registered.2.crds.keys().collect();
-
         match specific_view {
             Some(view) => return view.to_owned(),
             None => {
-                return match crds.contains(&gvk) {
-                    false => &self.generic_renderer,
-                    true => &self.crd_renderer,
-                }
+                eprintln!(
+                    "View {:?} not found for {:?}, returning fallback.",
+                    &view_name, &gvk
+                );
+                return &self.generic_renderer;
             }
         }
     }

@@ -1,16 +1,11 @@
-use std::sync::Arc;
-
-use kube::{
-    api::GroupVersionKind,
-    config::{KubeConfigOptions, Kubeconfig},
-};
+use kube::config::{KubeConfigOptions, Kubeconfig};
 use serde::Serialize;
 use tauri::{Emitter, State};
 
 use crate::{
     app_state::{
         AsyncDiscoveryResult, DiscoveredResource, JoinHandleStoreState,
-        KubernetesClientRegistryState, RendererRegistry,
+        KubernetesClientRegistryState,
     },
     frontend_types::{BackendError, DiscoveredCluster},
 };
@@ -20,14 +15,13 @@ use super::KubeContextSource;
 #[derive(Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub enum DiscoveryResult {
-    DiscoveredResource((DiscoveredResource, Vec<String>)),
+    DiscoveredResource(DiscoveredResource),
 }
 
 #[tauri::command]
 pub async fn discover_kubernetes_cluster(
     app_handle: tauri::AppHandle,
     client_registry: tauri::State<'_, KubernetesClientRegistryState>,
-    view_registry: tauri::State<'_, Arc<RendererRegistry>>,
     join_handle_store: State<'_, JoinHandleStoreState>,
     channel: tauri::ipc::Channel<DiscoveryResult>,
     context_source: KubeContextSource,
@@ -40,8 +34,8 @@ pub async fn discover_kubernetes_cluster(
         ..Default::default()
     };
 
-    let client_config = kube::Config::from_custom_kubeconfig(kubeconfig, &kubeconfig_options)
-        .await?;
+    let client_config =
+        kube::Config::from_custom_kubeconfig(kubeconfig, &kubeconfig_options).await?;
 
     let (client_id, internal_discovery, discovery_handle) =
         client_registry.manage(client_config)?;
@@ -56,9 +50,7 @@ pub async fn discover_kubernetes_cluster(
     while let Ok(discovery) = internal_discovery.recv() {
         let send_result = match discovery {
             AsyncDiscoveryResult::DiscoveredResource(resource) => {
-                let gvk = GroupVersionKind::gvk(&resource.group, &resource.version, &resource.kind);
-                let views = view_registry.get_renderers(&client_id, &gvk).await;
-                channel.send(DiscoveryResult::DiscoveredResource((resource, views)))
+                channel.send(DiscoveryResult::DiscoveredResource(resource))
             }
         };
 

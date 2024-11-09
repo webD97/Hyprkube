@@ -11,11 +11,12 @@ import TabView, { Tab } from '../../components/TabView';
 import { useTabs } from '../../components/TabView/hooks';
 import { useClusterDiscovery } from '../../hooks/useClusterDiscovery';
 import useResourceWatch from '../../hooks/useResourceWatch';
-import { Gvk, NamespaceAndName } from '../../model/k8s';
+import { Gvk } from '../../model/k8s';
 import classes from './styles.module.css';
 import { useSearchParams } from 'react-router-dom';
 import useClusterNamespaces from '../../hooks/useClusterNamespaces';
 import { deleteResource } from '../../api/deleteResource';
+import listResourceViews, { type ResourceViewDef } from '../../api/listResourceViews';
 
 const namespace_gvk = { group: "", version: "v1", kind: "Namespace" };
 
@@ -40,9 +41,9 @@ const ClusterView: React.FC = () => {
     const source = searchParams.get('source');
     const context = searchParams.get('context');
 
+    const [availableViews, setAvailableViews] = useState<ResourceViewDef[]>([]);
     const [currentGvk, setCurrentGvk] = useState<Gvk>();
     const [pinnedGvks, setPinnedGvks] = useState<Gvk[]>(defaultPinnedGvks);
-    const [selectedResource, setSelectedResource] = useState<NamespaceAndName>({ namespace: '', name: '' });
     const [selectedView, setSelectedView] = useState("");
     const { discovery, clientId, lastError, loading } = useClusterDiscovery(source, context);
     const namespaces = useClusterNamespaces(clientId, namespace_gvk);
@@ -52,14 +53,19 @@ const ClusterView: React.FC = () => {
     const [tabs, activeTab, pushTab, removeTab, setActiveTab] = useTabs();
 
     useEffect(() => {
+        if (!clientId) return;
         if (!currentGvk) return;
 
-        const availableViews = discovery?.gvks[currentGvk.group].kinds.find(k => k.kind === currentGvk.kind)?.views || [];
+        listResourceViews(clientId, currentGvk)
+            .then(views => {
+                setAvailableViews(views);
 
-        if (availableViews?.length < 1) return;
+                if (views.length > 0) {
+                    setSelectedView(views[0]);
+                }
+            });
 
-        setSelectedView(availableViews[0]);
-    }, [selectedResource, currentGvk, discovery?.gvks]);
+    }, [currentGvk, clientId]);
 
     dayjs.extend(relativeTime);
 
@@ -153,7 +159,7 @@ const ClusterView: React.FC = () => {
                                             <h2>{findResourcePlural(currentGvk)}</h2>
                                             <select value={selectedView} onChange={(e) => setSelectedView(e.target.value)}>
                                                 {
-                                                    discovery?.gvks[currentGvk.group].kinds.find(v => v.kind === currentGvk.kind)?.views.map(view => (
+                                                    availableViews.map(view => (
                                                         <option key={view}>{view}</option>
                                                     ))
                                                 }
@@ -185,8 +191,6 @@ const ClusterView: React.FC = () => {
                                                 }
                                             }}
                                             onResourceClicked={(uid) => {
-                                                setSelectedResource(resources[uid]);
-
                                                 if (currentGvk.kind === "Pod") {
                                                     pushTab(
                                                         <Tab title={resources[uid].name}>

@@ -39,6 +39,7 @@ pub fn run() {
             frontend_commands::cleanup_channel,
             frontend_commands::discover_contexts,
             frontend_commands::delete_resource,
+            frontend_commands::list_resource_views,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

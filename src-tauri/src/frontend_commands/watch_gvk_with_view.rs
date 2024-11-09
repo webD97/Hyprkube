@@ -58,11 +58,10 @@ pub async fn watch_gvk_with_view(
 
     let api = match resource_capabilities.scope {
         kube::discovery::Scope::Cluster => kube::Api::all_with(client, &api_resource),
-        kube::discovery::Scope::Namespaced =>
-            match namespace {
-                "" => kube::Api::all_with(client, &api_resource),
-                namespace => kube::Api::namespaced_with(client, namespace, &api_resource)
-            }
+        kube::discovery::Scope::Namespaced => match namespace {
+            "" => kube::Api::all_with(client, &api_resource),
+            namespace => kube::Api::namespaced_with(client, namespace, &api_resource),
+        },
     };
 
     let views = Arc::clone(&views);
@@ -74,9 +73,7 @@ pub async fn watch_gvk_with_view(
         .boxed();
 
     let stream = async move {
-        let view = views
-            .get_renderer(&client_id, &gvk, view_name.as_str())
-            .await;
+        let view = views.get_renderer(&gvk, view_name.as_str()).await;
 
         let (_, _, discovery) = client_registry_arc.get_cluster(&client_id).unwrap();
 

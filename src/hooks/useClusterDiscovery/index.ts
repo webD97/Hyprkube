@@ -20,7 +20,6 @@ export type DiscoveredResource = {
     kind: string,
     plural: string,
     scope: 'namespaced' | 'cluster',
-    views: string[]
 }
 
 export type DiscoveryResult = {
@@ -29,10 +28,7 @@ export type DiscoveryResult = {
 
 export type AsyncDiscovery =
     {
-        discoveredResource: [
-            { group: string, version: string, kind: string, plural: string, source: 'Builtin' | 'CustomResource', scope: 'cluster' | 'namespaced' },
-            string[]
-        ]
+        discoveredResource: { group: string, version: string, kind: string, plural: string, source: 'Builtin' | 'CustomResource', scope: 'cluster' | 'namespaced' },
     };
 
 export function useClusterDiscovery(source: string | null, context: string | null): ClusterDiscovery {
@@ -49,7 +45,7 @@ export function useClusterDiscovery(source: string | null, context: string | nul
 
         channel.onmessage = (message) => {
             if ("discoveredResource" in message) {
-                const [resource, views] = message.discoveredResource;
+                const resource = message.discoveredResource;
 
                 setDiscovery((discovery) => {
                     const updated = { ...discovery };
@@ -69,7 +65,6 @@ export function useClusterDiscovery(source: string | null, context: string | nul
                             version: resource.version,
                             plural: resource.plural,
                             scope: resource.scope,
-                            views
                         };
 
                         updated.gvks[resource.group].kinds.push(x);
