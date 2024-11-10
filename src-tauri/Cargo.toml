@@ -25,7 +25,7 @@ tauri = { version = "2.0.6", features = [] }
 kube = { version = "0.96.0", features = ["runtime", "client"] }
 k8s-openapi = { version = "0.23.0", features = ["v1_30"] }
 futures = { version = "0.3.31" }
-tokio = { version = "1.41.0" }
+tokio = { version = "1.41.1" }
 tokio-util = { version = "0.7.12", features = ["compat"] }
 thiserror = "1.0.65"
 uuid = { version = "1.11.0", features = ["v4"] }
