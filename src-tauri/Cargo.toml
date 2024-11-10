@@ -40,7 +40,7 @@ dirs = "5.0.1"
 scan_dir = "0.3.3"
 rust-embed = "8.5.0"
 tauri-plugin-shell = "2.0.2"
-serde_json_path = "0.6.7"
+serde_json_path = "0.7.1"
 tauri-plugin-dialog = "2.0.0-alpha.2"
 
 [features]
