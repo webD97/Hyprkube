@@ -19,6 +19,7 @@ import { deleteResource } from '../../api/deleteResource';
 import listResourceViews, { type ResourceViewDef } from '../../api/listResourceViews';
 import { confirm } from '@tauri-apps/plugin-dialog';
 import { Menu, MenuItem, PredefinedMenuItem, Submenu } from '@tauri-apps/api/menu';
+import HyprkubeTerminal from '../../components/Terminal';
 
 const namespace_gvk = { group: "", version: "v1", kind: "Namespace" };
 
@@ -238,8 +239,24 @@ const ClusterView: React.FC = () => {
 
                                                     attachItems.push(
                                                         MenuItem.new({
-                                                            text: 'Container 0',
-                                                            enabled: false
+                                                            text: 'Shell 0',
+                                                            action: async () => {
+                                                                const { namespace, name } = resources[resourceUID];
+
+                                                                pushTab(
+                                                                    <Tab title={`Shell (${name})`}>
+                                                                        {
+                                                                            () => (
+                                                                                <HyprkubeTerminal
+                                                                                    clientId={clientId!}
+                                                                                    podName={name}
+                                                                                    podNamespace={namespace}
+                                                                                />
+                                                                            )
+                                                                        }
+                                                                    </Tab>
+                                                                );
+                                                            }
                                                         })
                                                     );
 
@@ -249,7 +266,7 @@ const ClusterView: React.FC = () => {
                                                     })
 
                                                     const attachSubmenu = Submenu.new({
-                                                        text: 'Open shell',
+                                                        text: 'Execute shell',
                                                         items: await Promise.all(attachItems)
                                                     });
 

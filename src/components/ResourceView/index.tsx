@@ -107,8 +107,7 @@ const ResourceView: React.FC<ResourceViewProps> = (props) => {
                         table.getRowModel().rows.map((row) => {
                             return (
                                 <tr key={row.id}
-                                    onContextMenu={(e) => {
-                                        e.preventDefault();
+                                    onContextMenu={() => {
                                         onResourceContextMenu(row.original[0]).then(menu => menu.popup());
                                     }}
                                 >

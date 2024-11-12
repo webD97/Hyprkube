@@ -7,7 +7,9 @@ mod frontend_commands;
 mod frontend_types;
 mod resource_rendering;
 
-use app_state::{ChannelTasks, JoinHandleStoreState, KubernetesClientRegistry, RendererRegistry};
+use app_state::{
+    ChannelTasks, ExecSessions, JoinHandleStoreState, KubernetesClientRegistry, RendererRegistry,
+};
 use tauri::{async_runtime::spawn, Listener, Manager};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -21,6 +23,7 @@ pub fn run() {
             app.manage(RendererRegistry::new_state(app_handle.clone()));
             app.manage(KubernetesClientRegistry::new_state());
             app.manage(ChannelTasks::new_state(app_handle.clone()));
+            app.manage(ExecSessions::new_state());
 
             app.listen("frontend-onbeforeunload", move |_event| {
                 println!("ONBEFOREUNLOAD");
@@ -41,6 +44,10 @@ pub fn run() {
             frontend_commands::discover_contexts,
             frontend_commands::delete_resource,
             frontend_commands::list_resource_views,
+            frontend_commands::pod_exec_start_session,
+            frontend_commands::pod_exec_write_stdin,
+            frontend_commands::pod_exec_abort_session,
+            frontend_commands::pod_exec_resize_terminal,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -4,6 +4,7 @@ mod discover_contexts;
 mod discover_kubernetes_cluster;
 mod kube_stream_podlogs;
 mod list_resource_views;
+mod pod_exec;
 mod watch_gvk_with_view;
 mod watch_namespaces;
 
@@ -13,5 +14,6 @@ pub use discover_contexts::*;
 pub use discover_kubernetes_cluster::*;
 pub use kube_stream_podlogs::*;
 pub use list_resource_views::*;
+pub use pod_exec::*;
 pub use watch_gvk_with_view::*;
 pub use watch_namespaces::*;
