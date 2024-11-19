@@ -20,6 +20,7 @@ import listResourceViews, { type ResourceViewDef } from '../../api/listResourceV
 import { confirm } from '@tauri-apps/plugin-dialog';
 import { Menu, MenuItem, PredefinedMenuItem, Submenu } from '@tauri-apps/api/menu';
 import HyprkubeTerminal from '../../components/Terminal';
+import listPodContainerNames from '../../api/listPodContainerNames';
 
 const namespace_gvk = { group: "", version: "v1", kind: "Namespace" };
 
@@ -188,6 +189,8 @@ const ClusterView: React.FC = () => {
                                             columnTitles={columnTitles || []}
                                             resourceData={resources}
                                             onResourceContextMenu={async (resourceUID: string) => {
+                                                const { namespace, name } = resources[resourceUID];
+
                                                 const itemPromises: Promise<MenuItem | PredefinedMenuItem>[] = [
                                                     MenuItem.new({
                                                         text: 'Show YAML',
@@ -216,48 +219,54 @@ const ClusterView: React.FC = () => {
                                                     const logItems: Promise<MenuItem>[] = [];
                                                     const attachItems: Promise<MenuItem>[] = [];
 
+                                                    const containerNames = await listPodContainerNames(clientId!, namespace, name);
+
                                                     logItems.push(
-                                                        MenuItem.new({
-                                                            text: 'Container 0',
-                                                            action: () => {
-                                                                pushTab(
-                                                                    <Tab title={resources[resourceUID].name}>
-                                                                        {
-                                                                            () => (
-                                                                                <LogPanel
-                                                                                    kubernetesClientId={clientId}
-                                                                                    namespace={resources[resourceUID].namespace}
-                                                                                    name={resources[resourceUID].name}
-                                                                                />
-                                                                            )
-                                                                        }
-                                                                    </Tab>
-                                                                )
-                                                            }
-                                                        })
+                                                        ...containerNames.map(containerName => (
+                                                            MenuItem.new({
+                                                                text: containerName,
+                                                                action: () => {
+                                                                    pushTab(
+                                                                        <Tab title={name}>
+                                                                            {
+                                                                                () => (
+                                                                                    <LogPanel
+                                                                                        kubernetesClientId={clientId}
+                                                                                        namespace={namespace}
+                                                                                        name={name}
+                                                                                        container={containerName}
+                                                                                    />
+                                                                                )
+                                                                            }
+                                                                        </Tab>
+                                                                    )
+                                                                }
+                                                            })
+                                                        ))
                                                     );
 
                                                     attachItems.push(
-                                                        MenuItem.new({
-                                                            text: 'Shell 0',
-                                                            action: async () => {
-                                                                const { namespace, name } = resources[resourceUID];
-
-                                                                pushTab(
-                                                                    <Tab title={`Shell (${name})`}>
-                                                                        {
-                                                                            () => (
-                                                                                <HyprkubeTerminal
-                                                                                    clientId={clientId!}
-                                                                                    podName={name}
-                                                                                    podNamespace={namespace}
-                                                                                />
-                                                                            )
-                                                                        }
-                                                                    </Tab>
-                                                                );
-                                                            }
-                                                        })
+                                                        ...containerNames.map(containerName => (
+                                                            MenuItem.new({
+                                                                text: containerName,
+                                                                action: async () => {
+                                                                    pushTab(
+                                                                        <Tab title={`Shell (${name})`}>
+                                                                            {
+                                                                                () => (
+                                                                                    <HyprkubeTerminal
+                                                                                        clientId={clientId!}
+                                                                                        podName={name}
+                                                                                        podNamespace={namespace}
+                                                                                        container={containerName}
+                                                                                    />
+                                                                                )
+                                                                            }
+                                                                        </Tab>
+                                                                    );
+                                                                }
+                                                            })
+                                                        ))
                                                     );
 
                                                     const logsSubmenu = Submenu.new({

@@ -30,6 +30,7 @@ pub async fn kube_stream_podlogs(
     client_id: Uuid,
     namespace: &str,
     name: &str,
+    container: &str,
     channel: tauri::ipc::Channel<LogStreamEvent>,
 ) -> Result<(), BackendError> {
     let client = client_registry_arc.try_clone(&client_id)?;
@@ -40,6 +41,7 @@ pub async fn kube_stream_podlogs(
         follow: true,
         tail_lines: Some(1000),
         timestamps: false,
+        container: Some(container.into()),
         ..Default::default()
     };
 

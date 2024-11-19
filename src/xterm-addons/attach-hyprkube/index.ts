@@ -9,7 +9,7 @@ type TerminalMessage = string | { Bytes: number[] };
 export default class AttachHyprkubeAddon implements ITerminalAddon {
     private execSessionId: Promise<string> | null = null;
 
-    constructor(private clientId: string, private podNamespace: string, private podName: string) {
+    constructor(private clientId: string, private podNamespace: string, private podName: string, private container: string) {
     }
 
     async activate(terminal: Terminal): Promise<void> {
@@ -38,7 +38,7 @@ export default class AttachHyprkubeAddon implements ITerminalAddon {
         };
 
         this.execSessionId = invoke('pod_exec_start_session', {
-            clientId: this.clientId, podNamespace: this.podNamespace, podName: this.podName, sessionEventChannel
+            clientId: this.clientId, podNamespace: this.podNamespace, podName: this.podName, container: this.container, sessionEventChannel
         });
     }
 

@@ -8,14 +8,15 @@ export interface LogPanelProps {
     kubernetesClientId: string | undefined,
     namespace: string,
     name: string
+    container: string,
 }
 
 const LogPanel: React.FC<LogPanelProps> = (props) => {
     const {
-        kubernetesClientId, namespace, name
+        kubernetesClientId, namespace, name, container
     } = props;
 
-    const text = usePodLogs(kubernetesClientId, namespace, name);
+    const text = usePodLogs(kubernetesClientId, namespace, name, container);
 
     return (
         <div className={classes.container}>

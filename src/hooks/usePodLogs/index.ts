@@ -18,7 +18,7 @@ export type LogStreamEvent =
         }
     };
 
-export const usePodLogs = (kubernetesClientId: string | undefined, namespace: string, name: string) => {
+export const usePodLogs = (kubernetesClientId: string | undefined, namespace: string, name: string, container: string) => {
     const [text, setText] = useState('');
 
     useEffect(() => {
@@ -40,13 +40,13 @@ export const usePodLogs = (kubernetesClientId: string | undefined, namespace: st
             }
         };
 
-        invoke('kube_stream_podlogs', { namespace, name, channel, clientId: kubernetesClientId })
+        invoke('kube_stream_podlogs', { namespace, name, channel, container, clientId: kubernetesClientId })
             .catch(e => setText(e));
 
         return () => {
             invoke('cleanup_channel', { channel });
         };
-    }, [namespace, name, kubernetesClientId]);
+    }, [namespace, name, kubernetesClientId, container]);
 
     return text;
 };

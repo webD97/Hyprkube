@@ -10,6 +10,7 @@ import styles from './styles.module.css';
 export interface HyprkubeTerminalProps {
     podNamespace: string,
     podName: string,
+    container: string,
     clientId: string,
 }
 
@@ -27,7 +28,7 @@ const HyprkubeTerminal: React.FC<HyprkubeTerminalProps> = (props) => {
 
         fitAddon.current = new FitAddon();
 
-        terminal.loadAddon(new AttachHyprkubeAddon(props.clientId!, props.podNamespace, props.podName));
+        terminal.loadAddon(new AttachHyprkubeAddon(props.clientId!, props.podNamespace, props.podName, props.container));
         terminal.loadAddon(new WebglAddon());
         terminal.loadAddon(fitAddon.current);
         terminal.loadAddon(new ClipboardAddon());

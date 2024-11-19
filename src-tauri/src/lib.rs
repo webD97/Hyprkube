@@ -48,6 +48,7 @@ pub fn run() {
             frontend_commands::pod_exec_write_stdin,
             frontend_commands::pod_exec_abort_session,
             frontend_commands::pod_exec_resize_terminal,
+            frontend_commands::list_pod_container_names,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
