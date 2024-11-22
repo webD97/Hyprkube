@@ -1,7 +1,5 @@
-import { Channel, invoke } from '@tauri-apps/api/core';
 import { IDisposable, ITerminalAddon, Terminal } from '@xterm/xterm';
-
-type TerminalMessage = string | { Bytes: number[] };
+import { abortExecSession, resizeTerminal, startExecSession, writeBytes } from '../../api/podExec';
 
 /**
  * Attach an xterm Terminal to a Hyprkube ExecSession
@@ -17,22 +15,24 @@ export default class AttachHyprkubeAddon implements ITerminalAddon {
     activate(terminal: Terminal): void {
         this.disposables.push(
             terminal.onData(async (data) => {
-                await invoke('pod_exec_write_stdin', {
-                    execSessionId: await this.execSessionId, buf: this.encoder.encode(data)
-                });
+                await this.execSessionId
+                    ?.then(sessionId => writeBytes(sessionId, this.encoder.encode(data)))
+                    .catch(e => console.log("Failed to write to terminal:", e));
             })
         );
 
         this.disposables.push(
             terminal.onResize(async ({ cols, rows }) => {
-                console.log(`Requesting resize to ${cols}x${rows}`)
-                await invoke('pod_exec_resize_terminal', {
-                    execSessionId: await this.execSessionId, columns: cols, rows
-                });
+                console.log(`Requesting resize to ${cols}x${rows}`);
+                await this.execSessionId
+                    ?.then(sessionId => resizeTerminal(sessionId, cols, rows))
+                    .catch(e => console.log("Failed to resize terminal:", e));
             })
         );
 
-        const sessionEventChannel = new Channel<TerminalMessage>();
+        const [sessionIdPromise, sessionEventChannel] = startExecSession(this.clientId, this.podNamespace, this.podName, this.container);
+
+        this.execSessionId = sessionIdPromise;
 
         sessionEventChannel.onmessage = (message) => {
             if (typeof (message) === 'object' && "Bytes" in message) {
@@ -42,21 +42,13 @@ export default class AttachHyprkubeAddon implements ITerminalAddon {
                 terminal?.write('\r\nHyprkube: Session exited');
             }
         };
-
-        this.execSessionId = invoke('pod_exec_start_session', {
-            clientId: this.clientId, podNamespace: this.podNamespace, podName: this.podName, container: this.container, sessionEventChannel
-        });
     }
 
     dispose(): void {
         this.disposables.forEach(d => d.dispose());
 
         this.execSessionId
-            ?.then(sessionId =>
-                invoke('pod_exec_abort_session', {
-                    execSessionId: sessionId
-                })
-            )
+            ?.then(abortExecSession)
             .catch(e => console.error("Error stopping exec session", e));
     }
 }
