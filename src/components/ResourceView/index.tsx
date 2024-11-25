@@ -15,6 +15,7 @@ import {
 } from '@tanstack/react-table';
 import { CustomCell } from "./CustomCell";
 import { Menu } from "@tauri-apps/api/menu";
+import { PhysicalPosition } from "@tauri-apps/api/dpi";
 
 export interface ResourceViewProps {
     namespace?: string,
@@ -107,8 +108,12 @@ const ResourceView: React.FC<ResourceViewProps> = (props) => {
                         table.getRowModel().rows.map((row) => {
                             return (
                                 <tr key={row.id}
-                                    onContextMenu={() => {
-                                        onResourceContextMenu(row.original[0]).then(menu => menu.popup());
+                                    onContextMenu={(e) => {
+                                        e.preventDefault();
+
+                                        onResourceContextMenu(row.original[0])
+                                            .then(menu => menu.popup(new PhysicalPosition(e.pageX, e.pageY)))
+                                            .catch(e => JSON.stringify(e));
                                     }}
                                 >
                                     {

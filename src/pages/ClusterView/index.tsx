@@ -67,7 +67,8 @@ const ClusterView: React.FC = () => {
                 if (views.length > 0) {
                     setSelectedView(views[0]);
                 }
-            });
+            })
+            .catch(e => alert(JSON.stringify(e)));
 
     }, [currentGvk, clientId]);
 
@@ -202,14 +203,17 @@ const ClusterView: React.FC = () => {
                                                     }),
                                                     MenuItem.new({
                                                         text: 'Delete resource',
-                                                        action: async () => {
+                                                        action: () => {
                                                             const { namespace, name } = resources[resourceUID];
 
-                                                            const confirmed = await confirm(`This action cannot be reverted. Are you sure?`, { kind: 'warning', title: `Permanently delete resource?` });
+                                                            confirm(`This action cannot be reverted. Are you sure?`, { kind: 'warning', title: `Permanently delete resource?` })
+                                                                .then(confirmed => {
+                                                                    if (confirmed) {
+                                                                        return deleteResource(clientId!, currentGvk, namespace, name);
+                                                                    }
+                                                                })
+                                                                .catch(e => alert(JSON.stringify(e)));
 
-                                                            if (confirmed) {
-                                                                deleteResource(clientId!, currentGvk, namespace, name);
-                                                            }
                                                         }
                                                     }),
                                                     PredefinedMenuItem.new({ item: 'Separator' }),
@@ -249,7 +253,7 @@ const ClusterView: React.FC = () => {
                                                         ...containerNames.map(containerName => (
                                                             MenuItem.new({
                                                                 text: containerName,
-                                                                action: async () => {
+                                                                action: () => {
                                                                     pushTab(
                                                                         <Tab title={`Shell (${name})`}>
                                                                             {
@@ -269,22 +273,31 @@ const ClusterView: React.FC = () => {
                                                         ))
                                                     );
 
-                                                    const logsSubmenu = Submenu.new({
-                                                        text: 'Show logs',
-                                                        items: await Promise.all(logItems)
-                                                    })
+                                                    try {
+                                                        const logsSubmenu = Submenu.new({
+                                                            text: 'Show logs',
+                                                            items: await Promise.all(logItems)
+                                                        })
 
-                                                    const attachSubmenu = Submenu.new({
-                                                        text: 'Execute shell',
-                                                        items: await Promise.all(attachItems)
-                                                    });
+                                                        const attachSubmenu = Submenu.new({
+                                                            text: 'Execute shell',
+                                                            items: await Promise.all(attachItems)
+                                                        });
 
-                                                    itemPromises.push(logsSubmenu, attachSubmenu);
+                                                        itemPromises.push(logsSubmenu, attachSubmenu);
+                                                    }
+                                                    catch (e) {
+                                                        throw new Error(e as string);
+                                                    }
                                                 }
 
-                                                const items = await Promise.all(itemPromises);
-
-                                                return Menu.new({ items });
+                                                try {
+                                                    const items = await Promise.all(itemPromises);
+                                                    return Menu.new({ items });
+                                                }
+                                                catch (e) {
+                                                    throw new Error(e as string);
+                                                }
                                             }}
                                         />
                                     </>
