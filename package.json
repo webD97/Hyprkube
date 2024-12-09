@@ -11,7 +11,7 @@
     "tauri": "tauri"
   },
   "dependencies": {
-    "@melloware/react-logviewer": "6.0.3",
+    "@melloware/react-logviewer": "6.1.0",
     "@tanstack/react-table": "^8.20.5",
     "@tauri-apps/api": "2.1.1",
     "@tauri-apps/plugin-dialog": "^2.0.1",
