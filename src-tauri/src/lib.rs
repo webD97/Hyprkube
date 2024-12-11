@@ -2,14 +2,19 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod app_state;
+mod cluster_profiles;
 mod dirs;
 mod frontend_commands;
 mod frontend_types;
+mod persistence;
 mod resource_rendering;
+
+use std::sync::Arc;
 
 use app_state::{
     ChannelTasks, ExecSessions, JoinHandleStoreState, KubernetesClientRegistry, RendererRegistry,
 };
+use persistence::Repository;
 use tauri::{async_runtime::spawn, Listener, Manager};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -17,6 +22,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_store::Builder::default().build())
         .setup(|app| {
             let app_handle = app.handle().clone();
 
@@ -24,6 +30,18 @@ pub fn run() {
             app.manage(KubernetesClientRegistry::new_state());
             app.manage(ChannelTasks::new_state(app_handle.clone()));
             app.manage(ExecSessions::new_state());
+
+            let mut cluster_profile_registry =
+                cluster_profiles::ClusterProfileRegistry::new(app_handle.clone());
+            cluster_profile_registry.scan_profiles();
+            app.manage(Arc::new(cluster_profile_registry));
+
+            let repo = Arc::new(Repository::new(app.handle().clone()));
+            app.manage(repo.clone());
+
+            let pinned_gvk_service =
+                cluster_profiles::GvkService::new(app.handle().clone(), repo.clone());
+            app.manage(pinned_gvk_service);
 
             app.listen("frontend-onbeforeunload", move |_event| {
                 println!("ONBEFOREUNLOAD");
@@ -49,6 +67,10 @@ pub fn run() {
             frontend_commands::pod_exec_abort_session,
             frontend_commands::pod_exec_resize_terminal,
             frontend_commands::list_pod_container_names,
+            cluster_profiles::list_cluster_profiles,
+            cluster_profiles::cluster_profile_add_pinned_gvk,
+            cluster_profiles::cluster_profile_remove_pinned_gvk,
+            cluster_profiles::cluster_profile_list_pinned_gvks,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

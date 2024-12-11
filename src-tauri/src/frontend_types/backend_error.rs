@@ -11,6 +11,9 @@ pub enum BackendError {
     #[error(transparent)]
     ResourceViewError(#[from] ResourceViewError),
 
+    #[error(transparent)]
+    TauriError(#[from] tauri::Error),
+
     #[error("{0}")]
     Generic(String),
 }

@@ -2,12 +2,15 @@ import { Link } from "react-router-dom";
 
 import classes from './styles.module.css';
 import { useContextDiscovery } from "../../hooks/useContextDiscovery";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { invoke } from "@tauri-apps/api/core";
 
-type GroupedContextSources = { [key: string]: {
-    realSource: string,
-    contexts: string[]
-} };
+type GroupedContextSources = {
+    [key: string]: {
+        realSource: string,
+        contexts: string[]
+    }
+};
 
 const ClusterOverview: React.FC = () => {
     const contextSources = useContextDiscovery();
