@@ -33,3 +33,23 @@ pub fn get_views_dir() -> Option<PathBuf> {
 
     Some(views_dir)
 }
+
+pub fn get_cluster_profiles_dir() -> Option<PathBuf> {
+    let mut cluster_profiles_dir = get_config_dir()?;
+    cluster_profiles_dir.push("clusterprofiles");
+
+    if !cluster_profiles_dir.exists() {
+        match std::fs::create_dir_all(&cluster_profiles_dir) {
+            Ok(()) => (),
+            Err(error) => {
+                eprintln!(
+                    "Failed to create directory {:?} for cluster profiles: {:?}",
+                    cluster_profiles_dir, error
+                );
+                return None;
+            }
+        }
+    }
+
+    Some(cluster_profiles_dir)
+}

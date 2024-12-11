@@ -1,12 +1,16 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod app_features;
 mod app_state;
 mod dirs;
 mod frontend_commands;
 mod frontend_types;
 mod resource_rendering;
 
+use std::sync::Arc;
+
+use app_features::cluster_profiles::{ClusterProfileRegistry, GvkService};
 use app_state::{
     ChannelTasks, ExecSessions, JoinHandleStoreState, KubernetesClientRegistry, RendererRegistry,
 };
@@ -17,6 +21,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_store::Builder::default().build())
         .setup(|app| {
             let app_handle = app.handle().clone();
 
@@ -24,6 +29,13 @@ pub fn run() {
             app.manage(KubernetesClientRegistry::new_state());
             app.manage(ChannelTasks::new_state(app_handle.clone()));
             app.manage(ExecSessions::new_state());
+
+            let mut cluster_profile_registry = ClusterProfileRegistry::default();
+            cluster_profile_registry.scan_profiles();
+            app.manage(Arc::new(cluster_profile_registry));
+
+            let pinned_gvk_service = GvkService::new(app.handle().clone());
+            app.manage(pinned_gvk_service);
 
             app.listen("frontend-onbeforeunload", move |_event| {
                 println!("ONBEFOREUNLOAD");
@@ -49,6 +61,10 @@ pub fn run() {
             frontend_commands::pod_exec_abort_session,
             frontend_commands::pod_exec_resize_terminal,
             frontend_commands::list_pod_container_names,
+            app_features::cluster_profiles::list_cluster_profiles,
+            app_features::cluster_profiles::cluster_profile_list_pinned_gvks,
+            app_features::cluster_profiles::cluster_profile_add_pinned_gvk,
+            app_features::cluster_profiles::cluster_profile_remove_pinned_gvk
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
