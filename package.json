@@ -21,7 +21,7 @@
     "@xterm/addon-webgl": "^0.18.0",
     "@xterm/xterm": "^5.5.0",
     "dayjs": "1.11.13",
-    "eslint-plugin-react": "^7.37.2",
+    "eslint-plugin-react": "^7.37.3",
     "react": "19.0.0",
     "react-dom": "19.0.0",
     "react-error-boundary": "4.1.2",
