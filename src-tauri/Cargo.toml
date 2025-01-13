@@ -36,7 +36,7 @@ rhai = { version = "1.20.1", features = [
     "no_custom_syntax",
     "no_time",
 ] }
-dirs = "5.0.1"
+dirs = "6.0.0"
 scan_dir = "0.3.3"
 rust-embed = "8.5.0"
 tauri-plugin-shell = "2.2.0"
