@@ -29,7 +29,7 @@
   },
   "devDependencies": {
     "@eslint/js": "9.18.0",
-    "@tauri-apps/cli": "2.2.2",
+    "@tauri-apps/cli": "2.2.4",
     "@types/node": "22.10.2",
     "@types/react": "19.0.1",
     "@types/react-dom": "19.0.2",
