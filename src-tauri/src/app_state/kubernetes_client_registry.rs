@@ -9,7 +9,7 @@ use std::{
 
 use k8s_openapi::apiextensions_apiserver::pkg::apis::apiextensions::v1::CustomResourceDefinition;
 use kube::api::{GroupVersionKind, ListParams};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::frontend_types::BackendError;
@@ -22,7 +22,7 @@ pub struct DiscoveredGroup {
     pub kinds: Vec<DiscoveredResource>,
 }
 
-#[derive(Serialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub enum Scope {
     Cluster,
@@ -38,7 +38,7 @@ impl From<kube::discovery::Scope> for Scope {
     }
 }
 
-#[derive(Serialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct DiscoveredResource {
     pub group: String,
@@ -56,7 +56,7 @@ pub struct DiscoveryResult {
     pub crds: HashMap<GroupVersionKind, CustomResourceDefinition>,
 }
 
-#[derive(Serialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub enum ApiGroupSource {
     Builtin,
     CustomResource,
