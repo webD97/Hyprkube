@@ -33,14 +33,14 @@ pub fn run() {
 
             let mut cluster_profile_registry =
                 cluster_profiles::ClusterProfileRegistry::new(app_handle.clone());
+            cluster_profile_registry.ensure_default_profile().unwrap();
             cluster_profile_registry.scan_profiles();
             app.manage(Arc::new(cluster_profile_registry));
 
             let repo = Arc::new(Repository::new(app.handle().clone()));
             app.manage(repo.clone());
 
-            let pinned_gvk_service =
-                GvkService::new(app.handle().clone(), repo.clone());
+            let pinned_gvk_service = GvkService::new(app.handle().clone(), repo.clone());
             app.manage(pinned_gvk_service);
 
             app.listen("frontend-onbeforeunload", move |_event| {

@@ -1,4 +1,4 @@
-use std::{collections::HashMap, path::PathBuf, sync::Arc};
+use std::{collections::HashMap, fs::OpenOptions, io::Write, path::PathBuf, sync::Arc};
 
 use scan_dir::ScanDir;
 use serde::{Deserialize, Serialize};
@@ -26,6 +26,21 @@ impl ClusterProfileRegistry {
             app_handle,
             profiles: HashMap::new(),
         }
+    }
+
+    pub fn ensure_default_profile(&self) -> Result<(), std::io::Error> {
+        let profiles_dir = {
+            let mut path = get_cluster_profiles_dir(&self.app_handle).unwrap();
+            path.push("_default");
+            path
+        };
+
+        let _ = OpenOptions::new()
+            .write(true)
+            .create(true)
+            .open(profiles_dir)?;
+
+        Ok(())
     }
 
     pub fn scan_profiles(&mut self) {
