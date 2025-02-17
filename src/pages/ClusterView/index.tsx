@@ -25,6 +25,8 @@ import listClusterProfiles, { ClusterProfile } from '../../api/listClusterProfil
 import addPinnedGvk from '../../api/addPinnedGvk';
 import removePinnedGvk from '../../api/removePinnedGvk';
 import usePinnedGvks from '../../hooks/usePinnedGvks';
+import useHiddenGvks from '../../hooks/useHiddenGvks';
+import addHiddenGvk from '../../api/addHiddenGvk';
 
 const namespace_gvk = { group: "", version: "v1", kind: "Namespace" };
 
@@ -53,6 +55,7 @@ const ClusterView: React.FC = () => {
     const [currentGvk, setCurrentGvk] = useState<Gvk>();
     const [clusterProfiles, setClusterProfiles] = useState<ClusterProfile[]>([]);
     const pinnedGvks = usePinnedGvks(clusterProfiles?.[0]?.[0]);
+    const hiddenGvks = useHiddenGvks(clusterProfiles?.[0]?.[0]);
     const [selectedView, setSelectedView] = useState("");
     const { discovery, clientId, lastError, loading } = useClusterDiscovery(source, context);
     const namespaces = useClusterNamespaces(clientId, namespace_gvk);
@@ -132,13 +135,13 @@ const ClusterView: React.FC = () => {
                                         text: "Unpin",
                                         action: () => {
                                             removePinnedGvk(clusterProfiles[0][0], gvk)
-                                                .catch(e => alert(JSON.stringify(e)));  
+                                                .catch(e => alert(JSON.stringify(e)));
                                         }
                                     });
 
-                                    const menu = await Menu.new({items: await Promise.all([unpin])});
+                                    const menu = await Menu.new({ items: await Promise.all([unpin]) });
 
-                                    menu.popup();
+                                    await menu.popup();
                                 }}
                             />
                         )
@@ -150,7 +153,18 @@ const ClusterView: React.FC = () => {
                         .filter((group) => !group.isCrd)
                         .sort((groupA, groupB) => groupA.name.localeCompare(groupB.name))
                         .map(({ name: groupName, kinds }, idx) => {
-                            const gvks = kinds.map(({ kind, version }) => ({ group: groupName, version, kind }));
+                            const gvks = kinds
+                                .map(({ kind, version }) => ({ group: groupName, version, kind }))
+                                .filter(gvk => (
+                                    !hiddenGvks.some(current => (
+                                        current.group === gvk.group &&
+                                        current.version === gvk.version &&
+                                        current.kind === gvk.kind
+                                    ))
+                                ));
+
+                            // Don't show groups where everything is hidden
+                            if (gvks.length === 0) return;
 
                             return (
                                 <details key={idx}>
@@ -164,13 +178,21 @@ const ClusterView: React.FC = () => {
                                                 text: "Pin",
                                                 action: () => {
                                                     addPinnedGvk(clusterProfiles[0][0], gvk)
-                                                        .catch(e => alert(JSON.stringify(e)));  
+                                                        .catch(e => alert(JSON.stringify(e)));
                                                 }
                                             });
-        
-                                            const menu = await Menu.new({items: await Promise.all([unpin])});
-        
-                                            menu.popup();
+
+                                            const hide = MenuItem.new({
+                                                text: "Hide",
+                                                action: () => {
+                                                    addHiddenGvk(clusterProfiles[0][0], gvk)
+                                                        .catch(e => alert(JSON.stringify(e)));
+                                                }
+                                            });
+
+                                            const menu = await Menu.new({ items: await Promise.all([unpin, hide]) });
+
+                                            await menu.popup();
                                         }}
                                     />
                                 </details>
@@ -184,7 +206,18 @@ const ClusterView: React.FC = () => {
                         .filter((group) => group.isCrd)
                         .sort((groupA, groupB) => groupA.name.localeCompare(groupB.name))
                         .map(({ name: groupName, kinds }) => {
-                            const gvks = kinds.map(({ kind, version }) => ({ group: groupName, version, kind }));
+                            const gvks = kinds
+                                .map(({ kind, version }) => ({ group: groupName, version, kind }))
+                                .filter(gvk => (
+                                    !hiddenGvks.some(current => (
+                                        current.group === gvk.group &&
+                                        current.version === gvk.version &&
+                                        current.kind === gvk.kind
+                                    ))
+                                ));
+
+                            // Don't show groups where everything is hidden
+                            if (gvks.length === 0) return;
 
                             return (
                                 <details key={groupName}>
@@ -198,13 +231,21 @@ const ClusterView: React.FC = () => {
                                                 text: "Pin",
                                                 action: () => {
                                                     addPinnedGvk(clusterProfiles[0][0], gvk)
-                                                        .catch(e => alert(JSON.stringify(e)));  
+                                                        .catch(e => alert(JSON.stringify(e)));
                                                 }
                                             });
-        
-                                            const menu = await Menu.new({items: await Promise.all([unpin])});
-        
-                                            menu.popup();
+
+                                            const hide = MenuItem.new({
+                                                text: "Hide",
+                                                action: () => {
+                                                    addHiddenGvk(clusterProfiles[0][0], gvk)
+                                                        .catch(e => alert(JSON.stringify(e)));
+                                                }
+                                            });
+
+                                            const menu = await Menu.new({ items: await Promise.all([unpin, hide]) });
+
+                                            await menu.popup();
                                         }}
                                     />
                                 </details>

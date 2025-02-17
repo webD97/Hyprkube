@@ -1,43 +1,43 @@
 import { useEffect, useRef, useState } from "react";
 import { ClusterProfileId } from "../../api/listClusterProfiles";
 import { Gvk } from "../../model/k8s";
-import listPinnedGvks from "../../api/listPinnedGvks";
 import { listen, UnlistenFn } from "@tauri-apps/api/event";
+import listHiddenGvks from "../../api/listHiddenGvks";
 
-interface PinnedGvksChangedEvent {
+interface HiddenGvksChangedEvent {
     clusterProfile: ClusterProfileId,
     gvks: Gvk[]
 }
 
-export default function usePinnedGvks(profile: ClusterProfileId | undefined) {
+export default function useHiddenGvks(profile: ClusterProfileId | undefined) {
     const unlistenFn = useRef<UnlistenFn>(null);
-    const [pinnedGvks, setPinnedGvks] = useState<Gvk[]>([]);
+    const [hiddenGvks, setHiddenGvks] = useState<Gvk[]>([]);
 
     useEffect(() => {
         if (!profile) {
             return;
         }
 
-        listPinnedGvks(profile)
+        listHiddenGvks(profile)
             .then(result => {
-                setPinnedGvks(result)
+                setHiddenGvks(result)
             })
             .catch(e => {
                 console.log("error listening")
-                alert("Error listing pinned GVKs: " + JSON.stringify(e))
+                alert("Error listing hidden GVKs: " + JSON.stringify(e))
             });
 
-        listen<PinnedGvksChangedEvent>('hyprkube://pinned-gvks-changed', (event) => {
+        listen<HiddenGvksChangedEvent>('hyprkube://hidden-gvks-changed', (event) => {
             console.log({ event })
             if (event.payload.clusterProfile === profile) {
-                setPinnedGvks(event.payload.gvks);
+                setHiddenGvks(event.payload.gvks);
             }
         })
             .then((unlisten) => {
                 unlistenFn.current = unlisten;
             })
             .catch(e => {
-                alert("Error listening for changes to pinned GVKs: " + JSON.stringify(e))
+                alert("Error listening for changes to hidden GVKs: " + JSON.stringify(e))
             });
 
         return () => {
@@ -47,5 +47,5 @@ export default function usePinnedGvks(profile: ClusterProfileId | undefined) {
         }
     }, [profile]);
 
-    return pinnedGvks;
+    return hiddenGvks;
 }
