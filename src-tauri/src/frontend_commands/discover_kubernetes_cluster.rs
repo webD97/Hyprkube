@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use kube::config::{KubeConfigOptions, Kubeconfig};
 use serde::Serialize;
 use tauri::{Emitter, State};
@@ -8,6 +10,7 @@ use crate::{
         KubernetesClientRegistryState,
     },
     frontend_types::{BackendError, DiscoveredCluster},
+    persistence::{DiscoveryCacheService, Repository},
 };
 
 use super::KubeContextSource;
@@ -25,17 +28,25 @@ pub async fn discover_kubernetes_cluster(
     join_handle_store: State<'_, JoinHandleStoreState>,
     channel: tauri::ipc::Channel<DiscoveryResult>,
     context_source: KubeContextSource,
+    repository: State<'_, Arc<Repository>>,
 ) -> Result<DiscoveredCluster, BackendError> {
     let (kubeconfig_path, context_name) = context_source;
     let kubeconfig = Kubeconfig::read_from(kubeconfig_path)?;
 
     let kubeconfig_options = &KubeConfigOptions {
-        context: Some(context_name),
+        context: Some(context_name.clone()),
         ..Default::default()
     };
 
     let client_config =
         kube::Config::from_custom_kubeconfig(kubeconfig, &kubeconfig_options).await?;
+
+    let discovery_cache = DiscoveryCacheService::new(&context_name.clone(), Arc::clone(&repository));
+    for cached in discovery_cache.read_cache() {
+        channel
+            .send(DiscoveryResult::DiscoveredResource(cached))
+            .unwrap();
+    }
 
     let (client_id, internal_discovery, discovery_handle) =
         client_registry.manage(client_config)?;
@@ -50,6 +61,7 @@ pub async fn discover_kubernetes_cluster(
     while let Ok(discovery) = internal_discovery.recv() {
         let send_result = match discovery {
             AsyncDiscoveryResult::DiscoveredResource(resource) => {
+                discovery_cache.cache_resource(resource.clone());
                 channel.send(DiscoveryResult::DiscoveredResource(resource))
             }
         };

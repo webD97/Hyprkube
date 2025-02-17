@@ -1,7 +1,7 @@
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import EmojiHint from '../../components/EmojiHint';
 import GvkList from '../../components/GvkList';
@@ -21,24 +21,30 @@ import { confirm } from '@tauri-apps/plugin-dialog';
 import { Menu, MenuItem, PredefinedMenuItem, Submenu } from '@tauri-apps/api/menu';
 import HyprkubeTerminal from '../../components/Terminal';
 import listPodContainerNames from '../../api/listPodContainerNames';
+import listClusterProfiles, { ClusterProfile } from '../../api/listClusterProfiles';
+import addPinnedGvk from '../../api/addPinnedGvk';
+import removePinnedGvk from '../../api/removePinnedGvk';
+import usePinnedGvks from '../../hooks/usePinnedGvks';
+import useHiddenGvks from '../../hooks/useHiddenGvks';
+import addHiddenGvk from '../../api/addHiddenGvk';
 
 const namespace_gvk = { group: "", version: "v1", kind: "Namespace" };
 
-const defaultPinnedGvks: Gvk[] = [
-    { group: '', version: 'v1', kind: 'Node' },
-    { group: '', version: 'v1', kind: 'Namespace' },
-    { group: '', version: 'v1', kind: 'Pod' },
-    { group: 'apps', version: 'v1', kind: 'Deployment' },
-    { group: 'apps', version: 'v1', kind: 'StatefulSet' },
-    { group: 'batch', version: 'v1', kind: 'CronJob' },
-    { group: 'batch', version: 'v1', kind: 'Job' },
-    { group: '', version: 'v1', kind: 'ConfigMap' },
-    { group: '', version: 'v1', kind: 'Secret' },
-    { group: '', version: 'v1', kind: 'Service' },
-    { group: 'networking.k8s.io', version: 'v1', kind: 'Ingress' },
-    { group: '', version: 'v1', kind: 'PersistentVolumeClaim' },
-    { group: '', version: 'v1', kind: 'PersistentVolume' },
-];
+// const defaultPinnedGvks: Gvk[] = [
+//     { group: '', version: 'v1', kind: 'Node' },
+//     { group: '', version: 'v1', kind: 'Namespace' },
+//     { group: '', version: 'v1', kind: 'Pod' },
+//     { group: 'apps', version: 'v1', kind: 'Deployment' },
+//     { group: 'apps', version: 'v1', kind: 'StatefulSet' },
+//     { group: 'batch', version: 'v1', kind: 'CronJob' },
+//     { group: 'batch', version: 'v1', kind: 'Job' },
+//     { group: '', version: 'v1', kind: 'ConfigMap' },
+//     { group: '', version: 'v1', kind: 'Secret' },
+//     { group: '', version: 'v1', kind: 'Service' },
+//     { group: 'networking.k8s.io', version: 'v1', kind: 'Ingress' },
+//     { group: '', version: 'v1', kind: 'PersistentVolumeClaim' },
+//     { group: '', version: 'v1', kind: 'PersistentVolume' },
+// ];
 
 const ClusterView: React.FC = () => {
     const [searchParams] = useSearchParams();
@@ -47,7 +53,9 @@ const ClusterView: React.FC = () => {
 
     const [availableViews, setAvailableViews] = useState<ResourceViewDef[]>([]);
     const [currentGvk, setCurrentGvk] = useState<Gvk>();
-    const [pinnedGvks, setPinnedGvks] = useState<Gvk[]>(defaultPinnedGvks);
+    const [clusterProfiles, setClusterProfiles] = useState<ClusterProfile[]>([]);
+    const pinnedGvks = usePinnedGvks(clusterProfiles?.[0]?.[0]);
+    const hiddenGvks = useHiddenGvks(clusterProfiles?.[0]?.[0]);
     const [selectedView, setSelectedView] = useState("");
     const { discovery, clientId, lastError, loading } = useClusterDiscovery(source, context);
     const namespaces = useClusterNamespaces(clientId, namespace_gvk);
@@ -55,6 +63,20 @@ const ClusterView: React.FC = () => {
     const [columnTitles, resources] = useResourceWatch(clientId, currentGvk, selectedView, selectedNamespace);
 
     const [tabs, activeTab, pushTab, removeTab, setActiveTab] = useTabs();
+
+    useEffect(() => {
+        listClusterProfiles()
+            .then(profiles => {
+                setClusterProfiles(profiles);
+                // return Promise.all(defaultPinnedGvks.map(gvk => {
+                //     return addPinnedGvk(
+                //         profiles[0][0],
+                //         gvk
+                //     );
+                // }));
+            })
+            .catch(e => alert(JSON.stringify(e)));
+    }, []);
 
     useEffect(() => {
         if (!clientId) return;
@@ -82,19 +104,45 @@ const ClusterView: React.FC = () => {
         return discovery.gvks[gvk.group]?.kinds.find(resource => resource.kind === gvk.kind)?.scope;
     }
 
+    const sortedPinnedGvks = useMemo(() => {
+        return pinnedGvks.sort((a, b) => {
+            if (a.kind < b.kind) {
+                return -1;
+            }
+            if (a.kind > b.kind) {
+                return 1;
+            }
+
+            return 0;
+        });
+    }, [pinnedGvks]);
+
     return (
         <div className={classes.container}>
             <nav>
                 <span>{context}</span>
                 <h2>Pinned resources</h2>
                 {
-                    pinnedGvks.length == 0
+                    sortedPinnedGvks.length == 0
                         ? null
                         : (
                             <GvkList withGroupName
-                                gvks={pinnedGvks}
+                                gvks={sortedPinnedGvks}
                                 onResourceClicked={(gvk) => setCurrentGvk(gvk)}
-                                onPinButtonClicked={({ group, kind }) => setPinnedGvks(currentlyPinned => currentlyPinned.filter(clickedGvk => clickedGvk.group !== group || clickedGvk.kind !== kind))}
+                                onPinButtonClicked={(gvk) => void removePinnedGvk(clusterProfiles[0][0], gvk)}
+                                onGvkRightClicked={async (gvk) => {
+                                    const unpin = MenuItem.new({
+                                        text: "Unpin",
+                                        action: () => {
+                                            removePinnedGvk(clusterProfiles[0][0], gvk)
+                                                .catch(e => alert(JSON.stringify(e)));
+                                        }
+                                    });
+
+                                    const menu = await Menu.new({ items: await Promise.all([unpin]) });
+
+                                    await menu.popup();
+                                }}
                             />
                         )
                 }
@@ -105,7 +153,18 @@ const ClusterView: React.FC = () => {
                         .filter((group) => !group.isCrd)
                         .sort((groupA, groupB) => groupA.name.localeCompare(groupB.name))
                         .map(({ name: groupName, kinds }, idx) => {
-                            const gvks = kinds.map(({ kind, version }) => ({ group: groupName, version, kind }));
+                            const gvks = kinds
+                                .map(({ kind, version }) => ({ group: groupName, version, kind }))
+                                .filter(gvk => (
+                                    !hiddenGvks.some(current => (
+                                        current.group === gvk.group &&
+                                        current.version === gvk.version &&
+                                        current.kind === gvk.kind
+                                    ))
+                                ));
+
+                            // Don't show groups where everything is hidden
+                            if (gvks.length === 0) return;
 
                             return (
                                 <details key={idx}>
@@ -113,7 +172,28 @@ const ClusterView: React.FC = () => {
                                     <GvkList className={classes.gvkListIndented}
                                         gvks={gvks}
                                         onResourceClicked={(gvk) => setCurrentGvk(gvk)}
-                                        onPinButtonClicked={(gvk) => setPinnedGvks(currentlyPinned => [...currentlyPinned, gvk])}
+                                        onPinButtonClicked={(gvk) => void addPinnedGvk(clusterProfiles[0][0], gvk)}
+                                        onGvkRightClicked={async (gvk) => {
+                                            const unpin = MenuItem.new({
+                                                text: "Pin",
+                                                action: () => {
+                                                    addPinnedGvk(clusterProfiles[0][0], gvk)
+                                                        .catch(e => alert(JSON.stringify(e)));
+                                                }
+                                            });
+
+                                            const hide = MenuItem.new({
+                                                text: "Hide",
+                                                action: () => {
+                                                    addHiddenGvk(clusterProfiles[0][0], gvk)
+                                                        .catch(e => alert(JSON.stringify(e)));
+                                                }
+                                            });
+
+                                            const menu = await Menu.new({ items: await Promise.all([unpin, hide]) });
+
+                                            await menu.popup();
+                                        }}
                                     />
                                 </details>
                             );
@@ -126,7 +206,18 @@ const ClusterView: React.FC = () => {
                         .filter((group) => group.isCrd)
                         .sort((groupA, groupB) => groupA.name.localeCompare(groupB.name))
                         .map(({ name: groupName, kinds }) => {
-                            const gvks = kinds.map(({ kind, version }) => ({ group: groupName, version, kind }));
+                            const gvks = kinds
+                                .map(({ kind, version }) => ({ group: groupName, version, kind }))
+                                .filter(gvk => (
+                                    !hiddenGvks.some(current => (
+                                        current.group === gvk.group &&
+                                        current.version === gvk.version &&
+                                        current.kind === gvk.kind
+                                    ))
+                                ));
+
+                            // Don't show groups where everything is hidden
+                            if (gvks.length === 0) return;
 
                             return (
                                 <details key={groupName}>
@@ -134,7 +225,28 @@ const ClusterView: React.FC = () => {
                                     <GvkList className={classes.gvkListIndented}
                                         gvks={gvks}
                                         onResourceClicked={(gvk) => setCurrentGvk(gvk)}
-                                        onPinButtonClicked={(gvk) => setPinnedGvks(currentlyPinned => [...currentlyPinned, gvk])}
+                                        onPinButtonClicked={(gvk) => void addPinnedGvk(clusterProfiles[0][0], gvk)}
+                                        onGvkRightClicked={async (gvk) => {
+                                            const unpin = MenuItem.new({
+                                                text: "Pin",
+                                                action: () => {
+                                                    addPinnedGvk(clusterProfiles[0][0], gvk)
+                                                        .catch(e => alert(JSON.stringify(e)));
+                                                }
+                                            });
+
+                                            const hide = MenuItem.new({
+                                                text: "Hide",
+                                                action: () => {
+                                                    addHiddenGvk(clusterProfiles[0][0], gvk)
+                                                        .catch(e => alert(JSON.stringify(e)));
+                                                }
+                                            });
+
+                                            const menu = await Menu.new({ items: await Promise.all([unpin, hide]) });
+
+                                            await menu.popup();
+                                        }}
                                     />
                                 </details>
                             );
