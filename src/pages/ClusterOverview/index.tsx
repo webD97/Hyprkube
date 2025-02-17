@@ -2,8 +2,7 @@ import { Link } from "react-router-dom";
 
 import classes from './styles.module.css';
 import { useContextDiscovery } from "../../hooks/useContextDiscovery";
-import { useEffect, useMemo, useState } from "react";
-import { invoke } from "@tauri-apps/api/core";
+import { useMemo } from "react";
 
 type GroupedContextSources = {
     [key: string]: {
