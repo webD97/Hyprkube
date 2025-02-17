@@ -32,6 +32,17 @@ impl GvkService {
         gvk: GroupVersionKind,
     ) -> Result<(), self::Error> {
         self.add_gvk(profile, gvk, PERISTENCE_KEY_PINNED_GVKS)
+            .map(|gvks| {
+                self.app
+                    .emit(
+                        "hyprkube://pinned-gvks-changed",
+                        PinnedGvksChanged {
+                            cluster_profile: profile.to_owned(),
+                            gvks,
+                        },
+                    )
+                    .unwrap();
+            })
     }
 
     pub fn remove_pinned_gvk(
@@ -40,6 +51,17 @@ impl GvkService {
         gvk: &GroupVersionKind,
     ) -> Result<(), self::Error> {
         self.remove_gvk(profile, gvk, PERISTENCE_KEY_PINNED_GVKS)
+            .map(|gvks| {
+                self.app
+                    .emit(
+                        "hyprkube://pinned-gvks-changed",
+                        PinnedGvksChanged {
+                            cluster_profile: profile.to_owned(),
+                            gvks: gvks,
+                        },
+                    )
+                    .unwrap();
+            })
     }
 
     pub fn list_hidden_gvks(
@@ -55,6 +77,17 @@ impl GvkService {
         gvk: GroupVersionKind,
     ) -> Result<(), self::Error> {
         self.add_gvk(profile, gvk, PERISTENCE_KEY_HIDDEN_GVKS)
+            .map(|gvks| {
+                self.app
+                    .emit(
+                        "hyprkube://hidden-gvks-changed",
+                        PinnedGvksChanged {
+                            cluster_profile: profile.to_owned(),
+                            gvks,
+                        },
+                    )
+                    .unwrap();
+            })
     }
 
     pub fn remove_hidden_gvk(
@@ -63,13 +96,24 @@ impl GvkService {
         gvk: &GroupVersionKind,
     ) -> Result<(), self::Error> {
         self.remove_gvk(profile, gvk, PERISTENCE_KEY_HIDDEN_GVKS)
+            .map(|gvks| {
+                self.app
+                    .emit(
+                        "hyprkube://hidden-gvks-changed",
+                        PinnedGvksChanged {
+                            cluster_profile: profile.to_owned(),
+                            gvks: gvks,
+                        },
+                    )
+                    .unwrap();
+            })
     }
 
     fn list_gvks(
         &self,
         profile: &ClusterProfileId,
-        persistence_key: &str
-    )-> Result<Vec<GroupVersionKind>, self::Error> {
+        persistence_key: &str,
+    ) -> Result<Vec<GroupVersionKind>, self::Error> {
         let items = self.repository.read_key(
             &persistence::Context::PerClusterProfile(profile.clone()),
             persistence_key,
@@ -84,46 +128,39 @@ impl GvkService {
         Ok(items)
     }
 
-    fn add_gvk(&self,
+    fn add_gvk(
+        &self,
         profile: &ClusterProfileId,
         gvk: GroupVersionKind,
-        persistence_key: &str
-    ) -> Result<(), self::Error> {
-            let mut pinned = self.list_pinned_gvks(profile)?;
+        persistence_key: &str,
+    ) -> Result<Vec<GroupVersionKind>, self::Error> {
+        let mut pinned = self.list_gvks(profile, persistence_key)?;
 
-            if pinned.contains(&gvk) {
-                return Ok(());
-            }
-    
-            pinned.push(gvk.clone());
-    
-            self.repository.set_key(
-                &persistence::Context::PerClusterProfile(profile.clone()),
-                persistence_key,
-                serde_json::to_value(pinned.clone())?,
-            )?;
-    
-            self.app.emit(
-                "hyprkube://pinned-gvks-changed",
-                PinnedGvksChanged {
-                    cluster_profile: profile.to_owned(),
-                    gvks: pinned,
-                },
-            )?;
-    
-            Ok(())
+        if pinned.contains(&gvk) {
+            return Ok(pinned);
+        }
+
+        pinned.push(gvk.clone());
+
+        self.repository.set_key(
+            &persistence::Context::PerClusterProfile(profile.clone()),
+            persistence_key,
+            serde_json::to_value(pinned.clone())?,
+        )?;
+
+        Ok(pinned)
     }
 
     pub fn remove_gvk(
         &self,
         profile: &ClusterProfileId,
         gvk: &GroupVersionKind,
-        persistence_key: &str
-    ) -> Result<(), self::Error> {
-        let mut pinned = self.list_pinned_gvks(profile)?;
+        persistence_key: &str,
+    ) -> Result<Vec<GroupVersionKind>, self::Error> {
+        let mut pinned = self.list_gvks(profile, persistence_key)?;
 
         if !pinned.contains(&gvk) {
-            return Ok(());
+            return Ok(pinned);
         }
 
         pinned.retain(|g| g != gvk);
@@ -134,15 +171,7 @@ impl GvkService {
             serde_json::to_value(pinned.clone())?,
         )?;
 
-        self.app.emit(
-            "hyprkube://pinned-gvks-changed",
-            PinnedGvksChanged {
-                cluster_profile: profile.to_owned(),
-                gvks: pinned,
-            },
-        )?;
-
-        Ok(())
+        Ok(pinned)
     }
 }
 
