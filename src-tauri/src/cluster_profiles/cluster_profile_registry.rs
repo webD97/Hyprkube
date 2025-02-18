@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fs::OpenOptions, io::Write, path::PathBuf, sync::Arc};
+use std::{collections::HashMap, fs::OpenOptions, path::PathBuf, sync::Arc};
 
 use scan_dir::ScanDir;
 use serde::{Deserialize, Serialize};
