@@ -144,20 +144,16 @@ const ClusterView: React.FC = () => {
                                 gvks={sortedPinnedGvks}
                                 onResourceClicked={(gvk) => setCurrentGvk(gvk)}
                                 onPinButtonClicked={(gvk) => void removePinnedGvk(clusterProfiles[0][0], gvk)}
-                                onGvkRightClicked={(gvk) => {
-                                    (async () => {
-                                        const unpin = MenuItem.new({
-                                            text: "Unpin",
-                                            action: () => {
-                                                removePinnedGvk(clusterProfiles[0][0], gvk)
-                                                    .catch(e => alert(JSON.stringify(e)));
-                                            }
-                                        });
+                                onGvkContextMenu={async (gvk) => {
+                                    const unpin = MenuItem.new({
+                                        text: "Unpin",
+                                        action: () => {
+                                            removePinnedGvk(clusterProfiles[0][0], gvk)
+                                                .catch(e => alert(JSON.stringify(e)));
+                                        }
+                                    });
 
-                                        const menu = await Menu.new({ items: await Promise.all([unpin]) });
-
-                                        await menu.popup();
-                                    })().catch(e => alert(JSON.stringify(e)));
+                                    return Menu.new({ items: await Promise.all([unpin]) });
                                 }}
                             />
                         )
@@ -189,28 +185,24 @@ const ClusterView: React.FC = () => {
                                         gvks={gvks}
                                         onResourceClicked={(gvk) => setCurrentGvk(gvk)}
                                         onPinButtonClicked={(gvk) => void addPinnedGvk(clusterProfiles[0][0], gvk)}
-                                        onGvkRightClicked={(gvk) => {
-                                            (async () => {
-                                                const unpin = MenuItem.new({
-                                                    text: "Pin",
-                                                    action: () => {
-                                                        addPinnedGvk(clusterProfiles[0][0], gvk)
-                                                            .catch(e => alert(JSON.stringify(e)));
-                                                    }
-                                                });
+                                        onGvkContextMenu={async (gvk) => {
+                                            const unpin = MenuItem.new({
+                                                text: "Pin",
+                                                action: () => {
+                                                    addPinnedGvk(clusterProfiles[0][0], gvk)
+                                                        .catch(e => alert(JSON.stringify(e)));
+                                                }
+                                            });
 
-                                                const hide = MenuItem.new({
-                                                    text: "Hide",
-                                                    action: () => {
-                                                        addHiddenGvk(clusterProfiles[0][0], gvk)
-                                                            .catch(e => alert(JSON.stringify(e)));
-                                                    }
-                                                });
+                                            const hide = MenuItem.new({
+                                                text: "Hide",
+                                                action: () => {
+                                                    addHiddenGvk(clusterProfiles[0][0], gvk)
+                                                        .catch(e => alert(JSON.stringify(e)));
+                                                }
+                                            });
 
-                                                const menu = await Menu.new({ items: await Promise.all([unpin, hide]) });
-
-                                                await menu.popup();
-                                            })().catch(e => alert(JSON.stringify(e)));
+                                            return await Menu.new({ items: await Promise.all([unpin, hide]) });
                                         }}
                                     />
                                 </details>
@@ -244,28 +236,24 @@ const ClusterView: React.FC = () => {
                                         gvks={gvks}
                                         onResourceClicked={(gvk) => setCurrentGvk(gvk)}
                                         onPinButtonClicked={(gvk) => void addPinnedGvk(clusterProfiles[0][0], gvk)}
-                                        onGvkRightClicked={(gvk) => {
-                                            (async () => {
-                                                const unpin = MenuItem.new({
-                                                    text: "Pin",
-                                                    action: () => {
-                                                        addPinnedGvk(clusterProfiles[0][0], gvk)
-                                                            .catch(e => alert(JSON.stringify(e)));
-                                                    }
-                                                });
+                                        onGvkContextMenu={async (gvk) => {
+                                            const unpin = MenuItem.new({
+                                                text: "Pin",
+                                                action: () => {
+                                                    addPinnedGvk(clusterProfiles[0][0], gvk)
+                                                        .catch(e => alert(JSON.stringify(e)));
+                                                }
+                                            });
 
-                                                const hide = MenuItem.new({
-                                                    text: "Hide",
-                                                    action: () => {
-                                                        addHiddenGvk(clusterProfiles[0][0], gvk)
-                                                            .catch(e => alert(JSON.stringify(e)));
-                                                    }
-                                                });
+                                            const hide = MenuItem.new({
+                                                text: "Hide",
+                                                action: () => {
+                                                    addHiddenGvk(clusterProfiles[0][0], gvk)
+                                                        .catch(e => alert(JSON.stringify(e)));
+                                                }
+                                            });
 
-                                                const menu = await Menu.new({ items: await Promise.all([unpin, hide]) });
-
-                                                await menu.popup();
-                                            })().catch(e => alert(JSON.stringify(e)));
+                                            return await Menu.new({ items: await Promise.all([unpin, hide]) });
                                         }}
                                     />
                                 </details>

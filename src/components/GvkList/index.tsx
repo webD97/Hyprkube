@@ -2,6 +2,8 @@ import React from 'react';
 import { Gvk } from '../../model/k8s';
 
 import classes from './component.module.css';
+import { Menu } from '@tauri-apps/api/menu';
+import { PhysicalPosition } from '@tauri-apps/api/dpi';
 
 export interface GvkListProps {
     className?: string,
@@ -9,7 +11,7 @@ export interface GvkListProps {
     withGroupName?: boolean,
     onResourceClicked?: (gvk: Gvk) => void,
     onPinButtonClicked?: (gvk: Gvk) => void,
-    onGvkRightClicked?: (gvk: Gvk) => void,
+    onGvkContextMenu: (gvk: Gvk) => Promise<Menu>,
 }
 
 const GvkList: React.FC<GvkListProps> = (props) => {
@@ -17,9 +19,9 @@ const GvkList: React.FC<GvkListProps> = (props) => {
         className,
         gvks,
         withGroupName = false,
+        onGvkContextMenu,
         onResourceClicked = () => undefined,
         onPinButtonClicked = () => undefined,
-        onGvkRightClicked = () => undefined,
     } = props;
 
     return (
@@ -31,10 +33,15 @@ const GvkList: React.FC<GvkListProps> = (props) => {
 
                         return (
                             <li key={`${kind}.${group}/${version}`}>
-                                <span onClick={() => onResourceClicked(gvk)} onContextMenu={e => {
-                                    e.preventDefault();
-                                    onGvkRightClicked(gvk);
-                                }}>
+                                <span
+                                    onClick={() => onResourceClicked(gvk)}
+                                    onContextMenu={e => {
+                                        e.preventDefault();
+                                        onGvkContextMenu(gvk)
+                                            .then(menu => menu.popup(new PhysicalPosition(e.screenX, e.screenY)))
+                                            .catch(e => alert(JSON.stringify(e)));
+                                    }
+                                    }>
                                     {
                                         group !== '' && withGroupName
                                             ? `${kind} (${group})`

@@ -117,7 +117,7 @@ const ResourceView: React.FC<ResourceViewProps> = (props) => {
                                         e.preventDefault();
 
                                         onResourceContextMenu(gvk, row.original[0])
-                                            .then(menu => menu.popup(new PhysicalPosition(e.pageX, e.pageY)))
+                                            .then(menu => menu.popup(new PhysicalPosition(e.screenX, e.screenY)))
                                             .catch(e => JSON.stringify(e));
                                     }}
                                 >
