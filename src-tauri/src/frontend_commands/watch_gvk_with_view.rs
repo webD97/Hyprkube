@@ -34,6 +34,7 @@ pub enum WatchStreamEvent {
     },
 }
 
+#[allow(clippy::too_many_arguments)]
 #[tauri::command]
 pub async fn watch_gvk_with_view(
     client_registry_arc: State<'_, KubernetesClientRegistryState>,
@@ -102,8 +103,8 @@ pub async fn watch_gvk_with_view(
                     let columns = view.render(&gvk, crd, &obj).unwrap();
                     Some(WatchStreamEvent::Created {
                         uid: obj.metadata.uid.expect("no uid"),
-                        namespace: obj.metadata.namespace.or(Some("".into())).unwrap(),
-                        name: obj.metadata.name.or(Some("".into())).unwrap(),
+                        namespace: obj.metadata.namespace.unwrap_or("".into()),
+                        name: obj.metadata.name.unwrap_or("".into()),
                         columns,
                     })
                 }
@@ -111,14 +112,14 @@ pub async fn watch_gvk_with_view(
                     let columns = view.render(&gvk, crd, &obj).unwrap();
                     Some(WatchStreamEvent::Updated {
                         uid: obj.metadata.uid.expect("no uid"),
-                        namespace: obj.metadata.namespace.or(Some("".into())).unwrap(),
-                        name: obj.metadata.name.or(Some("".into())).unwrap(),
+                        namespace: obj.metadata.namespace.unwrap_or("".into()),
+                        name: obj.metadata.name.unwrap_or("".into()),
                         columns,
                     })
                 }
                 Some(kube::api::WatchEvent::Deleted(obj)) => Some(WatchStreamEvent::Deleted {
-                    namespace: obj.metadata.namespace.or(Some("".into())).unwrap(),
-                    name: obj.metadata.name.or(Some("".into())).unwrap(),
+                    namespace: obj.metadata.namespace.unwrap_or("".into()),
+                    name: obj.metadata.name.unwrap_or("".into()),
                     uid: obj.metadata.uid.expect("no uid"),
                 }),
                 Some(kube::api::WatchEvent::Bookmark(_obj)) => None,

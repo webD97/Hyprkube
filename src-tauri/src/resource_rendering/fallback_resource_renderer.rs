@@ -28,10 +28,10 @@ impl ResourceRenderer for FallbackRenderer {
     ) -> Result<Vec<Result<Vec<FrontendValue>, String>>, BackendError> {
         Ok(vec![
             Ok(vec![FrontendValue::PlainString(
-                obj.metadata.clone().namespace.or(Some("".into())).unwrap(),
+                obj.metadata.clone().namespace.unwrap_or("".into()),
             )]),
             Ok(vec![FrontendValue::PlainString(
-                obj.metadata.clone().name.or(Some("".into())).unwrap(),
+                obj.metadata.clone().name.unwrap_or("".into()),
             )]),
             Ok(vec![FrontendValue::RelativeTime(super::RelativeTime {
                 iso: obj

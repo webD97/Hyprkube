@@ -111,7 +111,7 @@ impl ChannelTasks {
     pub fn abort(&self, channel_id: &u32) {
         let handles = self.handles.read().unwrap();
 
-        if let Some(abort_handle) = handles.get(&channel_id) {
+        if let Some(abort_handle) = handles.get(channel_id) {
             println!("Trying to kill channel {}", channel_id);
             abort_handle.abort();
         } else {

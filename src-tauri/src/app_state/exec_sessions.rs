@@ -38,7 +38,7 @@ impl ExecSessions {
     pub async fn register(&self, sender: Sender<ExecSessionRequest>) -> ExecSessionId {
         let uuid = Uuid::new_v4();
 
-        self.senders.lock().await.insert(uuid.clone(), sender);
+        self.senders.lock().await.insert(uuid, sender);
 
         uuid
     }

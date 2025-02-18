@@ -39,9 +39,10 @@ pub async fn discover_kubernetes_cluster(
     };
 
     let client_config =
-        kube::Config::from_custom_kubeconfig(kubeconfig, &kubeconfig_options).await?;
+        kube::Config::from_custom_kubeconfig(kubeconfig, kubeconfig_options).await?;
 
-    let discovery_cache = DiscoveryCacheService::new(&context_name.clone(), Arc::clone(&repository));
+    let discovery_cache =
+        DiscoveryCacheService::new(&context_name.clone(), Arc::clone(&repository));
     for cached in discovery_cache.read_cache() {
         channel
             .send(DiscoveryResult::DiscoveredResource(cached))

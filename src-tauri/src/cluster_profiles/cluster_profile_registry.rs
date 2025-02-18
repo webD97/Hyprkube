@@ -38,6 +38,7 @@ impl ClusterProfileRegistry {
         let _ = OpenOptions::new()
             .write(true)
             .create(true)
+            .truncate(false)
             .open(profiles_dir)?;
 
         Ok(())

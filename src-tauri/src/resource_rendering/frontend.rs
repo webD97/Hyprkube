@@ -14,7 +14,7 @@ impl ColoredString {
     }
 
     fn build_extra(builder: &mut rhai::TypeBuilder<Self>) {
-        builder.with_fn("ColoredString", |string, color| Self::new(string, color));
+        builder.with_fn("ColoredString", Self::new);
     }
 }
 
@@ -30,7 +30,7 @@ impl ColoredBox {
     }
 
     fn build_extra(builder: &mut rhai::TypeBuilder<Self>) {
-        builder.with_fn("ColoredBox", |string| Self::new(string));
+        builder.with_fn("ColoredBox", Self::new);
     }
 }
 

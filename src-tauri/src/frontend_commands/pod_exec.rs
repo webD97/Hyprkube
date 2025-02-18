@@ -63,6 +63,7 @@ pub async fn pod_exec_resize_terminal(
         .await
 }
 
+#[allow(clippy::too_many_arguments)]
 #[tauri::command]
 pub async fn pod_exec_start_session(
     client_registry_arc: State<'_, KubernetesClientRegistryState>,

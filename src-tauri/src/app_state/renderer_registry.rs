@@ -40,7 +40,7 @@ impl RendererRegistry {
 
         let walk_result: Vec<PathBuf> = ScanDir::files()
             .walk(&views_dir, |iter| {
-                iter.filter(|&(_, ref name)| name.ends_with(".rhai"))
+                iter.filter(|(_, name)| name.ends_with(".rhai"))
                     .map(|(ref entry, _)| entry.path())
                     .collect()
             })
@@ -64,8 +64,7 @@ impl RendererRegistry {
                 .definition
                 .match_api_version
                 .split_once("/")
-                .or(Some(("", view.definition.match_api_version.as_str())))
-                .unwrap();
+                .unwrap_or(("", view.definition.match_api_version.as_str()));
 
             let gvk = GroupVersionKind {
                 group: group.into(),
@@ -75,10 +74,7 @@ impl RendererRegistry {
 
             println!("Found view {:?} for {:?}", view.definition.name, gvk);
 
-            renderers
-                .entry(gvk)
-                .or_insert_with(Vec::new)
-                .push(Box::new(view));
+            renderers.entry(gvk).or_default().push(Box::new(view));
         }
 
         RendererRegistry {
@@ -95,12 +91,12 @@ impl RendererRegistry {
         kube_client_id: &Uuid,
         gvk: &GroupVersionKind,
     ) -> Vec<String> {
-        let renderers = self.mappings.get(gvk).or(Some(Self::EMPTY_VEC)).unwrap();
+        let renderers = self.mappings.get(gvk).unwrap_or(Self::EMPTY_VEC);
 
         let kubernetes_client_registry = self.app_handle.state::<KubernetesClientRegistryState>();
 
         let registered = kubernetes_client_registry
-            .get_cluster(&kube_client_id)
+            .get_cluster(kube_client_id)
             .unwrap();
 
         let crds: Vec<&GroupVersionKind> = registered.2.crds.keys().collect();
@@ -131,19 +127,18 @@ impl RendererRegistry {
         let specific_view = self
             .mappings
             .get(gvk)
-            .or(Some(Self::EMPTY_VEC))
-            .unwrap()
+            .unwrap_or(Self::EMPTY_VEC)
             .iter()
             .find(|view| view.display_name() == view_name);
 
         match specific_view {
-            Some(view) => return view.to_owned(),
+            Some(view) => view.to_owned(),
             None => {
                 eprintln!(
                     "View {:?} not found for {:?}, returning fallback.",
                     &view_name, &gvk
                 );
-                return &self.generic_renderer;
+                &self.generic_renderer
             }
         }
     }

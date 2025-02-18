@@ -21,13 +21,13 @@ pub struct ScriptedResourceView {
 #[derive(Debug, Error)]
 pub enum ResourceViewError {
     #[error("error in view definition")]
-    ViewDefinitionError(#[from] InvalidViewDefinition),
+    ViewDefinition(#[from] InvalidViewDefinition),
 
     #[error("error in rhai script")]
-    SyntaxError(#[from] rhai::ParseError),
+    Syntax(#[from] rhai::ParseError),
 
     #[error("error in rhai script")]
-    RuntimeError(#[from] Box<rhai::EvalAltResult>),
+    Runtime(#[from] Box<rhai::EvalAltResult>),
 }
 
 impl ScriptedResourceView {

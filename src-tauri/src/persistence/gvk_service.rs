@@ -57,7 +57,7 @@ impl GvkService {
                         "hyprkube://pinned-gvks-changed",
                         PinnedGvksChanged {
                             cluster_profile: profile.to_owned(),
-                            gvks: gvks,
+                            gvks,
                         },
                     )
                     .unwrap();
@@ -102,7 +102,7 @@ impl GvkService {
                         "hyprkube://hidden-gvks-changed",
                         PinnedGvksChanged {
                             cluster_profile: profile.to_owned(),
-                            gvks: gvks,
+                            gvks,
                         },
                     )
                     .unwrap();
@@ -159,7 +159,7 @@ impl GvkService {
     ) -> Result<Vec<GroupVersionKind>, self::Error> {
         let mut pinned = self.list_gvks(profile, persistence_key)?;
 
-        if !pinned.contains(&gvk) {
+        if !pinned.contains(gvk) {
             return Ok(pinned);
         }
 
@@ -185,16 +185,16 @@ struct PinnedGvksChanged {
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
     #[error(transparent)]
-    TauriError(#[from] tauri::Error),
+    Tauri(#[from] tauri::Error),
 
     #[error(transparent)]
-    TauriStoreError(#[from] tauri_plugin_store::Error),
+    TauriStore(#[from] tauri_plugin_store::Error),
 
     #[error(transparent)]
-    SerializationError(#[from] serde_json::Error),
+    Serialization(#[from] serde_json::Error),
 
     #[error(transparent)]
-    RepositoryError(#[from] persistence::Error),
+    Repository(#[from] persistence::Error),
 }
 
 impl Serialize for Error {

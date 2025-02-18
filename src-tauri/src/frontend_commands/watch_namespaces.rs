@@ -47,10 +47,10 @@ pub async fn watch_namespaces(
 
             let to_send = match event {
                 Some(kube::api::WatchEvent::Added(obj)) => Some(WatchNamespacesEvent::Created(
-                    obj.metadata.name.or(Some("".into())).unwrap(),
+                    obj.metadata.name.unwrap_or("".into()),
                 )),
                 Some(kube::api::WatchEvent::Deleted(obj)) => Some(WatchNamespacesEvent::Deleted(
-                    obj.metadata.name.or(Some("".into())).unwrap(),
+                    obj.metadata.name.unwrap_or("".into()),
                 )),
                 Some(kube::api::WatchEvent::Modified(_obj)) => None,
                 Some(kube::api::WatchEvent::Bookmark(_obj)) => None,
