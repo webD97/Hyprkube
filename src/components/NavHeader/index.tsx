@@ -1,5 +1,4 @@
 import { useLocation, useNavigate } from "react-router-dom";
-import ThemeToggle from "../ThemeToggle";
 
 import classes from './component.module.css';
 import { useEffect, useState } from "react";
@@ -24,7 +23,6 @@ const NavHeader: React.FC<NavHeaderProps> = (_props) => {
             <button disabled={!canGoBack} onClick={() => navigate(1)}>&rarr;</button>
             <h2>🧊&nbsp; Hyprkube </h2>
             <div>
-                <ThemeToggle />
             </div>
         </div>
     );

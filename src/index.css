@@ -3,7 +3,7 @@
   line-height: 1.5;
   font-weight: 400;
 
-  color-scheme: dark light;
+  color-scheme: dark;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -13,10 +13,6 @@
 
   user-select: none;
   -webkit-user-select: none;
-}
-
-.dark-mode {
-  color-scheme: dark;
 }
 
 body,
