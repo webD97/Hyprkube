@@ -143,7 +143,6 @@ const ClusterView: React.FC = () => {
                             <GvkList withGroupName
                                 gvks={sortedPinnedGvks}
                                 onResourceClicked={(gvk) => setCurrentGvk(gvk)}
-                                onPinButtonClicked={(gvk) => void removePinnedGvk(clusterProfiles[0][0], gvk)}
                                 onGvkContextMenu={async (gvk) => {
                                     const unpin = MenuItem.new({
                                         text: "Unpin",
@@ -184,7 +183,6 @@ const ClusterView: React.FC = () => {
                                     <GvkList className={classes.gvkListIndented}
                                         gvks={gvks}
                                         onResourceClicked={(gvk) => setCurrentGvk(gvk)}
-                                        onPinButtonClicked={(gvk) => void addPinnedGvk(clusterProfiles[0][0], gvk)}
                                         onGvkContextMenu={async (gvk) => {
                                             const unpin = MenuItem.new({
                                                 text: "Pin",
@@ -235,7 +233,6 @@ const ClusterView: React.FC = () => {
                                     <GvkList className={classes.gvkListIndented}
                                         gvks={gvks}
                                         onResourceClicked={(gvk) => setCurrentGvk(gvk)}
-                                        onPinButtonClicked={(gvk) => void addPinnedGvk(clusterProfiles[0][0], gvk)}
                                         onGvkContextMenu={async (gvk) => {
                                             const unpin = MenuItem.new({
                                                 text: "Pin",
