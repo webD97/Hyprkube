@@ -1,7 +1,7 @@
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import EmojiHint from '../../components/EmojiHint';
 import GvkList from '../../components/GvkList';
@@ -27,24 +27,10 @@ import removePinnedGvk from '../../api/removePinnedGvk';
 import usePinnedGvks from '../../hooks/usePinnedGvks';
 import useHiddenGvks from '../../hooks/useHiddenGvks';
 import addHiddenGvk from '../../api/addHiddenGvk';
+import { Editor } from '@monaco-editor/react';
+import getResourceYaml from '../../api/getResourceYaml';
 
 const namespace_gvk = { group: "", version: "v1", kind: "Namespace" };
-
-// const defaultPinnedGvks: Gvk[] = [
-//     { group: '', version: 'v1', kind: 'Node' },
-//     { group: '', version: 'v1', kind: 'Namespace' },
-//     { group: '', version: 'v1', kind: 'Pod' },
-//     { group: 'apps', version: 'v1', kind: 'Deployment' },
-//     { group: 'apps', version: 'v1', kind: 'StatefulSet' },
-//     { group: 'batch', version: 'v1', kind: 'CronJob' },
-//     { group: 'batch', version: 'v1', kind: 'Job' },
-//     { group: '', version: 'v1', kind: 'ConfigMap' },
-//     { group: '', version: 'v1', kind: 'Secret' },
-//     { group: '', version: 'v1', kind: 'Service' },
-//     { group: 'networking.k8s.io', version: 'v1', kind: 'Ingress' },
-//     { group: '', version: 'v1', kind: 'PersistentVolumeClaim' },
-//     { group: '', version: 'v1', kind: 'PersistentVolume' },
-// ];
 
 const ClusterView: React.FC = () => {
     const [searchParams] = useSearchParams();
@@ -68,12 +54,6 @@ const ClusterView: React.FC = () => {
         listClusterProfiles()
             .then(profiles => {
                 setClusterProfiles(profiles);
-                // return Promise.all(defaultPinnedGvks.map(gvk => {
-                //     return addPinnedGvk(
-                //         profiles[0][0],
-                //         gvk
-                //     );
-                // }));
             })
             .catch(e => alert(JSON.stringify(e)));
     }, []);
@@ -116,6 +96,40 @@ const ClusterView: React.FC = () => {
             return 0;
         });
     }, [pinnedGvks]);
+
+    const yamlViewerFactory = useCallback(() => {
+        if (clientId === undefined) {
+            return () => undefined;
+        }
+
+        return (gvk: Gvk, resourceUID: string) => {
+            const { namespace, name } = resources[resourceUID];
+
+            getResourceYaml(clientId, gvk, namespace, name)
+                .then((yaml) => {
+                    pushTab(
+                        <Tab title={`Show: ${name}`}>
+                            {
+                                () => (
+                                    <Editor
+                                        height="600px"
+                                        width="100%"
+                                        defaultLanguage="yaml"
+                                        theme="vs-dark"
+                                        options={{
+                                            renderWhitespace: "all",
+                                            readOnly: true,
+                                        }}
+                                        value={yaml}
+                                    />
+                                )
+                            }
+                        </Tab>
+                    )
+                })
+                .catch(e => alert(JSON.stringify(e)));
+        }
+    }, [clientId, pushTab, resources]);
 
     return (
         <div className={classes.container}>
@@ -298,20 +312,18 @@ const ClusterView: React.FC = () => {
                                         </div>
                                         <ResourceView
                                             resourceNamePlural={findResourcePlural(currentGvk)}
+                                            gvk={currentGvk}
                                             namespace={selectedNamespace}
                                             columnTitles={columnTitles || []}
                                             resourceData={resources}
-                                            onResourceContextMenu={async (resourceUID: string) => {
+                                            onResourceClicked={yamlViewerFactory()}
+                                            onResourceContextMenu={async (gvk, resourceUID) => {
                                                 const { namespace, name } = resources[resourceUID];
 
                                                 const itemPromises: Promise<MenuItem | PredefinedMenuItem>[] = [
                                                     MenuItem.new({
                                                         text: 'Show YAML',
-                                                        enabled: false,
-                                                    }),
-                                                    MenuItem.new({
-                                                        text: 'Copy YAML',
-                                                        enabled: false,
+                                                        action: () => yamlViewerFactory()(gvk, resourceUID)
                                                     }),
                                                     MenuItem.new({
                                                         text: 'Delete resource',

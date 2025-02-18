@@ -16,13 +16,16 @@ import {
 import { CustomCell } from "./CustomCell";
 import { Menu } from "@tauri-apps/api/menu";
 import { PhysicalPosition } from "@tauri-apps/api/dpi";
+import { Gvk } from "../../model/k8s";
 
 export interface ResourceViewProps {
     namespace?: string,
     resourceNamePlural?: string,
     columnTitles: string[],
     resourceData: ResourceViewData,
-    onResourceContextMenu: (uid: string) => Promise<Menu>
+    gvk: Gvk,
+    onResourceContextMenu: (gvk: Gvk, uid: string) => Promise<Menu>,
+    onResourceClicked?: (gvk: Gvk, uid: string) => void
 }
 
 function createColumns(titles: string[]) {
@@ -49,8 +52,10 @@ const ResourceView: React.FC<ResourceViewProps> = (props) => {
         namespace,
         resourceNamePlural,
         columnTitles,
+        gvk,
         resourceData = {},
         onResourceContextMenu,
+        onResourceClicked = () => undefined
     } = props;
 
     const columns = useMemo(() => createColumns(columnTitles), [columnTitles]);
@@ -108,10 +113,11 @@ const ResourceView: React.FC<ResourceViewProps> = (props) => {
                         table.getRowModel().rows.map((row) => {
                             return (
                                 <tr key={row.id}
+                                    onClick={() => onResourceClicked(gvk, row.original[0])}
                                     onContextMenu={(e) => {
                                         e.preventDefault();
 
-                                        onResourceContextMenu(row.original[0])
+                                        onResourceContextMenu(gvk, row.original[0])
                                             .then(menu => menu.popup(new PhysicalPosition(e.pageX, e.pageY)))
                                             .catch(e => JSON.stringify(e));
                                     }}

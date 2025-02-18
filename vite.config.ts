@@ -21,7 +21,7 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          xterm: ['@xterm/xterm', '@xterm/addon-clipboard', '@xterm/addon-fit', '@xterm/addon-webgl']
+          xterm: ['@xterm/xterm', '@xterm/addon-clipboard', '@xterm/addon-fit', '@xterm/addon-webgl', '@monaco-editor/react']
         }
       }
     }

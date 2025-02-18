@@ -7,6 +7,7 @@
 
 .container table tr {
     height: 2.5em;
+    cursor: pointer;
 }
 
 .container table th {

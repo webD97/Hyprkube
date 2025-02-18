@@ -96,6 +96,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_json_path",
+ "serde_yaml",
  "tauri",
  "tauri-build",
  "tauri-plugin-dialog",

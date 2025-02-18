@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@melloware/react-logviewer": "6.1.2",
+    "@monaco-editor/react": "^4.7.0",
     "@tanstack/react-table": "^8.20.6",
     "@tauri-apps/api": "2.2.0",
     "@tauri-apps/plugin-dialog": "^2.2.0",
