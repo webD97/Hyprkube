@@ -4,12 +4,11 @@ use kube::api::GroupVersionKind;
 use rust_embed::Embed;
 use scan_dir::ScanDir;
 
-use tauri::Manager as _;
+use tauri::{AppHandle, Manager as _};
 use uuid::Uuid;
 
 use crate::{
     app_state::KubernetesClientRegistryState,
-    dirs::get_views_dir,
     resource_rendering::{CrdRenderer, FallbackRenderer, ResourceRenderer, ScriptedResourceView},
 };
 
@@ -37,7 +36,7 @@ impl RendererRegistry {
         let mut renderers: HashMap<GroupVersionKind, Vec<Box<dyn ResourceRenderer>>> =
             HashMap::new();
 
-        let views_dir = get_views_dir().unwrap();
+        let views_dir = get_views_dir(&app_handle).unwrap();
 
         let walk_result: Vec<PathBuf> = ScanDir::files()
             .walk(&views_dir, |iter| {
@@ -148,4 +147,24 @@ impl RendererRegistry {
             }
         }
     }
+}
+
+fn get_views_dir(app: &AppHandle) -> Option<PathBuf> {
+    let mut views_dir = app.path().app_data_dir().unwrap();
+    views_dir.push("views");
+
+    if !views_dir.exists() {
+        match std::fs::create_dir_all(&views_dir) {
+            Ok(()) => (),
+            Err(error) => {
+                eprintln!(
+                    "Failed to create directory {:?} for view scripts: {:?}",
+                    views_dir, error
+                );
+                return None;
+            }
+        }
+    }
+
+    Some(views_dir)
 }

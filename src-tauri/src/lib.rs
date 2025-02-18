@@ -3,7 +3,6 @@
 
 mod app_state;
 mod cluster_profiles;
-mod dirs;
 mod frontend_commands;
 mod frontend_types;
 mod persistence;
