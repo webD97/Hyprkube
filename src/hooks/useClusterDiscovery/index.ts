@@ -78,16 +78,17 @@ export function useClusterDiscovery(source: string | null, context: string | nul
         listen<string>('ERR_CLUSTER_DISCOVERY', (e) => setLastError(e.payload))
             .then((unlisten) => {
                 invoke<{ clientId: string }>('discover_kubernetes_cluster', { channel, contextSource: [source, context] })
-                    .catch((e) => setLastError(e))
-                    .then((response) => setClientId(response!.clientId))
+                    .then((response) => setClientId(response.clientId))
+                    .catch((e) => setLastError(e as unknown as string))
                     .finally(() => {
                         setLoading(false);
                         unlisten();
                     });
-            });
+            })
+            .catch(e => alert(JSON.stringify(e)));
 
         return () => {
-            invoke('cleanup_channel', { channel });
+            void invoke('cleanup_channel', { channel });
         };
     }, [context, source]);
 
