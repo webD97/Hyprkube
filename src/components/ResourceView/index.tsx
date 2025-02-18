@@ -104,7 +104,6 @@ const ResourceView: React.FC<ResourceViewProps> = (props) => {
                                             {{ asc: ' ⬆️', desc: ' ⬇️' }[header.column.getIsSorted() as string] ?? null}
                                         </th>
                                     ))}
-                                <th className={styles.resourceQuickActions}>Actions</th>
                             </tr>
                         ))}
                 </thead>
@@ -130,8 +129,6 @@ const ResourceView: React.FC<ResourceViewProps> = (props) => {
                                                 </td>
                                             )
                                         })}
-                                    <td className={styles.resourceQuickActions}>
-                                    </td>
                                 </tr>
                             )
                         })}

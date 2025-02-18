@@ -28,18 +28,6 @@
     background-color: rgba(0, 0, 0, 0.25);
 }
 
-.container .resourceQuickActions {
-    width: 10%;
-}
-
-.container .resourceQuickActions>* {
-    display: none;
-}
-
-.container .resourceQuickActions:hover>* {
-    display: initial;
-}
-
 .sortable {
     cursor: pointer;
 }
