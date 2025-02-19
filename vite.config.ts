@@ -21,7 +21,9 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          xterm: ['@xterm/xterm', '@xterm/addon-clipboard', '@xterm/addon-fit', '@xterm/addon-webgl', '@monaco-editor/react']
+          xterm: ['@xterm/xterm', '@xterm/addon-clipboard', '@xterm/addon-fit', '@xterm/addon-webgl'],
+          monaco: ['@monaco-editor/react', '@monaco-editor/loader', 'monaco-editor'],
+          logviewer: ['@melloware/react-logviewer']
         }
       }
     }
