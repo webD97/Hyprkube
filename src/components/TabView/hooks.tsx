@@ -1,10 +1,10 @@
 import { ReactElement, useState } from "react";
 import { TabProps } from ".";
 
-type Tab = ReactElement<TabProps>;
+export type TabElement = ReactElement<TabProps>;
 
-export function useTabs(): [Tab[], number, (tab: Tab) => void, (idx: number) => void, (idx: number) => void] {
-    const [tabs, setTabs] = useState<Tab[]>([]);
+export function useTabs(): [TabElement[], number, (tab: TabElement) => void, (idx: number) => void, (idx: number) => void] {
+    const [tabs, setTabs] = useState<TabElement[]>([]);
     const [activeTab, setActiveTab] = useState(0);
 
     const pushTab = (tab: ReactElement<TabProps>) => {

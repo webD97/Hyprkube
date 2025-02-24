@@ -6,7 +6,6 @@ import { type editor } from 'monaco-editor';
 
 import EmojiHint from '../../components/EmojiHint';
 import GvkList from '../../components/GvkList';
-import LogPanel from '../../components/LogPanel';
 import ResourceView from '../../components/ResourceView';
 import TabView, { Tab } from '../../components/TabView';
 import { useTabs } from '../../components/TabView/hooks';
@@ -16,21 +15,14 @@ import { Gvk } from '../../model/k8s';
 import classes from './styles.module.css';
 import { useSearchParams } from 'react-router-dom';
 import useClusterNamespaces from '../../hooks/useClusterNamespaces';
-import { deleteResource } from '../../api/deleteResource';
 import listResourceViews, { type ResourceViewDef } from '../../api/listResourceViews';
-import { confirm } from '@tauri-apps/plugin-dialog';
-import { Menu, MenuItem, PredefinedMenuItem, Submenu } from '@tauri-apps/api/menu';
-import HyprkubeTerminal from '../../components/Terminal';
-import listPodContainerNames from '../../api/listPodContainerNames';
 import listClusterProfiles, { ClusterProfile } from '../../api/listClusterProfiles';
-import addPinnedGvk from '../../api/addPinnedGvk';
-import removePinnedGvk from '../../api/removePinnedGvk';
 import usePinnedGvks from '../../hooks/usePinnedGvks';
 import useHiddenGvks from '../../hooks/useHiddenGvks';
-import addHiddenGvk from '../../api/addHiddenGvk';
 import { Editor } from '@monaco-editor/react';
 import getResourceYaml from '../../api/getResourceYaml';
 import applyResourceYaml from '../../api/applyResourceYaml';
+import { createMenuForNormalGvks, createMenuForPinnedGvks, createMenuForResource } from './menus';
 
 const namespace_gvk = { group: "", version: "v1", kind: "Namespace" };
 
@@ -188,17 +180,10 @@ const ClusterView: React.FC = () => {
                             <GvkList withGroupName
                                 gvks={sortedPinnedGvks}
                                 onResourceClicked={(gvk) => setCurrentGvk(gvk)}
-                                onGvkContextMenu={async (gvk) => {
-                                    const unpin = MenuItem.new({
-                                        text: "Unpin",
-                                        action: () => {
-                                            removePinnedGvk(clusterProfiles[0][0], gvk)
-                                                .catch(e => alert(JSON.stringify(e)));
-                                        }
-                                    });
-
-                                    return Menu.new({ items: await Promise.all([unpin]) });
-                                }}
+                                onGvkContextMenu={(gvk) => createMenuForPinnedGvks({
+                                    clusterProfile: clusterProfiles[0][0],
+                                    gvk
+                                })}
                             />
                         )
                 }
@@ -228,25 +213,10 @@ const ClusterView: React.FC = () => {
                                     <GvkList className={classes.gvkListIndented}
                                         gvks={gvks}
                                         onResourceClicked={(gvk) => setCurrentGvk(gvk)}
-                                        onGvkContextMenu={async (gvk) => {
-                                            const unpin = MenuItem.new({
-                                                text: "Pin",
-                                                action: () => {
-                                                    addPinnedGvk(clusterProfiles[0][0], gvk)
-                                                        .catch(e => alert(JSON.stringify(e)));
-                                                }
-                                            });
-
-                                            const hide = MenuItem.new({
-                                                text: "Hide",
-                                                action: () => {
-                                                    addHiddenGvk(clusterProfiles[0][0], gvk)
-                                                        .catch(e => alert(JSON.stringify(e)));
-                                                }
-                                            });
-
-                                            return await Menu.new({ items: await Promise.all([unpin, hide]) });
-                                        }}
+                                        onGvkContextMenu={(gvk) => createMenuForNormalGvks({
+                                            clusterProfile: clusterProfiles[0][0],
+                                            gvk
+                                        })}
                                     />
                                 </details>
                             );
@@ -278,25 +248,10 @@ const ClusterView: React.FC = () => {
                                     <GvkList className={classes.gvkListIndented}
                                         gvks={gvks}
                                         onResourceClicked={(gvk) => setCurrentGvk(gvk)}
-                                        onGvkContextMenu={async (gvk) => {
-                                            const unpin = MenuItem.new({
-                                                text: "Pin",
-                                                action: () => {
-                                                    addPinnedGvk(clusterProfiles[0][0], gvk)
-                                                        .catch(e => alert(JSON.stringify(e)));
-                                                }
-                                            });
-
-                                            const hide = MenuItem.new({
-                                                text: "Hide",
-                                                action: () => {
-                                                    addHiddenGvk(clusterProfiles[0][0], gvk)
-                                                        .catch(e => alert(JSON.stringify(e)));
-                                                }
-                                            });
-
-                                            return await Menu.new({ items: await Promise.all([unpin, hide]) });
-                                        }}
+                                        onGvkContextMenu={(gvk) => createMenuForNormalGvks({
+                                            clusterProfile: clusterProfiles[0][0],
+                                            gvk
+                                        })}
                                     />
                                 </details>
                             );
@@ -351,111 +306,13 @@ const ClusterView: React.FC = () => {
                                         columnTitles={columnTitles || []}
                                         resourceData={resources}
                                         onResourceClicked={yamlViewerFactory()}
-                                        onResourceContextMenu={async (gvk, resourceUID) => {
+                                        onResourceContextMenu={(gvk, resourceUID) => {
                                             const { namespace, name } = resources[resourceUID];
 
-                                            const itemPromises: Promise<MenuItem | PredefinedMenuItem>[] = [
-                                                MenuItem.new({
-                                                    text: 'Show YAML',
-                                                    action: () => yamlViewerFactory()(gvk, resourceUID)
-                                                }),
-                                                MenuItem.new({
-                                                    text: 'Delete resource',
-                                                    action: () => {
-                                                        const { namespace, name } = resources[resourceUID];
-
-                                                        confirm(`This action cannot be reverted. Are you sure?`, { kind: 'warning', title: `Permanently delete resource?` })
-                                                            .then(confirmed => {
-                                                                if (confirmed) {
-                                                                    return deleteResource(clientId!, currentGvk, namespace, name);
-                                                                }
-                                                            })
-                                                            .catch(e => alert(JSON.stringify(e)));
-
-                                                    }
-                                                }),
-                                                PredefinedMenuItem.new({ item: 'Separator' }),
-                                            ];
-
-                                            if (currentGvk.kind === "Pod") {
-                                                const logItems: Promise<MenuItem>[] = [];
-                                                const attachItems: Promise<MenuItem>[] = [];
-
-                                                const containerNames = await listPodContainerNames(clientId!, namespace, name);
-
-                                                logItems.push(
-                                                    ...containerNames.map(containerName => (
-                                                        MenuItem.new({
-                                                            text: containerName,
-                                                            action: () => {
-                                                                pushTab(
-                                                                    <Tab title={name}>
-                                                                        {
-                                                                            () => (
-                                                                                <LogPanel
-                                                                                    kubernetesClientId={clientId}
-                                                                                    namespace={namespace}
-                                                                                    name={name}
-                                                                                    container={containerName}
-                                                                                />
-                                                                            )
-                                                                        }
-                                                                    </Tab>
-                                                                )
-                                                            }
-                                                        })
-                                                    ))
-                                                );
-
-                                                attachItems.push(
-                                                    ...containerNames.map(containerName => (
-                                                        MenuItem.new({
-                                                            text: containerName,
-                                                            action: () => {
-                                                                pushTab(
-                                                                    <Tab title={`Shell (${name})`}>
-                                                                        {
-                                                                            () => (
-                                                                                <HyprkubeTerminal
-                                                                                    clientId={clientId!}
-                                                                                    podName={name}
-                                                                                    podNamespace={namespace}
-                                                                                    container={containerName}
-                                                                                />
-                                                                            )
-                                                                        }
-                                                                    </Tab>
-                                                                );
-                                                            }
-                                                        })
-                                                    ))
-                                                );
-
-                                                try {
-                                                    const logsSubmenu = Submenu.new({
-                                                        text: 'Show logs',
-                                                        items: await Promise.all(logItems)
-                                                    })
-
-                                                    const attachSubmenu = Submenu.new({
-                                                        text: 'Execute shell',
-                                                        items: await Promise.all(attachItems)
-                                                    });
-
-                                                    itemPromises.push(logsSubmenu, attachSubmenu);
-                                                }
-                                                catch (e) {
-                                                    throw new Error(e as string);
-                                                }
-                                            }
-
-                                            try {
-                                                const items = await Promise.all(itemPromises);
-                                                return Menu.new({ items });
-                                            }
-                                            catch (e) {
-                                                throw new Error(e as string);
-                                            }
+                                            return createMenuForResource({
+                                                clientId: clientId!, gvk, namespace, name, pushTab,
+                                                onShowYaml: () => yamlViewerFactory()(gvk, resourceUID)
+                                            });
                                         }}
                                     />
                                 </>
