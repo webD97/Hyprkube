@@ -28,7 +28,7 @@ futures = { version = "0.3.31" }
 tokio = { version = "1.43.0" }
 tokio-util = { version = "0.7.13", features = ["compat"] }
 thiserror = "2.0.11"
-uuid = { version = "1.13.1", features = ["v4"] }
+uuid = { version = "1.14.0", features = ["v4"] }
 rhai = { version = "1.21.0", features = [
     "serde",
     "sync",
