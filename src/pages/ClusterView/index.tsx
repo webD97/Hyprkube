@@ -1,7 +1,8 @@
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { type editor } from 'monaco-editor';
 
 import EmojiHint from '../../components/EmojiHint';
 import GvkList from '../../components/GvkList';
@@ -29,6 +30,7 @@ import useHiddenGvks from '../../hooks/useHiddenGvks';
 import addHiddenGvk from '../../api/addHiddenGvk';
 import { Editor } from '@monaco-editor/react';
 import getResourceYaml from '../../api/getResourceYaml';
+import applyResourceYaml from '../../api/applyResourceYaml';
 
 const namespace_gvk = { group: "", version: "v1", kind: "Namespace" };
 
@@ -49,6 +51,8 @@ const ClusterView: React.FC = () => {
     const [columnTitles, resources] = useResourceWatch(clientId, currentGvk, selectedView, selectedNamespace);
 
     const [tabs, activeTab, pushTab, removeTab, setActiveTab] = useTabs();
+
+    const editorRef = useRef<editor.IStandaloneCodeEditor>(null);
 
     useEffect(() => {
         listClusterProfiles()
@@ -111,25 +115,66 @@ const ClusterView: React.FC = () => {
                         <Tab title={`Show: ${name}`}>
                             {
                                 () => (
-                                    <Editor
-                                        height="600px"
-                                        width="100%"
-                                        defaultLanguage="yaml"
-                                        theme="vs-dark"
-                                        options={{
-                                            renderWhitespace: "all",
-                                            readOnly: true,
-                                        }}
-                                        value={yaml}
-                                    />
+                                    <>
+                                        <button
+                                            onClick={() => {
+                                                const editor = editorRef.current!;
+                                                const data = editor.getValue();
+
+                                                if (!data) return;
+
+                                                applyResourceYaml(clientId, currentGvk!, namespace, name, data)
+                                                    .then(newYaml => {
+                                                        editor.setValue(newYaml);
+                                                    })
+                                                    .catch((e) => {
+                                                        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+                                                        const {
+                                                            status,
+                                                            reason,
+                                                            message,
+                                                        } = JSON.parse(e as string);
+
+                                                        const editorValue = editor.getValue().split('\n').filter(line => !line.startsWith('#')).join('\n');
+                                                        editor.setValue(`# ${status} (Reason: ${reason})\n# ${message}\n${editorValue}`);
+                                                    });
+                                            }}
+                                        >
+                                            💾 Apply
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                const editor = editorRef.current!;
+
+                                                getResourceYaml(clientId, gvk, namespace, name)
+                                                    .then(yaml => editor.setValue(yaml))
+                                                    .catch(e => alert(JSON.stringify(e)));
+                                            }}
+                                        >
+                                            ⭮ Reload
+                                        </button>
+                                        <Editor
+                                            height="600px"
+                                            width="100%"
+                                            defaultLanguage="yaml"
+                                            theme="vs-dark"
+                                            options={{
+                                                renderWhitespace: "all",
+                                            }}
+                                            value={yaml}
+                                            onMount={(editor) => {
+                                                editorRef.current = editor;
+                                            }}
+                                        />
+                                    </>
                                 )
                             }
-                        </Tab>
+                        </Tab >
                     )
                 })
                 .catch(e => alert(JSON.stringify(e)));
         }
-    }, [clientId, pushTab, resources]);
+    }, [clientId, currentGvk, pushTab, resources]);
 
     return (
         <div className={classes.container}>

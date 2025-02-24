@@ -67,6 +67,7 @@ pub fn run() {
             frontend_commands::pod_exec_resize_terminal,
             frontend_commands::list_pod_container_names,
             frontend_commands::get_resource_yaml,
+            frontend_commands::apply_resource_yaml,
             cluster_profiles::list_cluster_profiles,
             cluster_profiles::cluster_profile_add_pinned_gvk,
             cluster_profiles::cluster_profile_remove_pinned_gvk,

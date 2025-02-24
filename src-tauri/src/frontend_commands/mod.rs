@@ -1,3 +1,4 @@
+mod apply_resource_yaml;
 mod cleanup_channel;
 mod delete_resource;
 mod discover_contexts;
@@ -10,6 +11,7 @@ mod pod_exec;
 mod watch_gvk_with_view;
 mod watch_namespaces;
 
+pub use apply_resource_yaml::*;
 pub use cleanup_channel::*;
 pub use delete_resource::*;
 pub use discover_contexts::*;
