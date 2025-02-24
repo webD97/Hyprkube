@@ -9,6 +9,7 @@ export function useTabs(): [TabElement[], number, (tab: TabElement) => void, (id
 
     const pushTab = (tab: ReactElement<TabProps>) => {
         setTabs(tabs => [...tabs, tab]);
+        setActiveTab(tabs.length);
     }
 
     const removeTab = (remove_idx: number) => {
