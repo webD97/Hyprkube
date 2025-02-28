@@ -2,11 +2,10 @@
     font-family: monospace;
     border-spacing: 0;
     width: 100%;
-    table-layout: fixed;
 }
 
 .container table tr {
-    height: 2.5em;
+    height: 2.22em;
     cursor: pointer;
 }
 
@@ -20,8 +19,8 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    min-width: 150px;
     padding: 0 0.5em;
+    vertical-align: middle;
 }
 
 .container table tbody tr:hover {

@@ -1,22 +1,27 @@
 import { DisplayableResource, ResourceViewData } from "../../hooks/useResourceWatch";
 import EmojiHint from "../EmojiHint";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import styles from './styles.module.css';
 
 import {
+    ColumnDef,
     createColumnHelper,
     flexRender,
     getCoreRowModel,
     getSortedRowModel,
+    RowSelectionState,
     SortingState,
     useReactTable,
     VisibilityState
 } from '@tanstack/react-table';
-import { CustomCell } from "./CustomCell";
-import { Menu } from "@tauri-apps/api/menu";
 import { PhysicalPosition } from "@tauri-apps/api/dpi";
+import { Menu } from "@tauri-apps/api/menu";
 import { Gvk } from "../../model/k8s";
+import Checkbox from "../Checkbox";
+import { CustomCell } from "./CustomCell";
+
+type _TData = [string, DisplayableResource];
 
 export interface ResourceViewProps {
     namespace?: string,
@@ -25,12 +30,13 @@ export interface ResourceViewProps {
     resourceData: ResourceViewData,
     gvk: Gvk,
     onResourceContextMenu: (gvk: Gvk, uid: string) => Promise<Menu>,
-    onResourceClicked?: (gvk: Gvk, uid: string) => void
+    onResourceClicked?: (gvk: Gvk, uid: string) => void,
+    onSelectionChanged?: (rows: _TData[]) => void
 }
 
 function createColumns(titles: string[]) {
-    const columnHelper = createColumnHelper<[string, DisplayableResource]>();
-    return titles.map((title, idx) => {
+    const columnHelper = createColumnHelper<_TData>();
+    const dataColumns = titles.map((title, idx) => {
         return columnHelper.accessor(row => row[1].columns[idx], {
             id: idx.toString(),
             header: () => title,
@@ -45,6 +51,25 @@ function createColumns(titles: string[]) {
             }
         });
     });
+
+    const selectionColumn: ColumnDef<_TData> = {
+        id: '_selection',
+        header({ table }) {
+            return <Checkbox
+                checked={table.getIsAllPageRowsSelected()}
+                onChange={table.getToggleAllRowsSelectedHandler()}
+            />
+        },
+        cell({ row }) {
+            return <Checkbox
+                checked={row.getIsSelected()}
+                disabled={!row.getCanSelect()}
+                onChange={row.getToggleSelectedHandler()}
+            />
+        },
+    };
+
+    return [selectionColumn, ...dataColumns];
 }
 
 const ResourceView: React.FC<ResourceViewProps> = (props) => {
@@ -55,12 +80,14 @@ const ResourceView: React.FC<ResourceViewProps> = (props) => {
         gvk,
         resourceData = {},
         onResourceContextMenu,
-        onResourceClicked = () => undefined
+        onResourceClicked = () => undefined,
+        onSelectionChanged = () => undefined
     } = props;
 
     const columns = useMemo(() => createColumns(columnTitles), [columnTitles]);
     const data = useMemo(() => Object.entries(resourceData), [resourceData]);
-    const [sorting, setSorting] = useState<SortingState>([])
+    const [sorting, setSorting] = useState<SortingState>([]);
+    const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
 
     const columnVisibility: VisibilityState = useMemo(() => {
         if (namespace === "") {
@@ -80,12 +107,37 @@ const ResourceView: React.FC<ResourceViewProps> = (props) => {
         defaultColumn: {
             cell: CustomCell
         },
+        getRowId([resourceUid]) {
+            return resourceUid;
+        },
         onSortingChange: setSorting,
+        onRowSelectionChange: (x) => {
+            setRowSelection(x);
+        },
         state: {
             sorting,
-            columnVisibility
+            columnVisibility,
+            rowSelection
         }
     });
+
+    // Notify parent if selection changes
+    useEffect(() => {
+        onSelectionChanged(table.getSelectedRowModel().rows.map(row => row.original));
+    }, [table, rowSelection, onSelectionChanged, gvk]);
+
+    // Remove deleted resources from selection
+    useEffect(() => {
+        const newSelection: RowSelectionState = {};
+
+        Object.keys(rowSelection)
+            .filter(selectionUid => data.map(([dataUid]) => dataUid).includes(selectionUid))
+            .forEach(uid => newSelection[uid] = true);
+
+        if (Object.keys(newSelection).length == Object.keys(rowSelection).length) return;
+
+        setRowSelection(newSelection);
+    }, [data, rowSelection]);
 
     return (
         <div className={styles.container}>

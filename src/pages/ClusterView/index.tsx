@@ -1,28 +1,30 @@
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { type editor } from 'monaco-editor';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { Editor } from '@monaco-editor/react';
+import { confirm } from '@tauri-apps/plugin-dialog';
+import { useSearchParams } from 'react-router-dom';
+import applyResourceYaml from '../../api/applyResourceYaml';
+import { deleteResource } from '../../api/deleteResource';
+import getResourceYaml from '../../api/getResourceYaml';
+import listClusterProfiles, { ClusterProfile } from '../../api/listClusterProfiles';
+import listResourceViews, { type ResourceViewDef } from '../../api/listResourceViews';
 import EmojiHint from '../../components/EmojiHint';
 import GvkList from '../../components/GvkList';
 import ResourceView from '../../components/ResourceView';
 import TabView, { Tab } from '../../components/TabView';
 import { useTabs } from '../../components/TabView/hooks';
 import { useClusterDiscovery } from '../../hooks/useClusterDiscovery';
-import useResourceWatch from '../../hooks/useResourceWatch';
-import { Gvk } from '../../model/k8s';
-import classes from './styles.module.css';
-import { useSearchParams } from 'react-router-dom';
 import useClusterNamespaces from '../../hooks/useClusterNamespaces';
-import listResourceViews, { type ResourceViewDef } from '../../api/listResourceViews';
-import listClusterProfiles, { ClusterProfile } from '../../api/listClusterProfiles';
-import usePinnedGvks from '../../hooks/usePinnedGvks';
 import useHiddenGvks from '../../hooks/useHiddenGvks';
-import { Editor } from '@monaco-editor/react';
-import getResourceYaml from '../../api/getResourceYaml';
-import applyResourceYaml from '../../api/applyResourceYaml';
+import usePinnedGvks from '../../hooks/usePinnedGvks';
+import useResourceWatch, { DisplayableResource } from '../../hooks/useResourceWatch';
+import { Gvk } from '../../model/k8s';
 import { createMenuForNormalGvks, createMenuForPinnedGvks, createMenuForResource } from './menus';
+import classes from './styles.module.css';
 
 const namespace_gvk = { group: "", version: "v1", kind: "Namespace" };
 
@@ -41,6 +43,7 @@ const ClusterView: React.FC = () => {
     const namespaces = useClusterNamespaces(clientId, namespace_gvk);
     const [selectedNamespace, setSelectedNamespace] = useState('default');
     const [columnTitles, resources] = useResourceWatch(clientId, currentGvk, selectedView, selectedNamespace);
+    const [selectedResources, setSelectedResources] = useState<[string, DisplayableResource][]>([]);
 
     const [tabs, activeTab, pushTab, removeTab, setActiveTab] = useTabs();
 
@@ -167,6 +170,21 @@ const ClusterView: React.FC = () => {
                 .catch(e => alert(JSON.stringify(e)));
         }
     }, [clientId, currentGvk, pushTab, resources]);
+
+    const deleteSelectedResources = useCallback(() => {
+        if (!currentGvk) return console.warn('Cannot delete, currentGvk is not set!');
+        if (!clientId) return console.warn('Cannot delete, clientId is not set!');
+
+        confirm(`This action cannot be reverted. Are you sure?`, { kind: 'warning', title: `Permanently delete ${selectedResources.length} resources?` })
+            .then(confirmed => {
+                if (!confirmed) return;
+                selectedResources.forEach(([, { namespace, name }]) => {
+                    deleteResource(clientId, currentGvk, namespace, name)
+                        .catch(e => alert(JSON.stringify(e)));
+                });
+            })
+            .catch(e => alert(JSON.stringify(e)));
+    }, [clientId, currentGvk, selectedResources]);
 
     return (
         <div className={classes.container}>
@@ -298,6 +316,11 @@ const ClusterView: React.FC = () => {
                                                     </select>
                                                 )
                                         }
+                                        {
+                                            selectedResources.length < 1
+                                                ? null
+                                                : <button onClick={deleteSelectedResources}>🗑️ Delete {selectedResources.length}</button>
+                                        }
                                     </div>
                                     <ResourceView
                                         resourceNamePlural={findResourcePlural(currentGvk)}
@@ -314,6 +337,7 @@ const ClusterView: React.FC = () => {
                                                 onShowYaml: () => yamlViewerFactory()(gvk, resourceUID)
                                             });
                                         }}
+                                        onSelectionChanged={setSelectedResources}
                                     />
                                 </>
                             )
