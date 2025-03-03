@@ -14,7 +14,7 @@
     "@melloware/react-logviewer": "6.1.2",
     "@monaco-editor/react": "^4.7.0",
     "@tanstack/react-table": "^8.21.2",
-    "@tauri-apps/api": "2.2.0",
+    "@tauri-apps/api": "2.3.0",
     "@tauri-apps/plugin-dialog": "^2.2.0",
     "@tauri-apps/plugin-shell": "2.2.0",
     "@xterm/addon-clipboard": "^0.1.0",
