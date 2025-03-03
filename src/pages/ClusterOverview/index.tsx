@@ -6,8 +6,7 @@ import { useMemo } from "react";
 
 type GroupedContextSources = {
     [key: string]: {
-        realSource: string,
-        contexts: string[]
+        contexts: [string,string][]
     }
 };
 
@@ -26,12 +25,11 @@ const ClusterOverview: React.FC = () => {
 
             if (!(displayName in groupedContextSources)) {
                 groupedContextSources[displayName] = {
-                    realSource: source,
                     contexts: []
                 };
             }
 
-            groupedContextSources[displayName].contexts.push(contextName);
+            groupedContextSources[displayName].contexts.push([source, contextName]);
         });
 
         return groupedContextSources;
@@ -47,9 +45,9 @@ const ClusterOverview: React.FC = () => {
                             <h4>{source}</h4>
                             <ul className={classes.clusterList}>
                                 {
-                                    contextGroup.contexts.map(contextName => (
-                                        <li key={contextName}>
-                                            <Link to={`cluster?source=${contextGroup.realSource}&context=${contextName}`}>{contextName}</Link>
+                                    contextGroup.contexts.map(([source, name], idx) => (
+                                        <li key={idx}>
+                                            <Link to={`cluster?source=${source}&context=${name}`}>{name}</Link>
                                         </li>
                                     ))
                                 }
