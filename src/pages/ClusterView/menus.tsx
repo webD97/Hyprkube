@@ -1,15 +1,15 @@
 import { Menu, MenuItem, PredefinedMenuItem, Submenu } from "@tauri-apps/api/menu";
-import removePinnedGvk from "../../api/removePinnedGvk";
-import { Gvk } from "../../model/k8s";
-import addPinnedGvk from "../../api/addPinnedGvk";
-import addHiddenGvk from "../../api/addHiddenGvk";
 import { confirm } from '@tauri-apps/plugin-dialog';
+import addHiddenGvk from "../../api/addHiddenGvk";
+import addPinnedGvk from "../../api/addPinnedGvk";
 import { deleteResource } from "../../api/deleteResource";
 import listPodContainerNames from "../../api/listPodContainerNames";
-import { Tab } from "../../components/TabView";
+import removePinnedGvk from "../../api/removePinnedGvk";
 import LogPanel from "../../components/LogPanel";
-import HyprkubeTerminal from "../../components/Terminal";
+import { Tab } from "../../components/TabView";
 import { TabElement } from "../../components/TabView/hooks";
+import HyprkubeTerminal from "../../components/Terminal";
+import { Gvk } from "../../model/k8s";
 
 export async function createMenuForPinnedGvks(options: {
     clusterProfile: string,
@@ -55,13 +55,15 @@ export async function createMenuForResource(options: {
     gvk: Gvk,
     clientId: string,
     pushTab: (tab: TabElement) => void,
-    onShowYaml: () => void
+    onShowYaml: () => void,
+    onSelectNamespace: (namespace: string) => void
 }): Promise<Menu> {
     const {
         namespace, name,
         gvk, clientId,
         pushTab,
-        onShowYaml
+        onShowYaml,
+        onSelectNamespace
     } = options;
     const itemPromises: Promise<MenuItem | PredefinedMenuItem>[] = [
         MenuItem.new({
@@ -85,6 +87,17 @@ export async function createMenuForResource(options: {
         }),
         PredefinedMenuItem.new({ item: 'Separator' }),
     ];
+
+    if (namespace !== '') {
+        itemPromises.push(
+            MenuItem.new({
+                text: 'Select namespace',
+                action() {
+                    onSelectNamespace(namespace)
+                },
+            })
+        );
+    }
 
     if (gvk.kind === "Pod") {
         const logItems: Promise<MenuItem>[] = [];

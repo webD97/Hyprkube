@@ -334,7 +334,10 @@ const ClusterView: React.FC = () => {
 
                                             return createMenuForResource({
                                                 clientId: clientId!, gvk, namespace, name, pushTab,
-                                                onShowYaml: () => yamlViewerFactory()(gvk, resourceUID)
+                                                onShowYaml: () => yamlViewerFactory()(gvk, resourceUID),
+                                                onSelectNamespace: (namespace) => {
+                                                    setSelectedNamespace(namespace)
+                                                },
                                             });
                                         }}
                                         onSelectionChanged={setSelectedResources}
