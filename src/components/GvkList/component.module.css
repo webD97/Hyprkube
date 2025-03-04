@@ -27,3 +27,7 @@
     content: "📄";
     margin: 0 .5em;
 }
+
+.apiGroup {
+    color: rgba(255, 255, 255, 0.4);
+}

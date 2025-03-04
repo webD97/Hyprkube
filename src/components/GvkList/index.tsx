@@ -1,9 +1,9 @@
 import React from 'react';
 import { Gvk } from '../../model/k8s';
 
-import classes from './component.module.css';
-import { Menu } from '@tauri-apps/api/menu';
 import { PhysicalPosition } from '@tauri-apps/api/dpi';
+import { Menu } from '@tauri-apps/api/menu';
+import classes from './component.module.css';
 
 export interface GvkListProps {
     className?: string,
@@ -42,7 +42,7 @@ const GvkList: React.FC<GvkListProps> = (props) => {
                                     }>
                                     {
                                         group !== '' && withGroupName
-                                            ? `${kind} (${group})`
+                                            ? <><span>{kind}&nbsp;</span><span className={classes.apiGroup}>({group})</span></>
                                             : `${kind}`
                                     }
                                 </span>
