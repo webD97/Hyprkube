@@ -30,3 +30,9 @@
 .sortable {
     cursor: pointer;
 }
+
+.quickSearch {
+    height: 100%;
+    width: 20em;
+    padding: 0 0.5em;
+}

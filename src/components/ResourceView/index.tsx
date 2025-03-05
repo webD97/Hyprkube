@@ -6,9 +6,11 @@ import styles from './styles.module.css';
 
 import {
     ColumnDef,
+    ColumnFiltersState,
     createColumnHelper,
     flexRender,
     getCoreRowModel,
+    getFilteredRowModel,
     getSortedRowModel,
     RowSelectionState,
     SortingState,
@@ -17,6 +19,7 @@ import {
 } from '@tanstack/react-table';
 import { PhysicalPosition } from "@tauri-apps/api/dpi";
 import { Menu } from "@tauri-apps/api/menu";
+import { createPortal } from "react-dom";
 import { Gvk } from "../../model/k8s";
 import Checkbox from "../Checkbox";
 import { CustomCell } from "./CustomCell";
@@ -31,7 +34,8 @@ export interface ResourceViewProps {
     gvk: Gvk,
     onResourceContextMenu: (gvk: Gvk, uid: string) => Promise<Menu>,
     onResourceClicked?: (gvk: Gvk, uid: string) => void,
-    onSelectionChanged?: (rows: _TData[]) => void
+    onSelectionChanged?: (rows: _TData[]) => void,
+    searchbarPortal: React.RefObject<HTMLDivElement | null>
 }
 
 function createColumns(titles: string[]) {
@@ -48,6 +52,13 @@ function createColumns(titles: string[]) {
                 const valueB = payloadB.columns[parseInt(columnId)].sortableValue;
 
                 return valueA.localeCompare(valueB, undefined, { numeric: true });
+            },
+            filterFn: (row, columnId, filterValue) => {
+                const [, payload] = row.original;
+
+                const value = payload.columns[parseInt(columnId)].sortableValue;
+
+                return value.includes(filterValue as string);
             }
         });
     });
@@ -81,13 +92,15 @@ const ResourceView: React.FC<ResourceViewProps> = (props) => {
         resourceData = {},
         onResourceContextMenu,
         onResourceClicked = () => undefined,
-        onSelectionChanged = () => undefined
+        onSelectionChanged = () => undefined,
+        searchbarPortal
     } = props;
 
     const columns = useMemo(() => createColumns(columnTitles), [columnTitles]);
     const data = useMemo(() => Object.entries(resourceData), [resourceData]);
     const [sorting, setSorting] = useState<SortingState>([]);
     const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+    const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
 
     const columnVisibility: VisibilityState = useMemo(() => {
         if (namespace === "") {
@@ -104,6 +117,7 @@ const ResourceView: React.FC<ResourceViewProps> = (props) => {
         data,
         getCoreRowModel: getCoreRowModel(),
         getSortedRowModel: getSortedRowModel(),
+        getFilteredRowModel: getFilteredRowModel(),
         defaultColumn: {
             cell: CustomCell
         },
@@ -114,10 +128,12 @@ const ResourceView: React.FC<ResourceViewProps> = (props) => {
         onRowSelectionChange: (x) => {
             setRowSelection(x);
         },
+        onColumnFiltersChange: setColumnFilters,
         state: {
             sorting,
             columnVisibility,
-            rowSelection
+            rowSelection,
+            columnFilters
         }
     });
 
@@ -141,6 +157,21 @@ const ResourceView: React.FC<ResourceViewProps> = (props) => {
 
     return (
         <div className={styles.container}>
+            {
+                !searchbarPortal.current
+                    ? null
+                    : createPortal(
+                        (
+                            <input type="text"
+                                className={styles.quickSearch}
+                                placeholder="Quick search"
+                                value={columnFilters.find(x => x.id === '0')?.value as string ?? ''}
+                                onChange={(e) => table.setColumnFilters(() => ([{ id: '0', value: e.target.value }]))}
+                            />
+                        ),
+                        searchbarPortal.current
+                    )
+            }
             <table>
                 <thead>
                     {
@@ -154,6 +185,7 @@ const ResourceView: React.FC<ResourceViewProps> = (props) => {
                                         >
                                             {flexRender(header.column.columnDef.header, header.getContext())}
                                             {{ asc: ' ⬆️', desc: ' ⬇️' }[header.column.getIsSorted() as string] ?? null}
+                                            {header.column.getIsFiltered() ? ' 🔍' : null}
                                         </th>
                                     ))}
                             </tr>

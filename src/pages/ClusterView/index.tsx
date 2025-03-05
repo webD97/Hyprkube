@@ -49,6 +49,8 @@ const ClusterView: React.FC = () => {
 
     const editorRef = useRef<editor.IStandaloneCodeEditor>(null);
 
+    const searchbarRef = useRef<HTMLDivElement>(null);
+
     useEffect(() => {
         listClusterProfiles()
             .then(profiles => {
@@ -315,6 +317,7 @@ const ClusterView: React.FC = () => {
                                                 ? null
                                                 : <button onClick={deleteSelectedResources}>🗑️ Delete {selectedResources.length}</button>
                                         }
+                                        <div ref={searchbarRef}></div>
                                     </div>
                                     <ResourceView
                                         resourceNamePlural={findResourcePlural(currentGvk)}
@@ -323,6 +326,7 @@ const ClusterView: React.FC = () => {
                                         columnTitles={columnTitles || []}
                                         resourceData={resources}
                                         onResourceClicked={yamlViewerFactory()}
+                                        searchbarPortal={searchbarRef}
                                         onResourceContextMenu={(gvk, resourceUID) => {
                                             const { namespace, name } = resources[resourceUID];
 
