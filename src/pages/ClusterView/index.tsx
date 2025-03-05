@@ -195,7 +195,7 @@ const ClusterView: React.FC = () => {
                     sortedPinnedGvks.length == 0
                         ? null
                         : (
-                            <GvkList withGroupName
+                            <GvkList flat withGroupNames
                                 gvks={sortedPinnedGvks}
                                 onResourceClicked={(gvk) => setCurrentGvk(gvk)}
                                 onGvkContextMenu={(gvk) => createMenuForPinnedGvks({
@@ -226,17 +226,14 @@ const ClusterView: React.FC = () => {
                             if (gvks.length === 0) return;
 
                             return (
-                                <details key={idx}>
-                                    <summary>{groupName ? groupName : 'core'}</summary>
-                                    <GvkList className={classes.gvkListIndented}
-                                        gvks={gvks}
-                                        onResourceClicked={(gvk) => setCurrentGvk(gvk)}
-                                        onGvkContextMenu={(gvk) => createMenuForNormalGvks({
-                                            clusterProfile: clusterProfiles[0][0],
-                                            gvk
-                                        })}
-                                    />
-                                </details>
+                                <GvkList key={idx}
+                                    gvks={gvks}
+                                    onResourceClicked={(gvk) => setCurrentGvk(gvk)}
+                                    onGvkContextMenu={(gvk) => createMenuForNormalGvks({
+                                        clusterProfile: clusterProfiles[0][0],
+                                        gvk
+                                    })}
+                                />
                             );
                         })
                 }
@@ -246,7 +243,7 @@ const ClusterView: React.FC = () => {
                     Object.values(discovery?.gvks || [])
                         .filter((group) => group.isCrd)
                         .sort((groupA, groupB) => groupA.name.localeCompare(groupB.name))
-                        .map(({ name: groupName, kinds }) => {
+                        .map(({ name: groupName, kinds }, idx) => {
                             const gvks = kinds
                                 .map(({ kind, version }) => ({ group: groupName, version, kind }))
                                 .filter(gvk => (
@@ -261,17 +258,14 @@ const ClusterView: React.FC = () => {
                             if (gvks.length === 0) return;
 
                             return (
-                                <details key={groupName}>
-                                    <summary>{groupName ? groupName : 'core'}</summary>
-                                    <GvkList className={classes.gvkListIndented}
-                                        gvks={gvks}
-                                        onResourceClicked={(gvk) => setCurrentGvk(gvk)}
-                                        onGvkContextMenu={(gvk) => createMenuForNormalGvks({
-                                            clusterProfile: clusterProfiles[0][0],
-                                            gvk
-                                        })}
-                                    />
-                                </details>
+                                <GvkList key={idx}
+                                    gvks={gvks}
+                                    onResourceClicked={(gvk) => setCurrentGvk(gvk)}
+                                    onGvkContextMenu={(gvk) => createMenuForNormalGvks({
+                                        clusterProfile: clusterProfiles[0][0],
+                                        gvk
+                                    })}
+                                />
                             );
                         })
                 }

@@ -2,7 +2,6 @@
     list-style: none;
     padding-left: 0;
     margin: 0;
-    width: calc(100% - 10px);
 }
 
 .container ul li {
@@ -30,4 +29,8 @@
 
 .apiGroup {
     color: rgba(255, 255, 255, 0.4);
+}
+
+.indent {
+    padding-left: 1em;
 }

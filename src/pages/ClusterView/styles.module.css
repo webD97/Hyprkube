@@ -46,10 +46,6 @@ nav details>summary::-webkit-details-marker {
     content: "";
 }
 
-.gvkListIndented {
-    padding-left: 1em;
-}
-
 nav details summary:hover {
     background-color: rgba(0, 0, 0, 0.4);
     cursor: pointer;
