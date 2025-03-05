@@ -30,31 +30,33 @@ pub async fn discover_contexts(
         ));
     }
 
-    let path_openlens_kubeconfigs = {
-        let mut pathbuf = config_dir.clone();
-        pathbuf.push("OpenLens");
-        pathbuf.push("kubeconfigs");
-
-        pathbuf
-    };
-
-    match tokio::fs::read_dir(&path_openlens_kubeconfigs).await {
-        Ok(mut openlens_kubeconfigs) => {
-            while let Some(file) = openlens_kubeconfigs.next_entry().await.unwrap() {
-                let kubeconfig = Kubeconfig::read_from(file.path()).unwrap();
-                for context in &kubeconfig.contexts {
-                    contexts.push((
-                        file.path().to_str().unwrap().to_owned(),
-                        context.name.to_owned(),
-                    ));
+    for lens_compat_dir in ["OpenLens", "Lens"].iter() {
+        let path_openlens_kubeconfigs = {
+            let mut pathbuf = config_dir.clone();
+            pathbuf.push(lens_compat_dir);
+            pathbuf.push("kubeconfigs");
+    
+            pathbuf
+        };
+    
+        match tokio::fs::read_dir(&path_openlens_kubeconfigs).await {
+            Ok(mut openlens_kubeconfigs) => {
+                while let Some(file) = openlens_kubeconfigs.next_entry().await.unwrap() {
+                    let kubeconfig = Kubeconfig::read_from(file.path()).unwrap();
+                    for context in &kubeconfig.contexts {
+                        contexts.push((
+                            file.path().to_str().unwrap().to_owned(),
+                            context.name.to_owned(),
+                        ));
+                    }
                 }
             }
-        }
-        Err(e) => {
-            eprintln!(
-                "Failed to scan directory {:?} for kubeconfigs: {e}",
-                path_openlens_kubeconfigs
-            )
+            Err(e) => {
+                eprintln!(
+                    "Failed to scan directory {:?} for kubeconfigs: {e}",
+                    path_openlens_kubeconfigs
+                )
+            }
         }
     }
 
