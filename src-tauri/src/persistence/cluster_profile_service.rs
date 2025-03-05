@@ -6,15 +6,16 @@ use tauri::{AppHandle, Emitter as _};
 
 use crate::{cluster_profiles::ClusterProfileId, persistence};
 
-pub struct GvkService {
+pub struct ClusterProfileService {
     app: AppHandle,
     repository: Arc<persistence::Repository>,
 }
 
 const PERISTENCE_KEY_PINNED_GVKS: &str = "pinned_gvks";
 const PERISTENCE_KEY_HIDDEN_GVKS: &str = "hidden_gvks";
+const PERISTENCE_KEY_DEFAULT_NAMESPACE: &str = "default_namespace";
 
-impl GvkService {
+impl ClusterProfileService {
     pub fn new(app: AppHandle, repository: Arc<persistence::Repository>) -> Self {
         Self { app, repository }
     }
@@ -107,6 +108,32 @@ impl GvkService {
                     )
                     .unwrap();
             })
+    }
+
+    pub fn get_default_namespace(&self, profile: &ClusterProfileId) -> Result<String, self::Error> {
+        self.repository
+            .read_key(
+                &persistence::Context::PerClusterProfile(profile.clone()),
+                PERISTENCE_KEY_DEFAULT_NAMESPACE,
+            )
+            .map_err(self::Error::Repository)?
+            .map(serde_json::from_value::<String>)
+            .unwrap_or(Ok("default".to_owned()))
+            .map_err(self::Error::Serialization)
+    }
+
+    pub fn set_default_namespace(
+        &self,
+        profile: &ClusterProfileId,
+        namespace: &str,
+    ) -> Result<(), self::Error> {
+        self.repository
+            .set_key(
+                &persistence::Context::PerClusterProfile(profile.clone()),
+                PERISTENCE_KEY_DEFAULT_NAMESPACE,
+                serde_json::to_value(namespace)?,
+            )
+            .map_err(self::Error::Repository)
     }
 
     fn list_gvks(

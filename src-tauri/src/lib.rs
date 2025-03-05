@@ -13,7 +13,7 @@ use std::sync::Arc;
 use app_state::{
     ChannelTasks, ExecSessions, JoinHandleStoreState, KubernetesClientRegistry, RendererRegistry,
 };
-use persistence::{gvk_service::GvkService, Repository};
+use persistence::{cluster_profile_service::ClusterProfileService, Repository};
 use tauri::{async_runtime::spawn, Listener, Manager};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -39,8 +39,9 @@ pub fn run() {
             let repo = Arc::new(Repository::new(app.handle().clone()));
             app.manage(repo.clone());
 
-            let pinned_gvk_service = GvkService::new(app.handle().clone(), repo.clone());
-            app.manage(pinned_gvk_service);
+            let pinned_cluster_profile_service =
+                ClusterProfileService::new(app.handle().clone(), repo.clone());
+            app.manage(pinned_cluster_profile_service);
 
             app.listen("frontend-onbeforeunload", move |_event| {
                 println!("ONBEFOREUNLOAD");
@@ -75,6 +76,8 @@ pub fn run() {
             cluster_profiles::cluster_profile_add_hidden_gvk,
             cluster_profiles::cluster_profile_remove_hidden_gvk,
             cluster_profiles::cluster_profile_list_hidden_gvks,
+            cluster_profiles::get_default_namespace,
+            cluster_profiles::set_default_namespace,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

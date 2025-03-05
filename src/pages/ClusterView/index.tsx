@@ -9,9 +9,11 @@ import { confirm } from '@tauri-apps/plugin-dialog';
 import { useSearchParams } from 'react-router-dom';
 import applyResourceYaml from '../../api/applyResourceYaml';
 import { deleteResource } from '../../api/deleteResource';
+import getDefaultNamespace from '../../api/getDefaultNamespace';
 import getResourceYaml from '../../api/getResourceYaml';
 import listClusterProfiles, { ClusterProfile } from '../../api/listClusterProfiles';
 import listResourceViews, { type ResourceViewDef } from '../../api/listResourceViews';
+import setDefaultNamespace from '../../api/setDefaultNamespace';
 import EmojiHint from '../../components/EmojiHint';
 import GvkList from '../../components/GvkList';
 import ResourceView from '../../components/ResourceView';
@@ -52,6 +54,14 @@ const ClusterView: React.FC = () => {
     const searchbarRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
+        if (!clusterProfiles[0]?.[0]) return;
+
+        getDefaultNamespace(clusterProfiles[0][0])
+            .then(setSelectedNamespace)
+            .catch(e => alert(JSON.stringify(e)))
+    }, [clusterProfiles]);
+
+    useEffect(() => {
         listClusterProfiles()
             .then(profiles => {
                 setClusterProfiles(profiles);
@@ -74,6 +84,11 @@ const ClusterView: React.FC = () => {
             .catch(e => alert(JSON.stringify(e)));
 
     }, [currentGvk, clientId]);
+
+    const saveDefaultNamespace = useCallback(() => {
+        setDefaultNamespace(clusterProfiles[0][0], selectedNamespace)
+            .catch(e => alert(JSON.stringify(e)));
+    }, [clusterProfiles, selectedNamespace]);
 
     dayjs.extend(relativeTime);
 
@@ -302,14 +317,17 @@ const ClusterView: React.FC = () => {
                                             findResourceScope(currentGvk) === 'cluster'
                                                 ? null
                                                 : (
-                                                    <select value={selectedNamespace} onChange={(e) => setSelectedNamespace(e.target.value)}>
-                                                        <option label="(All namespaces)"></option>
-                                                        {
-                                                            Object.values(namespaces).map(namespace => (
-                                                                <option key={namespace}>{namespace}</option>
-                                                            ))
-                                                        }
-                                                    </select>
+                                                    <>
+                                                        <select value={selectedNamespace} onChange={(e) => setSelectedNamespace(e.target.value)}>
+                                                            <option label="(All namespaces)"></option>
+                                                            {
+                                                                Object.values(namespaces).map(namespace => (
+                                                                    <option key={namespace}>{namespace}</option>
+                                                                ))
+                                                            }
+                                                        </select>
+                                                        <button title="Save as custom default namespace" onClick={saveDefaultNamespace}>💾 Save</button>
+                                                    </>
                                                 )
                                         }
                                         {
