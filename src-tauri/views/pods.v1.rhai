@@ -65,6 +65,17 @@
                 }
 
                 if phase == "Pending" {
+                    let badInitContainer = obj.status?.initContainerStatuses?.find(|c| c.state?.waiting?.reason != ());
+                    let badContainer = obj.status?.containerStatuses?.find(|c| c.state?.waiting?.reason != ());
+
+                    if badInitContainer != () {
+                        return ColoredString(badInitContainer.state?.waiting?.reason + " (Init)", "orange");
+                    }
+
+                    if badContainer != () {
+                        return ColoredString(badContainer.state?.waiting?.reason, "orange");
+                    }
+
                     return ColoredString(phase, "orange");
                 }
 
