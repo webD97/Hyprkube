@@ -138,7 +138,7 @@ impl KubernetesClientRegistry {
                     .await?;
 
                 for group in discovery_builtins.groups() {
-                    for (ar, capabilities) in group.recommended_resources() {
+                    for (ar, capabilities) in group.resources_by_stability() {
                         if !capabilities.supports_operation(kube::discovery::verbs::WATCH) {
                             continue;
                         }
@@ -183,7 +183,7 @@ impl KubernetesClientRegistry {
                     .await?;
 
                 for group in discovery_builtins.groups() {
-                    for (ar, capabilities) in group.recommended_resources() {
+                    for (ar, capabilities) in group.resources_by_stability() {
                         if !capabilities.supports_operation(kube::discovery::verbs::WATCH) {
                             continue;
                         }
