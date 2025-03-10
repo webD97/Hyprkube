@@ -1,4 +1,4 @@
-import { DisplayableResource, ResourceViewData } from "../../hooks/useResourceWatch";
+import { DisplayableResource, ResourceField, ResourceViewData } from "../../hooks/useResourceWatch";
 import EmojiHint from "../EmojiHint";
 
 import { useEffect, useMemo, useState } from "react";
@@ -42,23 +42,16 @@ function createColumns(titles: string[]) {
     const columnHelper = createColumnHelper<_TData>();
     const dataColumns = titles.map((title, idx) => {
         return columnHelper.accessor(row => row[1].columns[idx], {
-            id: idx.toString(),
+            id: title,
             header: () => title,
             sortingFn: (rowA, rowB, columnId) => {
-                const [, payloadA] = rowA.original;
-                const [, payloadB] = rowB.original;
-
-                const valueA = payloadA.columns[parseInt(columnId)].sortableValue;
-                const valueB = payloadB.columns[parseInt(columnId)].sortableValue;
+                const valueA = rowA.getValue<ResourceField>(columnId).sortableValue;
+                const valueB = rowB.getValue<ResourceField>(columnId).sortableValue;
 
                 return valueA.localeCompare(valueB, undefined, { numeric: true });
             },
             filterFn: (row, columnId, filterValue) => {
-                const [, payload] = row.original;
-
-                const value = payload.columns[parseInt(columnId)].sortableValue;
-
-                return value.includes(filterValue as string);
+                return row.getValue<ResourceField>(columnId).sortableValue.includes(filterValue as string);
             }
         });
     });
@@ -165,8 +158,8 @@ const ResourceView: React.FC<ResourceViewProps> = (props) => {
                             <input type="text"
                                 className={styles.quickSearch}
                                 placeholder="Quick search"
-                                value={columnFilters.find(x => x.id === '0')?.value as string ?? ''}
-                                onChange={(e) => table.setColumnFilters(() => ([{ id: '0', value: e.target.value }]))}
+                                value={columnFilters.find(x => x.id === 'Name')?.value as string ?? ''}
+                                onChange={(e) => table.setColumnFilters(() => ([{ id: 'Name', value: e.target.value }]))}
                             />
                         ),
                         searchbarPortal.current
