@@ -1,13 +1,10 @@
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 
-import { type editor } from 'monaco-editor';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { Editor } from '@monaco-editor/react';
 import { confirm } from '@tauri-apps/plugin-dialog';
 import { useSearchParams } from 'react-router-dom';
-import applyResourceYaml from '../../api/applyResourceYaml';
 import { deleteResource } from '../../api/deleteResource';
 import getDefaultNamespace from '../../api/getDefaultNamespace';
 import getResourceYaml from '../../api/getResourceYaml';
@@ -19,6 +16,7 @@ import GvkList from '../../components/GvkList';
 import ResourceView from '../../components/ResourceView';
 import TabView, { Tab } from '../../components/TabView';
 import { useTabs } from '../../components/TabView/hooks';
+import ResourceEditor from '../../containers/ResourceEditor';
 import { useClusterDiscovery } from '../../hooks/useClusterDiscovery';
 import useClusterNamespaces from '../../hooks/useClusterNamespaces';
 import useHiddenGvks from '../../hooks/useHiddenGvks';
@@ -48,8 +46,6 @@ const ClusterView: React.FC = () => {
     const [selectedResources, setSelectedResources] = useState<[string, DisplayableResource][]>([]);
 
     const [tabs, activeTab, pushTab, removeTab, setActiveTab] = useTabs();
-
-    const editorRef = useRef<editor.IStandaloneCodeEditor>(null);
 
     const searchbarRef = useRef<HTMLDivElement>(null);
 
@@ -124,61 +120,16 @@ const ClusterView: React.FC = () => {
             getResourceYaml(clientId, gvk, namespace, name)
                 .then((yaml) => {
                     pushTab(
-                        <Tab title={`Show: ${name}`}>
+                        <Tab title={`Edit: ${name}`}>
                             {
                                 () => (
-                                    <>
-                                        <button
-                                            onClick={() => {
-                                                const editor = editorRef.current!;
-                                                const data = editor.getValue();
-
-                                                if (!data) return;
-
-                                                applyResourceYaml(clientId, currentGvk!, namespace, name, data)
-                                                    .then(newYaml => {
-                                                        editor.setValue(newYaml);
-                                                    })
-                                                    .catch((e) => {
-                                                        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-                                                        const {
-                                                            status,
-                                                            reason,
-                                                            message,
-                                                        } = JSON.parse(e as string);
-
-                                                        const editorValue = editor.getValue().split('\n').filter(line => !line.startsWith('#')).join('\n');
-                                                        editor.setValue(`# ${status} (Reason: ${reason})\n# ${message}\n${editorValue}`);
-                                                    });
-                                            }}
-                                        >
-                                            💾 Apply
-                                        </button>
-                                        <button
-                                            onClick={() => {
-                                                const editor = editorRef.current!;
-
-                                                getResourceYaml(clientId, gvk, namespace, name)
-                                                    .then(yaml => editor.setValue(yaml))
-                                                    .catch(e => alert(JSON.stringify(e)));
-                                            }}
-                                        >
-                                            ⭮ Reload
-                                        </button>
-                                        <Editor
-                                            height="600px"
-                                            width="100%"
-                                            defaultLanguage="yaml"
-                                            theme="vs-dark"
-                                            options={{
-                                                renderWhitespace: "all",
-                                            }}
-                                            value={yaml}
-                                            onMount={(editor) => {
-                                                editorRef.current = editor;
-                                            }}
-                                        />
-                                    </>
+                                    <ResourceEditor
+                                        clientId={clientId}
+                                        currentGvk={gvk}
+                                        fileContent={yaml}
+                                        namespace={namespace}
+                                        name={name}
+                                    />
                                 )
                             }
                         </Tab >
@@ -186,7 +137,7 @@ const ClusterView: React.FC = () => {
                 })
                 .catch(e => alert(JSON.stringify(e)));
         }
-    }, [clientId, currentGvk, pushTab, resources]);
+    }, [clientId, pushTab, resources]);
 
     const deleteSelectedResources = useCallback(() => {
         if (!currentGvk) return console.warn('Cannot delete, currentGvk is not set!');
