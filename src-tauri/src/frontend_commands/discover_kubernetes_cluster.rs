@@ -19,6 +19,7 @@ use super::KubeContextSource;
 #[serde(rename_all = "camelCase")]
 pub enum DiscoveryResult {
     DiscoveredResource(DiscoveredResource),
+    ClientId(String),
 }
 
 #[tauri::command]
@@ -64,6 +65,9 @@ pub async fn discover_kubernetes_cluster(
             AsyncDiscoveryResult::DiscoveredResource(resource) => {
                 discovery_cache.cache_resource(resource.clone());
                 channel.send(DiscoveryResult::DiscoveredResource(resource))
+            }
+            AsyncDiscoveryResult::ObtainedClientId(client_id) => {
+                channel.send(DiscoveryResult::ClientId(client_id))
             }
         };
 

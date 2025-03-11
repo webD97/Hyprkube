@@ -29,6 +29,9 @@ export type DiscoveryResult = {
 export type AsyncDiscovery =
     {
         discoveredResource: { group: string, version: string, kind: string, plural: string, source: 'Builtin' | 'CustomResource', scope: 'cluster' | 'namespaced' },
+    }
+    | {
+        clientId: string
     };
 
 export function useClusterDiscovery(source: string | null, context: string | null): ClusterDiscovery {
@@ -44,7 +47,9 @@ export function useClusterDiscovery(source: string | null, context: string | nul
         const channel = new Channel<AsyncDiscovery>();
 
         channel.onmessage = (message) => {
-            if ("discoveredResource" in message) {
+            if ("clientId" in message) {
+                setClientId(message.clientId);
+            } else if ("discoveredResource" in message) {
                 const resource = message.discoveredResource;
 
                 setDiscovery((discovery) => {
