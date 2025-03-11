@@ -3,7 +3,7 @@ use std::io::Read;
 
 use crate::{
     app_state::{
-        ExecSessionError, ExecSessionId, ExecSessionsState, JoinHandleStoreState,
+        ClientId, ExecSessionError, ExecSessionId, ExecSessionsState, JoinHandleStoreState,
         KubernetesClientRegistryState,
     },
     frontend_types::BackendError,
@@ -15,7 +15,6 @@ use serde::Serialize;
 use tauri::{ipc::Channel, State};
 use tokio::{io::AsyncWriteExt, sync::mpsc};
 use tokio_util::io::ReaderStream;
-use uuid::Uuid;
 
 #[derive(Serialize, Clone)]
 pub enum ExecSessionEvent {
@@ -69,7 +68,7 @@ pub async fn pod_exec_start_session(
     client_registry_arc: State<'_, KubernetesClientRegistryState>,
     join_handle_store: State<'_, JoinHandleStoreState>,
     consoles_state: State<'_, ExecSessionsState>,
-    client_id: Uuid,
+    client_id: ClientId,
     pod_namespace: &str,
     pod_name: &str,
     container: &str,

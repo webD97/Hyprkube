@@ -1,13 +1,15 @@
 use kube::api::DynamicObject;
 use tauri::State;
-use uuid::Uuid;
 
-use crate::{app_state::KubernetesClientRegistryState, frontend_types::BackendError};
+use crate::{
+    app_state::{ClientId, KubernetesClientRegistryState},
+    frontend_types::BackendError,
+};
 
 #[tauri::command]
 pub async fn get_resource_yaml(
     client_registry_arc: State<'_, KubernetesClientRegistryState>,
-    client_id: Uuid,
+    client_id: ClientId,
     gvk: kube::api::GroupVersionKind,
     namespace: &str,
     name: &str,

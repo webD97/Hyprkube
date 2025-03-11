@@ -31,8 +31,16 @@ pub async fn discover_kubernetes_cluster(
     context_source: KubeContextSource,
     repository: State<'_, Arc<Repository>>,
 ) -> Result<DiscoveredCluster, BackendError> {
-    let (kubeconfig_path, context_name) = context_source;
-    let kubeconfig = Kubeconfig::read_from(kubeconfig_path)?;
+    if context_source.provider != "file" {
+        return Err(BackendError::Generic(
+            "Unsupported kubeconfig provider".into(),
+        ));
+    }
+
+    println!("Starting discovery for cluster {}", context_source);
+
+    let context_name = &context_source.context;
+    let kubeconfig = Kubeconfig::read_from(&context_source.source)?;
 
     let kubeconfig_options = &KubeConfigOptions {
         context: Some(context_name.clone()),
@@ -51,7 +59,7 @@ pub async fn discover_kubernetes_cluster(
     }
 
     let (client_id, internal_discovery, discovery_handle) =
-        client_registry.manage(client_config)?;
+        client_registry.manage(client_config, &context_source)?;
 
     join_handle_store.submit(channel.id(), async move {
         if let Err(e) = discovery_handle.await {

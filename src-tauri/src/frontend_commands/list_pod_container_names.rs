@@ -1,13 +1,15 @@
 use k8s_openapi::api::core::v1::Pod;
 use tauri::State;
-use uuid::Uuid;
 
-use crate::{app_state::KubernetesClientRegistryState, frontend_types::BackendError};
+use crate::{
+    app_state::{ClientId, KubernetesClientRegistryState},
+    frontend_types::BackendError,
+};
 
 #[tauri::command]
 pub async fn list_pod_container_names(
     client_registry_arc: State<'_, KubernetesClientRegistryState>,
-    client_id: Uuid,
+    client_id: ClientId,
     namespace: &str,
     name: &str,
 ) -> Result<Vec<String>, BackendError> {

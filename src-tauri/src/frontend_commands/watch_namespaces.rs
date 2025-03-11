@@ -2,10 +2,9 @@ use futures::{StreamExt as _, TryStreamExt as _};
 use k8s_openapi::api::core::v1::Namespace;
 use serde::Serialize;
 use tauri::State;
-use uuid::Uuid;
 
 use crate::{
-    app_state::{JoinHandleStoreState, KubernetesClientRegistryState},
+    app_state::{ClientId, JoinHandleStoreState, KubernetesClientRegistryState},
     frontend_types::BackendError,
 };
 
@@ -20,7 +19,7 @@ pub enum WatchNamespacesEvent {
 pub async fn watch_namespaces(
     client_registry_arc: State<'_, KubernetesClientRegistryState>,
     join_handle_store: State<'_, JoinHandleStoreState>,
-    client_id: Uuid,
+    client_id: ClientId,
     channel: tauri::ipc::Channel<WatchNamespacesEvent>,
 ) -> Result<(), BackendError> {
     let channel_id = channel.id();

@@ -3,10 +3,9 @@ use serde::Serialize;
 use tauri::State;
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio_util::compat::FuturesAsyncReadCompatExt;
-use uuid::Uuid;
 
 use crate::{
-    app_state::{JoinHandleStoreState, KubernetesClientRegistryState},
+    app_state::{ClientId, JoinHandleStoreState, KubernetesClientRegistryState},
     frontend_types::BackendError,
 };
 
@@ -27,7 +26,7 @@ pub enum LogStreamEvent {
 pub async fn kube_stream_podlogs(
     client_registry_arc: State<'_, KubernetesClientRegistryState>,
     join_handle_store: State<'_, JoinHandleStoreState>,
-    client_id: Uuid,
+    client_id: ClientId,
     namespace: &str,
     name: &str,
     container: &str,

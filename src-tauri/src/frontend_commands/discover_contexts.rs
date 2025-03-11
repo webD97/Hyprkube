@@ -1,9 +1,21 @@
 use kube::config::Kubeconfig;
+use serde::{Deserialize, Serialize};
 use tauri::Manager;
 
 use crate::frontend_types::BackendError;
 
-pub type KubeContextSource = (String, String);
+#[derive(Serialize, Deserialize)]
+pub struct KubeContextSource {
+    pub provider: String,
+    pub source: String,
+    pub context: String,
+}
+
+impl std::fmt::Display for KubeContextSource {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}://{}#{}", self.provider, self.source, self.context)
+    }
+}
 
 #[tauri::command]
 pub async fn discover_contexts(
@@ -24,10 +36,11 @@ pub async fn discover_contexts(
 
     let kubeconfig = Kubeconfig::read_from(&path_default_kubeconfig).unwrap();
     for context in &kubeconfig.contexts {
-        contexts.push((
-            path_default_kubeconfig.to_str().unwrap().to_owned(),
-            context.name.to_owned(),
-        ));
+        contexts.push(KubeContextSource {
+            provider: "file".to_owned(),
+            source: path_default_kubeconfig.to_str().unwrap().to_owned(),
+            context: context.name.to_owned(),
+        });
     }
 
     for lens_compat_dir in ["OpenLens", "Lens"].iter() {
@@ -35,19 +48,20 @@ pub async fn discover_contexts(
             let mut pathbuf = config_dir.clone();
             pathbuf.push(lens_compat_dir);
             pathbuf.push("kubeconfigs");
-    
+
             pathbuf
         };
-    
+
         match tokio::fs::read_dir(&path_openlens_kubeconfigs).await {
             Ok(mut openlens_kubeconfigs) => {
                 while let Some(file) = openlens_kubeconfigs.next_entry().await.unwrap() {
                     let kubeconfig = Kubeconfig::read_from(file.path()).unwrap();
                     for context in &kubeconfig.contexts {
-                        contexts.push((
-                            file.path().to_str().unwrap().to_owned(),
-                            context.name.to_owned(),
-                        ));
+                        contexts.push(KubeContextSource {
+                            provider: "file".to_owned(),
+                            source: file.path().to_str().unwrap().to_owned(),
+                            context: context.name.to_owned(),
+                        });
                     }
                 }
             }

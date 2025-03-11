@@ -1,13 +1,17 @@
 import { invoke } from "@tauri-apps/api/core";
 import { useEffect, useState } from "react";
 
-export type KubeContextSource = [string, string];
+export type KubeContextSource = {
+    provider: string,
+    source: string,
+    context: string
+};
 
 export const useContextDiscovery = () => {
     const [sources, setSources] = useState<KubeContextSource[]>([]);
 
     useEffect(() => {
-        (invoke("discover_contexts") as Promise<KubeContextSource[]>)
+        invoke<KubeContextSource[]>("discover_contexts")
             .then(sources => setSources(sources))
             .catch(e => alert(e));
     }, []);

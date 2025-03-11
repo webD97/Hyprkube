@@ -1,12 +1,12 @@
 import { Link } from "react-router-dom";
 
-import classes from './styles.module.css';
-import { useContextDiscovery } from "../../hooks/useContextDiscovery";
 import { useMemo } from "react";
+import { KubeContextSource, useContextDiscovery } from "../../hooks/useContextDiscovery";
+import classes from './styles.module.css';
 
 type GroupedContextSources = {
     [key: string]: {
-        contexts: [string,string][]
+        contexts: KubeContextSource[]
     }
 };
 
@@ -16,8 +16,9 @@ const ClusterOverview: React.FC = () => {
     const groupedContextSources = useMemo(() => {
         const groupedContextSources: GroupedContextSources = {};
 
-        contextSources.forEach(([source, contextName]) => {
-            let displayName = source;
+        contextSources.forEach((contextSource) => {
+            const { provider, source } = contextSource;
+            let displayName = provider + "://" + source;
 
             if (source.includes('Lens/')) {
                 displayName = source.substring(0, source.lastIndexOf('/'));
@@ -29,7 +30,7 @@ const ClusterOverview: React.FC = () => {
                 };
             }
 
-            groupedContextSources[displayName].contexts.push([source, contextName]);
+            groupedContextSources[displayName].contexts.push(contextSource);
         });
 
         return groupedContextSources;
@@ -45,9 +46,9 @@ const ClusterOverview: React.FC = () => {
                             <h4>{source}</h4>
                             <ul className={classes.clusterList}>
                                 {
-                                    contextGroup.contexts.map(([source, name], idx) => (
+                                    contextGroup.contexts.map(({ source, context }, idx) => (
                                         <li key={idx}>
-                                            <Link to={`cluster?source=${source}&context=${name}`}>{name}</Link>
+                                            <Link to={`cluster?source=${source}&context=${context}`}>{context}</Link>
                                         </li>
                                     ))
                                 }

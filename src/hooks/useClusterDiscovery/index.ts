@@ -82,7 +82,7 @@ export function useClusterDiscovery(source: string | null, context: string | nul
 
         listen<string>('ERR_CLUSTER_DISCOVERY', (e) => setLastError(e.payload))
             .then((unlisten) => {
-                invoke<{ clientId: string }>('discover_kubernetes_cluster', { channel, contextSource: [source, context] })
+                invoke<{ clientId: string }>('discover_kubernetes_cluster', { channel, contextSource: { provider: 'file', source, context } })
                     .then((response) => setClientId(response.clientId))
                     .catch((e) => setLastError(e as unknown as string))
                     .finally(() => {

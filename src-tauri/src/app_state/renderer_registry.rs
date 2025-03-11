@@ -5,12 +5,13 @@ use rust_embed::Embed;
 use scan_dir::ScanDir;
 
 use tauri::{AppHandle, Manager as _};
-use uuid::Uuid;
 
 use crate::{
     app_state::KubernetesClientRegistryState,
     resource_rendering::{CrdRenderer, FallbackRenderer, ResourceRenderer, ScriptedResourceView},
 };
+
+use super::ClientId;
 
 #[derive(Embed)]
 #[folder = "views/"]
@@ -88,7 +89,7 @@ impl RendererRegistry {
     /// Returns the names of all available renderers for the given GVK
     pub async fn get_renderers(
         &self,
-        kube_client_id: &Uuid,
+        kube_client_id: &ClientId,
         gvk: &GroupVersionKind,
     ) -> Vec<String> {
         let renderers = self.mappings.get(gvk).unwrap_or(Self::EMPTY_VEC);

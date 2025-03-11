@@ -1,8 +1,9 @@
 use serde::Serialize;
-use uuid::Uuid;
+
+use crate::app_state::ClientId;
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DiscoveredCluster {
-    pub client_id: Uuid,
+    pub client_id: ClientId,
 }

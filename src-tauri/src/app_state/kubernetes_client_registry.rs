@@ -10,9 +10,8 @@ use std::{
 use k8s_openapi::apiextensions_apiserver::pkg::apis::apiextensions::v1::CustomResourceDefinition;
 use kube::api::{GroupVersionKind, ListParams};
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 
-use crate::frontend_types::BackendError;
+use crate::{frontend_commands::KubeContextSource, frontend_types::BackendError};
 
 #[derive(Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -66,15 +65,17 @@ pub enum ApiGroupSource {
 #[serde(rename_all = "camelCase")]
 pub enum AsyncDiscoveryResult {
     DiscoveredResource(DiscoveredResource),
-    ObtainedClientId(String),
+    ObtainedClientId(ClientId),
 }
 
 pub type KubernetesClientRegistryState = Arc<KubernetesClientRegistry>;
 
 pub type ClusterState = (kube::Client, kube::Config, DiscoveryResult);
 
+pub type ClientId = String;
+
 pub struct KubernetesClientRegistry {
-    registered: Arc<RwLock<HashMap<Uuid, ClusterState>>>,
+    registered: Arc<RwLock<HashMap<ClientId, ClusterState>>>,
 }
 
 impl KubernetesClientRegistry {
@@ -91,25 +92,28 @@ impl KubernetesClientRegistry {
     pub fn manage(
         &self,
         new_config: kube::Config,
+        context_source: &KubeContextSource,
     ) -> Result<
         (
-            Uuid,
+            ClientId,
             Receiver<AsyncDiscoveryResult>,
             impl Future<Output = Result<(), BackendError>>,
         ),
         BackendError,
     > {
         let new_client = kube::Client::try_from(new_config.clone())?;
-        let id = Uuid::new_v4();
+        let client_id = context_source.to_string();
 
         let (downstream_tx, downstream_rx) = channel::<AsyncDiscoveryResult>();
 
         downstream_tx
-            .send(AsyncDiscoveryResult::ObtainedClientId(id.to_string()))
+            .send(AsyncDiscoveryResult::ObtainedClientId(
+                client_id.to_string(),
+            ))
             .unwrap();
 
         self.registered.write().unwrap().insert(
-            id,
+            client_id.clone(),
             (
                 new_client.clone(),
                 new_config,
@@ -162,7 +166,7 @@ impl KubernetesClientRegistry {
                             .unwrap();
 
                         let mut registered = registered_arc.write().unwrap();
-                        let (_, _, discovery) = registered.get_mut(&id).unwrap();
+                        let (_, _, discovery) = registered.get_mut(&client_id).unwrap();
 
                         discovery
                             .gvks
@@ -207,7 +211,7 @@ impl KubernetesClientRegistry {
                             .unwrap();
 
                         let mut registered = registered_arc.write().unwrap();
-                        let (_, _, discovery) = registered.get_mut(&id).unwrap();
+                        let (_, _, discovery) = registered.get_mut(&client_id).unwrap();
 
                         discovery
                             .gvks
@@ -233,7 +237,7 @@ impl KubernetesClientRegistry {
                 // Handle groups for custom resources
                 for crd in crd_list.items {
                     let mut registered = registered_arc.write().unwrap();
-                    let (_, _, discovery) = registered.get_mut(&id).unwrap();
+                    let (_, _, discovery) = registered.get_mut(&client_id).unwrap();
 
                     let latest = crd
                         .spec
@@ -249,11 +253,12 @@ impl KubernetesClientRegistry {
             Ok(())
         };
 
-        println!("Managing new client {}", id);
-        Ok((id, downstream_rx, discovery_handle))
+        println!("Managing new client {}", context_source.to_string());
+
+        Ok((context_source.to_string(), downstream_rx, discovery_handle))
     }
 
-    pub fn try_clone(&self, id: &Uuid) -> Result<kube::Client, BackendError> {
+    pub fn try_clone(&self, id: &ClientId) -> Result<kube::Client, BackendError> {
         self.registered
             .read()
             .unwrap()
@@ -262,7 +267,7 @@ impl KubernetesClientRegistry {
             .ok_or(format!("Kubernetes client with id {id} not found.").into())
     }
 
-    pub fn get_cluster(&self, id: &Uuid) -> Result<ClusterState, BackendError> {
+    pub fn get_cluster(&self, id: &ClientId) -> Result<ClusterState, BackendError> {
         self.registered
             .read()
             .unwrap()

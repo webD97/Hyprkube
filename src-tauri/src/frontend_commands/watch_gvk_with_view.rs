@@ -3,10 +3,9 @@ use std::sync::Arc;
 use futures::{StreamExt as _, TryStreamExt as _};
 use serde::Serialize;
 use tauri::State;
-use uuid::Uuid;
 
 use crate::{
-    app_state::{JoinHandleStoreState, KubernetesClientRegistryState, RendererRegistry},
+    app_state::{ClientId, JoinHandleStoreState, KubernetesClientRegistryState, RendererRegistry},
     frontend_types::{BackendError, FrontendValue},
 };
 
@@ -40,7 +39,7 @@ pub async fn watch_gvk_with_view(
     client_registry_arc: State<'_, KubernetesClientRegistryState>,
     join_handle_store: State<'_, JoinHandleStoreState>,
     views: State<'_, Arc<RendererRegistry>>,
-    client_id: Uuid,
+    client_id: ClientId,
     gvk: kube::api::GroupVersionKind,
     view_name: String,
     channel: tauri::ipc::Channel<WatchStreamEvent>,

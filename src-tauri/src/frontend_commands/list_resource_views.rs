@@ -1,14 +1,16 @@
 use std::sync::Arc;
 
 use kube::api::GroupVersionKind;
-use uuid::Uuid;
 
-use crate::{app_state::RendererRegistry, frontend_types::BackendError};
+use crate::{
+    app_state::{ClientId, RendererRegistry},
+    frontend_types::BackendError,
+};
 
 #[tauri::command]
 pub async fn list_resource_views(
     view_registry: tauri::State<'_, Arc<RendererRegistry>>,
-    client_id: Uuid,
+    client_id: ClientId,
     group: &str,
     version: &str,
     kind: &str,
