@@ -41,6 +41,7 @@ const ClusterView: React.FC = () => {
     const [selectedView, setSelectedView] = useState("");
     const { discovery, clientId, lastError } = useClusterDiscovery(source, context);
     const namespaces = useClusterNamespaces(clientId, namespace_gvk);
+    const [resourceDefaultNamespace, setResourceDefaultNamespace] = useState('default');
     const [selectedNamespace, setSelectedNamespace] = useState('default');
     const [columnTitles, resources] = useResourceWatch(clientId, currentGvk, selectedView, selectedNamespace);
     const [selectedResources, setSelectedResources] = useState<[string, DisplayableResource][]>([]);
@@ -51,11 +52,15 @@ const ClusterView: React.FC = () => {
 
     useEffect(() => {
         if (!clusterProfiles[0]?.[0]) return;
+        if (!currentGvk) return;
 
-        getDefaultNamespace(clusterProfiles[0][0])
-            .then(setSelectedNamespace)
+        getDefaultNamespace(clusterProfiles[0][0], currentGvk)
+            .then(namespace => {
+                setResourceDefaultNamespace(namespace);
+                setSelectedNamespace(namespace);
+            })
             .catch(e => alert(JSON.stringify(e)))
-    }, [clusterProfiles]);
+    }, [clusterProfiles, currentGvk]);
 
     useEffect(() => {
         listClusterProfiles()
@@ -82,9 +87,11 @@ const ClusterView: React.FC = () => {
     }, [currentGvk, clientId]);
 
     const saveDefaultNamespace = useCallback(() => {
-        setDefaultNamespace(clusterProfiles[0][0], selectedNamespace)
+        if (!currentGvk) return;
+
+        setDefaultNamespace(clusterProfiles[0][0], currentGvk, selectedNamespace)
             .catch(e => alert(JSON.stringify(e)));
-    }, [clusterProfiles, selectedNamespace]);
+    }, [clusterProfiles, currentGvk, selectedNamespace]);
 
     dayjs.extend(relativeTime);
 
@@ -273,11 +280,22 @@ const ClusterView: React.FC = () => {
                                                             <option label="(All namespaces)"></option>
                                                             {
                                                                 Object.values(namespaces).map(namespace => (
-                                                                    <option key={namespace}>{namespace}</option>
+                                                                    <option key={namespace} value={namespace}>
+                                                                        {namespace}
+                                                                        {
+                                                                            resourceDefaultNamespace === namespace
+                                                                                ? ' ⭐'
+                                                                                : ''
+                                                                        }
+                                                                    </option>
                                                                 ))
                                                             }
                                                         </select>
-                                                        <button title="Save as custom default namespace" onClick={saveDefaultNamespace}>💾 Save</button>
+                                                        {
+                                                            resourceDefaultNamespace !== selectedNamespace
+                                                                ? <button title="Save as custom default namespace" onClick={saveDefaultNamespace}>💾 Save as default</button>
+                                                                : null
+                                                        }
                                                     </>
                                                 )
                                         }

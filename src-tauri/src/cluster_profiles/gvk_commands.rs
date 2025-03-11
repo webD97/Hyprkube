@@ -61,15 +61,17 @@ pub fn cluster_profile_remove_hidden_gvk(
 pub fn get_default_namespace(
     cluster_profile_service: State<'_, ClusterProfileService>,
     profile: ClusterProfileId,
+    gvk: GroupVersionKind,
 ) -> Result<String, cluster_profile_service::Error> {
-    cluster_profile_service.get_default_namespace(&profile)
+    cluster_profile_service.get_default_namespace(&profile, &gvk)
 }
 
 #[tauri::command]
 pub fn set_default_namespace(
     cluster_profile_service: State<'_, ClusterProfileService>,
     profile: ClusterProfileId,
+    gvk: GroupVersionKind,
     namespace: &str,
 ) -> Result<(), cluster_profile_service::Error> {
-    cluster_profile_service.set_default_namespace(&profile, namespace)
+    cluster_profile_service.set_default_namespace(&profile, &gvk, namespace)
 }

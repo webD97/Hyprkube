@@ -1,10 +1,12 @@
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
 use kube::api::GroupVersionKind;
 use serde::Serialize;
 use tauri::{AppHandle, Emitter as _};
 
 use crate::{cluster_profiles::ClusterProfileId, persistence};
+
+use super::ToFlatString as _;
 
 pub struct ClusterProfileService {
     app: AppHandle,
@@ -13,7 +15,7 @@ pub struct ClusterProfileService {
 
 const PERISTENCE_KEY_PINNED_GVKS: &str = "pinned_gvks";
 const PERISTENCE_KEY_HIDDEN_GVKS: &str = "hidden_gvks";
-const PERISTENCE_KEY_DEFAULT_NAMESPACE: &str = "default_namespace";
+const PERISTENCE_KEY_DEFAULT_NAMESPACES: &str = "default_namespaces";
 
 impl ClusterProfileService {
     pub fn new(app: AppHandle, repository: Arc<persistence::Repository>) -> Self {
@@ -110,28 +112,50 @@ impl ClusterProfileService {
             })
     }
 
-    pub fn get_default_namespace(&self, profile: &ClusterProfileId) -> Result<String, self::Error> {
-        self.repository
+    pub fn get_default_namespace(
+        &self,
+        profile: &ClusterProfileId,
+        gvk: &GroupVersionKind,
+    ) -> Result<String, self::Error> {
+        Ok(self
+            .repository
             .read_key(
                 &persistence::Context::PerClusterProfile(profile.clone()),
-                PERISTENCE_KEY_DEFAULT_NAMESPACE,
+                PERISTENCE_KEY_DEFAULT_NAMESPACES,
             )
             .map_err(self::Error::Repository)?
-            .map(serde_json::from_value::<String>)
-            .unwrap_or(Ok("default".to_owned()))
-            .map_err(self::Error::Serialization)
+            .map(serde_json::from_value::<HashMap<String, String>>)
+            .unwrap_or(Ok(HashMap::new()))
+            .map_err(self::Error::Serialization)?
+            .get(&gvk.to_flat_string())
+            .unwrap_or(&"default".to_owned())
+            .to_owned())
     }
 
     pub fn set_default_namespace(
         &self,
         profile: &ClusterProfileId,
+        gvk: &GroupVersionKind,
         namespace: &str,
     ) -> Result<(), self::Error> {
+        let mut defaults = self
+            .repository
+            .read_key(
+                &persistence::Context::PerClusterProfile(profile.clone()),
+                PERISTENCE_KEY_DEFAULT_NAMESPACES,
+            )
+            .map_err(self::Error::Repository)?
+            .map(serde_json::from_value::<HashMap<String, String>>)
+            .unwrap_or(Ok(HashMap::new()))
+            .map_err(self::Error::Serialization)?;
+
+        defaults.insert(gvk.to_flat_string(), namespace.to_owned());
+
         self.repository
             .set_key(
                 &persistence::Context::PerClusterProfile(profile.clone()),
-                PERISTENCE_KEY_DEFAULT_NAMESPACE,
-                serde_json::to_value(namespace)?,
+                PERISTENCE_KEY_DEFAULT_NAMESPACES,
+                serde_json::to_value(defaults)?,
             )
             .map_err(self::Error::Repository)
     }
