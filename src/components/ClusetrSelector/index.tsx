@@ -18,8 +18,8 @@ export const ClusterSelector: React.FC<ClusterSelectorProps> = (props) => {
             >
                 <option disabled value={-1}></option>
                 {
-                    contextSources.map(([source, displayName], idx) => (
-                        <option value={idx} key={`${displayName}@${source}`}>{displayName}</option>
+                    contextSources.map(({ source, context }, idx) => (
+                        <option value={idx} key={`${context}@${source}`}>{context}</option>
                     ))
                 }
             </select>
