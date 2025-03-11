@@ -1,0 +1,21 @@
+.topBar {
+    display: flex;
+    align-items: stretch;
+}
+
+.topBar>* {
+    margin: 0.5em;
+}
+
+.topBar>*:first-child {
+    margin-left: 0;
+}
+
+.topBar>*:last-child {
+    margin-right: 0;
+    margin-left: auto;
+}
+
+.topBar h2 {
+    text-transform: capitalize;
+}

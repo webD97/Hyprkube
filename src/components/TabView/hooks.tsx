@@ -3,7 +3,7 @@ import { TabProps } from ".";
 
 export type TabElement = ReactElement<TabProps>;
 
-export function useTabs(): [TabElement[], number, (tab: TabElement) => void, (idx: number) => void, (idx: number) => void] {
+export function useTabs(): [TabElement[], number, (tab: TabElement) => void, (idx: number) => void, (idx: number) => void, (tab: TabElement) => void] {
     const [tabs, setTabs] = useState<TabElement[]>([]);
     const [activeTab, setActiveTab] = useState(0);
 
@@ -16,5 +16,17 @@ export function useTabs(): [TabElement[], number, (tab: TabElement) => void, (id
         setTabs(tabs => tabs.filter((_, idx) => idx !== remove_idx));
     }
 
-    return [tabs, activeTab, pushTab, removeTab, setActiveTab];
+    const replaceActiveTab = (newTab: ReactElement<TabProps>) => {
+        if (tabs.length === 0) {
+            pushTab(newTab);
+            return;
+        }
+
+        setTabs(tabs => tabs.map((tab, idx) => {
+            if (idx !== activeTab) return tab;
+            return newTab
+        }))
+    }
+
+    return [tabs, activeTab, pushTab, removeTab, setActiveTab, replaceActiveTab];
 };

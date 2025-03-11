@@ -11,6 +11,7 @@ export interface GvkListProps {
     flat?: boolean,
     withGroupNames?: boolean,
     onResourceClicked?: (gvk: Gvk) => void,
+    onResourceAuxClicked?: (gvk: Gvk) => void,
     onGvkContextMenu: (gvk: Gvk) => Promise<Menu>,
 }
 
@@ -22,6 +23,7 @@ const GvkList: React.FC<GvkListProps> = (props) => {
         withGroupNames = false,
         onGvkContextMenu,
         onResourceClicked = () => undefined,
+        onResourceAuxClicked = () => undefined,
     } = props;
 
     if (flat) {
@@ -38,6 +40,7 @@ const GvkList: React.FC<GvkListProps> = (props) => {
                                     <li key={`${kind}.${group}/${version}`}>
                                         <span
                                             onClick={() => onResourceClicked(gvk)}
+                                            onAuxClick={() => onResourceAuxClicked(gvk)}
                                             onContextMenu={e => {
                                                 e.preventDefault();
                                                 onGvkContextMenu(gvk)
@@ -99,6 +102,7 @@ const GvkList: React.FC<GvkListProps> = (props) => {
                 <GvkList flat className={classes.indent}
                     gvks={gvks}
                     onResourceClicked={onResourceClicked}
+                    onResourceAuxClicked={onResourceAuxClicked}
                     onGvkContextMenu={onGvkContextMenu}
                 />
             </details>

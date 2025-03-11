@@ -76,7 +76,7 @@ function createColumns(titles: string[]) {
     return [selectionColumn, ...dataColumns];
 }
 
-const ResourceView: React.FC<ResourceViewProps> = (props) => {
+const ResourceList: React.FC<ResourceViewProps> = (props) => {
     const {
         namespace,
         resourceNamePlural,
@@ -220,4 +220,4 @@ const ResourceView: React.FC<ResourceViewProps> = (props) => {
     );
 }
 
-export default ResourceView;
+export default ResourceList;

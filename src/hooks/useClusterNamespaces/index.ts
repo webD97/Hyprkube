@@ -1,6 +1,5 @@
 import { Channel, invoke } from "@tauri-apps/api/core";
 import { useEffect, useState } from "react";
-import { Gvk } from "../../model/k8s";
 
 export type WatchEvent =
     | {
@@ -16,11 +15,10 @@ export type WatchEvent =
         data: string
     }
 
-export default function useClusterNamespaces(kubernetesClientId: string | undefined, gvk: Gvk | undefined): string[] {
+export default function useClusterNamespaces(kubernetesClientId: string | undefined): string[] {
     const [namespaces, setNamespaces] = useState<string[]>([]);
 
     useEffect(() => {
-        if (gvk === undefined) return;
         if (kubernetesClientId === undefined) return;
 
         const channel = new Channel<WatchEvent>();
@@ -47,7 +45,7 @@ export default function useClusterNamespaces(kubernetesClientId: string | undefi
         return () => {
             invoke('cleanup_channel', { channel });
         };
-    }, [gvk, kubernetesClientId]);
+    }, [kubernetesClientId]);
 
     return namespaces;
 }

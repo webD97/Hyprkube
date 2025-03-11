@@ -8,7 +8,7 @@ dayjs.extend(RelativeTime);
 dayjs.extend(LocalizedFormat);
 
 export const CustomCell: React.FC<CellContext<[string, DisplayableResource], unknown>> = (props) => {
-    return (props.getValue() as ResourceField).components.map((inner, idx) => {
+    return (props.getValue() as ResourceField)?.components?.map((inner, idx) => {
         if ("PlainString" in inner) {
             return <span key={idx}>{inner.PlainString}</span>;
         }

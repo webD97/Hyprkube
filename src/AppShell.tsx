@@ -1,12 +1,12 @@
+import { emit } from "@tauri-apps/api/event";
 import { ErrorBoundary, FallbackProps } from "react-error-boundary";
 import { createBrowserRouter, Outlet, RouterProvider } from "react-router-dom";
 import ClusterOverview from "./pages/ClusterOverview";
 import ClusterView from "./pages/ClusterView";
-import { emit } from "@tauri-apps/api/event";
 
 import classes from './AppShell.module.css';
-import StatusPanel from "./containers/StatusPanel";
 import NavHeader from "./components/NavHeader";
+import StatusPanel from "./containers/StatusPanel";
 
 function fallbackRender(context: FallbackProps) {
     // Call resetErrorBoundary() to reset the error boundary and retry the render.
