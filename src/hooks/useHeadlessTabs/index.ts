@@ -1,4 +1,4 @@
-import { ReactElement, useState } from "react";
+import { ReactElement, useEffect, useState } from "react";
 
 export type TabDefinition<T> = {
     meta: T,
@@ -23,7 +23,7 @@ export function useHeadlessTabs<T>(initialTabs: TabDefinition<T>[] = []): [
     const pushTab = (meta: T, render: TabContentRenderer) => {
         setTabs(tabs => [...tabs, { meta, render }]);
         setActiveTab(tabs.length);
-    }
+    };
 
     const removeTab = (remove_idx: TabIdentifier) => {
         setTabs(tabs => tabs.filter((_, idx) => idx !== remove_idx));
@@ -31,12 +31,7 @@ export function useHeadlessTabs<T>(initialTabs: TabDefinition<T>[] = []): [
         if (remove_idx < activeTab) {
             setActiveTab(activeTab => activeTab - 1);
         }
-        else if (remove_idx === activeTab && activeTab === tabs.length - 1) {
-            // Do not change the activeTab because it will be correct on next render
-            // But ensure we're not going out of bounds
-            setActiveTab(activeTab => activeTab - 1);
-        }
-    }
+    };
 
     const replaceActiveTab = (meta: T, render: TabContentRenderer) => {
         if (tabs.length === 0) {
@@ -48,7 +43,15 @@ export function useHeadlessTabs<T>(initialTabs: TabDefinition<T>[] = []): [
             if (idx !== activeTab) return tab;
             return ({ meta, render })
         }))
-    }
+    };
+
+    useEffect(() => {
+        if (tabs.length > 0 && activeTab > tabs.length - 1) {
+            setActiveTab(tabs.length - 1);
+        }
+    }, [activeTab, tabs.length]);
+
+    console.log(activeTab)
 
     return [tabs, activeTab, pushTab, removeTab, setActiveTab, replaceActiveTab];
 };

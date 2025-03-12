@@ -16,6 +16,7 @@
 .header {
     grid-area: header;
     padding: 0.4em;
+    background-color: rgba(0, 0, 0, 0.2);
 }
 
 .footer {
