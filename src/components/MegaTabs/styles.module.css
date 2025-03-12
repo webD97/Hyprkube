@@ -4,7 +4,7 @@
     align-items: center;
 }
 
-.tabWrapper>div {
+.tabWrapper>.tab {
     padding: 0.4em;
     border-radius: 0.3em;
     width: 220px;
@@ -13,7 +13,15 @@
     align-items: center;
 }
 
-.tabWrapper>div:hover:not(.activeTab) {
+.tabWrapper>.tab.mini {
+    width: 2em;
+    height: 2em;
+    font-size: 1.1em;
+    text-align: center;
+    line-height: 2em;
+}
+
+.tabWrapper>.tab:hover:not(.activeTab) {
     background: rgba(255, 255, 255, 0.05);
 }
 
@@ -21,19 +29,22 @@
     background: rgba(255, 255, 255, 0.1);
 }
 
-.tabWrapper>div:not(:last-child) {
+.tabWrapper>.tab:not(:last-child) {
     margin-right: 0.5em;
 }
 
 .tabIcon {
     margin-right: 0.5em;
     font-size: 1.1em;
+    text-align: center;
+    flex-grow: 0;
 }
 
 .tabLabel {
     text-overflow: ellipsis;
     white-space: nowrap;
     overflow: hidden;
+    flex-grow: 1;
 }
 
 .closeIcon {
@@ -43,6 +54,7 @@
     border-radius: 0.3em;
     text-align: center;
     line-height: 1.35em;
+    flex-grow: 0;
 }
 
 .closeIcon:hover {

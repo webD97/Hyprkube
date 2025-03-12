@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { PropsWithChildren } from "react";
 import { createPortal } from "react-dom";
 import { ErrorBoundary } from "react-error-boundary";
 import { TabDefinition } from "../../hooks/useHeadlessTabs";
@@ -20,7 +20,7 @@ export interface MegaTabsProps {
     outlet: React.RefObject<HTMLDivElement | null>
 }
 
-const MegaTabs: React.FC<MegaTabsProps> = (props) => {
+const MegaTabs: React.FC<PropsWithChildren<MegaTabsProps>> = (props) => {
     const {
         activeTab,
         tabs,
@@ -36,7 +36,7 @@ const MegaTabs: React.FC<MegaTabsProps> = (props) => {
                     tabs.map(({ meta: { title, icon, immortal } }, idx) => (
                         <div key={idx}
                             title={title}
-                            className={idx === activeTab ? classes.activeTab : ''}
+                            className={`${idx === activeTab ? classes.activeTab : ''} ${classes.tab}`}
                             onClick={() => setActiveTab(idx)}
                             onAuxClick={() => !immortal && onCloseClicked(idx)}
                         >
@@ -49,6 +49,9 @@ const MegaTabs: React.FC<MegaTabsProps> = (props) => {
                             }
                         </div>
                     ))
+                }
+                {
+                    props.children
                 }
             </div>
             {
@@ -80,3 +83,19 @@ const MegaTabs: React.FC<MegaTabsProps> = (props) => {
 };
 
 export default MegaTabs;
+
+export interface MegaTabsButtonProps {
+    icon: string,
+    title?: string,
+    onClick?: React.MouseEventHandler
+}
+
+export const MegaTabsButton: React.FC<MegaTabsButtonProps> = (props) => {
+    const { icon, title, onClick = () => undefined } = props;
+
+    return (
+        <div className={`${classes.tab} ${classes.mini}`} title={title} onClick={onClick}>
+            <div className={classes.tabLabel}>{icon}</div>
+        </div>
+    );
+}

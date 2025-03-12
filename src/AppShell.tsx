@@ -1,9 +1,9 @@
 import { emit } from "@tauri-apps/api/event";
 import { ErrorBoundary, FallbackProps } from "react-error-boundary";
 
-import { useContext, useEffect, useRef } from "react";
+import { useCallback, useContext, useEffect, useRef } from "react";
 import classes from './AppShell.module.css';
-import MegaTabs, { MegaTabDefinition } from "./components/MegaTabs";
+import MegaTabs, { MegaTabDefinition, MegaTabsButton } from "./components/MegaTabs";
 import StatusPanel from "./containers/StatusPanel";
 import ApplicationTabsContext from "./contexts/ApplicationTabs";
 import { useHeadlessTabs } from "./hooks/useHeadlessTabs";
@@ -35,10 +35,14 @@ const Layout: React.FC = () => {
 
     const megaTabsOutlet = useRef<HTMLDivElement>(null);
 
+    const openClusterExplorer = useCallback(() => {
+        pushApplicationTab({ title: 'Connect to a cluster', icon: '🔮' }, () => <ClusterOverview />);
+    }, [pushApplicationTab]);
+
     useEffect(() => {
         if (applicationTabs.length > 0) return;
-        pushApplicationTab({ title: 'Connect to a cluster', icon: '🔮' }, () => <ClusterOverview />)
-    }, [applicationTabs.length, pushApplicationTab]);
+        openClusterExplorer();
+    }, [applicationTabs.length, openClusterExplorer]);
 
     return (
         <ErrorBoundary fallbackRender={fallbackRender}>
@@ -50,7 +54,13 @@ const Layout: React.FC = () => {
                         onCloseClicked={removeApplicationTab}
                         tabs={applicationTabs}
                         outlet={megaTabsOutlet}
-                    />
+                    >
+                        <MegaTabsButton
+                            icon="＋"
+                            title="Open new tab"
+                            onClick={openClusterExplorer}
+                        />
+                    </MegaTabs>
                 </header>
                 <main className={classes.main} ref={megaTabsOutlet}>
                 </main>
