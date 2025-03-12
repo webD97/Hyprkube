@@ -1,6 +1,5 @@
 import { listen } from "@tauri-apps/api/event";
-import { useState, useEffect } from "react";
-import { useLocation } from "react-router-dom";
+import { useEffect, useState } from "react";
 
 type JoinHandleStoreStatsPayload = {
     handles: number
@@ -8,10 +7,9 @@ type JoinHandleStoreStatsPayload = {
 
 const StatusPanel: React.FC = () => {
     const [hdlCount, setHdlCount] = useState(0);
-    const { pathname, search } = useLocation();
 
     useEffect(() => {
-        listen<JoinHandleStoreStatsPayload>('join_handle_store_stats', (event) => {
+        void listen<JoinHandleStoreStatsPayload>('join_handle_store_stats', (event) => {
             setHdlCount(event.payload.handles);
         })
     }, []);
@@ -19,7 +17,6 @@ const StatusPanel: React.FC = () => {
     return (
         <>
             <div>Channels: {hdlCount}</div>
-            <div>Location: {pathname}{search}</div>
         </>
     );
 };

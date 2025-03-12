@@ -1,0 +1,82 @@
+
+import React from "react";
+import { createPortal } from "react-dom";
+import { ErrorBoundary } from "react-error-boundary";
+import { TabDefinition } from "../../hooks/useHeadlessTabs";
+import classes from './styles.module.css';
+
+export type MegaTabDefinition = {
+    title: string,
+    icon: string,
+    keepAlive?: boolean,
+    immortal?: boolean
+};
+
+export interface MegaTabsProps {
+    activeTab: number,
+    setActiveTab?: (idx: number) => void,
+    onCloseClicked?: (idx: number) => void,
+    tabs: TabDefinition<MegaTabDefinition>[],
+    outlet: React.RefObject<HTMLDivElement | null>
+}
+
+const MegaTabs: React.FC<MegaTabsProps> = (props) => {
+    const {
+        activeTab,
+        tabs,
+        setActiveTab = () => undefined,
+        onCloseClicked = () => undefined,
+        outlet
+    } = props;
+
+    return (
+        <div>
+            <div className={classes.tabWrapper}>
+                {
+                    tabs.map(({ meta: { title, icon, immortal } }, idx) => (
+                        <div key={idx}
+                            title={title}
+                            className={idx === activeTab ? classes.activeTab : ''}
+                            onClick={() => setActiveTab(idx)}
+                            onAuxClick={() => !immortal && onCloseClicked(idx)}
+                        >
+                            <span className={classes.tabIcon}>{icon}</span>
+                            <span className={classes.tabLabel}>{title}</span>
+                            {
+                                immortal
+                                    ? null
+                                    : <span className={classes.closeIcon} title="Close tab" onClick={() => !immortal && onCloseClicked(idx)}>🗙</span>
+                            }
+                        </div>
+                    ))
+                }
+            </div>
+            {
+                !outlet.current
+                    ? null
+                    : createPortal(
+                        tabs.map(({ render, meta: { keepAlive } }, idx) => {
+                            if (!keepAlive && activeTab !== idx) return;
+                            return (
+                                <div key={idx} style={{ display: activeTab === idx ? 'initial' : 'none' }}>
+                                    <ErrorBoundary
+                                        fallbackRender={(context) => (
+                                            <div role="alert">
+                                                <p>Something went wrong:</p>
+                                                <pre style={{ color: "red" }}>{JSON.stringify(context.error, undefined, 2)}</pre>
+                                            </div>
+                                        )}
+                                    >
+                                        {render()}
+                                    </ErrorBoundary>
+                                </div>
+                            );
+                        })
+                        , outlet.current
+                    )
+            }
+        </div>
+    );
+};
+
+export default MegaTabs;

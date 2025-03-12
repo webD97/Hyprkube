@@ -3,7 +3,6 @@ import relativeTime from 'dayjs/plugin/relativeTime';
 
 import { useEffect, useMemo, useState } from 'react';
 
-import { useSearchParams } from 'react-router-dom';
 import listClusterProfiles, { ClusterProfile } from '../../api/listClusterProfiles';
 import EmojiHint from '../../components/EmojiHint';
 import GvkList from '../../components/GvkList';
@@ -11,22 +10,25 @@ import TabView, { Tab } from '../../components/TabView';
 import { useTabs } from '../../components/TabView/hooks';
 import ResourceListInspector from '../../containers/ResourceListInspector';
 import { DiscoveryResult, useClusterDiscovery } from '../../hooks/useClusterDiscovery';
+import { KubeContextSource } from '../../hooks/useContextDiscovery';
 import useHiddenGvks from '../../hooks/useHiddenGvks';
 import usePinnedGvks from '../../hooks/usePinnedGvks';
 import { Gvk } from '../../model/k8s';
 import { createMenuForNormalGvks, createMenuForPinnedGvks } from './menus';
 import classes from './styles.module.css';
 
-const ClusterView: React.FC = () => {
-    const [searchParams] = useSearchParams();
-    const source = searchParams.get('source')!;
-    const context = searchParams.get('context')!;
+export interface ClusterViewProps {
+    contextSource: KubeContextSource
+}
+
+const ClusterView: React.FC<ClusterViewProps> = (props) => {
+    const { contextSource } = props;
 
     const [clusterProfiles, setClusterProfiles] = useState<ClusterProfile[]>([]);
     const pinnedGvks = usePinnedGvks(clusterProfiles?.[0]?.[0]);
     const hiddenGvks = useHiddenGvks(clusterProfiles?.[0]?.[0]);
 
-    const { discovery } = useClusterDiscovery(source, context);
+    const { discovery } = useClusterDiscovery(contextSource.source, contextSource.context);
 
     const [bottomTabs, activeBottomTab, pushBottomTab, removeBottomTab, setActiveBottomTab] = useTabs();
     const [resourceTabs, activeResourceTab, pushResourceTab, removeResourceTab, setActiveResourceTab, replaceActiveResourceTab] = useTabs();
@@ -62,7 +64,7 @@ const ClusterView: React.FC = () => {
                 {() => (
                     <ResourceListInspector
                         gvk={gvk}
-                        contextSource={{ provider: 'file', context, source }}
+                        contextSource={contextSource}
                         clusterProfile={clusterProfiles[0][0]}
                         pushBottomTab={pushBottomTab}
                     />
@@ -75,7 +77,6 @@ const ClusterView: React.FC = () => {
     return (
         <div className={classes.container}>
             <nav>
-                <span>{context}</span>
                 <h2>Pinned resources</h2>
                 {
                     sortedPinnedGvks.length == 0

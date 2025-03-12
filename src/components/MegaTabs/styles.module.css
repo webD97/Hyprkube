@@ -1,0 +1,50 @@
+.tabWrapper {
+    display: flex;
+    height: 100%;
+    align-items: center;
+}
+
+.tabWrapper>div {
+    padding: 0.4em;
+    border-radius: 0.3em;
+    width: 220px;
+    cursor: default;
+    display: flex;
+    align-items: center;
+}
+
+.tabWrapper>div:hover:not(.activeTab) {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.activeTab {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.tabWrapper>div:not(:last-child) {
+    margin-right: 0.5em;
+}
+
+.tabIcon {
+    margin-right: 0.5em;
+    font-size: 1.1em;
+}
+
+.tabLabel {
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.closeIcon {
+    margin-left: auto;
+    width: 1.5em;
+    height: 1.5em;
+    border-radius: 0.3em;
+    text-align: center;
+    line-height: 1.35em;
+}
+
+.closeIcon:hover {
+    background: rgba(255, 255, 255, 0.05);
+}

@@ -1,7 +1,7 @@
-import { Link } from "react-router-dom";
-
-import { useMemo } from "react";
+import { useContext, useMemo } from "react";
+import ApplicationTabsContext from "../../contexts/ApplicationTabs";
 import { KubeContextSource, useContextDiscovery } from "../../hooks/useContextDiscovery";
+import ClusterView from "../ClusterView";
 import classes from './styles.module.css';
 
 type GroupedContextSources = {
@@ -12,6 +12,7 @@ type GroupedContextSources = {
 
 const ClusterOverview: React.FC = () => {
     const contextSources = useContextDiscovery();
+    const { replaceApplicationTab } = useContext(ApplicationTabsContext)!;
 
     const groupedContextSources = useMemo(() => {
         const groupedContextSources: GroupedContextSources = {};
@@ -48,9 +49,16 @@ const ClusterOverview: React.FC = () => {
                             <h4>{source}</h4>
                             <ul className={classes.clusterList}>
                                 {
-                                    contextGroup.contexts.map(({ source, context }, idx) => (
+                                    contextGroup.contexts.map((contextSource, idx) => (
                                         <li key={idx}>
-                                            <Link to={`cluster?source=${source}&context=${context}`}>{context}</Link>
+                                            <a href="" onClick={(e) => {
+                                                e.preventDefault();
+
+                                                replaceApplicationTab(
+                                                    { title: contextSource.context, icon: '🌍', keepAlive: true },
+                                                    () => <ClusterView contextSource={contextSource} />
+                                                );
+                                            }}>{contextSource.context}</a>
                                         </li>
                                     ))
                                 }
