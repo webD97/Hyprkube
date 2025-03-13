@@ -18,11 +18,13 @@ const ClusterOverview: React.FC = () => {
 
         contextSources.forEach((contextSource) => {
             const { provider, source } = contextSource;
-            let displayName = provider + "://" + source;
+            let displayName = source;
 
             if (source.includes('Lens/')) {
                 displayName = source.substring(0, source.lastIndexOf('/'));
             }
+
+            displayName = provider + "://" + displayName;
 
             if (!(displayName in groupedContextSources)) {
                 groupedContextSources[displayName] = {
