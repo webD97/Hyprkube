@@ -1,21 +1,19 @@
 .tabWrapper {
     display: flex;
     height: 100%;
-    align-items: center;
+    align-items: stretch;
 }
 
 .tabWrapper>.tab {
-    padding: 0.4em;
+    padding: 0.3em 0.5em;
     border-radius: 0.3em;
-    width: 220px;
+    max-width: 250px;
     cursor: default;
     display: flex;
     align-items: center;
 }
 
 .tabWrapper>.tab.mini {
-    width: 2em;
-    height: 2em;
     font-size: 1.1em;
     text-align: center;
     line-height: 2em;
@@ -40,20 +38,35 @@
     flex-grow: 0;
 }
 
-.tabLabel {
+.tabLabelWrapper {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    overflow: hidden;
+}
+
+.tabLabel, .tabSubtitle {
     text-overflow: ellipsis;
     white-space: nowrap;
     overflow: hidden;
-    flex-grow: 1;
+}
+
+.tabLabel {
+    font-size: 0.9em;
+}
+
+.tabSubtitle {
+    font-size: 0.8em;
+    opacity: 0.6;
 }
 
 .closeIcon {
-    margin-left: auto;
-    width: 1.5em;
-    height: 1.5em;
+    margin-left: 0.5em;
+    width: 2em;
+    height: 2em;
     border-radius: 0.3em;
     text-align: center;
-    line-height: 1.35em;
+    line-height: 1.8em;
     flex-grow: 0;
 }
 

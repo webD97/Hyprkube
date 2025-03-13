@@ -9,6 +9,7 @@ import classes from './styles.module.css';
 export type MegaTabDefinition = {
     title: string,
     icon: string,
+    subtitle?: string,
     keepAlive?: boolean,
     immortal?: boolean
 };
@@ -34,7 +35,7 @@ const MegaTabs: React.FC<PropsWithChildren<MegaTabsProps>> = (props) => {
         <div>
             <div className={classes.tabWrapper}>
                 {
-                    tabs.map(({ meta: { title, icon, immortal } }, idx) => (
+                    tabs.map(({ meta: { title, icon, immortal, subtitle } }, idx) => (
                         <div key={idx}
                             title={title}
                             className={`${idx === activeTab ? classes.activeTab : ''} ${classes.tab}`}
@@ -42,7 +43,14 @@ const MegaTabs: React.FC<PropsWithChildren<MegaTabsProps>> = (props) => {
                             onAuxClick={() => !immortal && onCloseClicked(idx)}
                         >
                             <span className={classes.tabIcon}>{icon}</span>
-                            <span className={classes.tabLabel}>{title}</span>
+                            <span className={classes.tabLabelWrapper}>
+                                <span className={classes.tabLabel}>{title}</span>
+                                {
+                                    subtitle
+                                    ? <span className={classes.tabSubtitle}>{subtitle}</span>
+                                    : null
+                                }
+                            </span>
                             {
                                 immortal
                                     ? null

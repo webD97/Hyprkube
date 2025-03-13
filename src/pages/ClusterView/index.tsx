@@ -77,8 +77,8 @@ const ClusterView: React.FC<ClusterViewProps> = (props) => {
             ;
     }
 
-    const makeTabTitle = useCallback((gvk: Gvk) => {
-        return `${contextSource.context} - ${gvk.kind}`;
+    const makeTabSubtitle = useCallback((gvk: Gvk) => {
+        return `${gvk.kind}`;
     }, [contextSource.context]);
 
     return (
@@ -92,13 +92,13 @@ const ClusterView: React.FC<ClusterViewProps> = (props) => {
                             <GvkList flat withGroupNames
                                 gvks={sortedPinnedGvks}
                                 onResourceClicked={(gvk) => {
-                                    tabContext?.setMeta(meta => ({ ...meta, title: makeTabTitle(gvk) }));
+                                    tabContext?.setMeta(meta => ({ ...meta, subtitle: makeTabSubtitle(gvk) }));
                                     replaceActiveResourceTab(
                                         makeTab(gvk)
                                     )
                                 }}
                                 onResourceAuxClicked={(gvk) => {
-                                    tabContext?.setMeta(meta => ({ ...meta, title: makeTabTitle(gvk) }));
+                                    tabContext?.setMeta(meta => ({ ...meta, subtitle: makeTabSubtitle(gvk) }));
                                     pushResourceTab(
                                         makeTab(gvk)
                                     )
@@ -134,13 +134,13 @@ const ClusterView: React.FC<ClusterViewProps> = (props) => {
                                 <GvkList key={idx}
                                     gvks={gvks}
                                     onResourceClicked={(gvk) => {
-                                        tabContext?.setMeta(meta => ({ ...meta, title: makeTabTitle(gvk) }));
+                                        tabContext?.setMeta(meta => ({ ...meta, subtitle: makeTabSubtitle(gvk) }));
                                         replaceActiveResourceTab(
                                             makeTab(gvk)
                                         )
                                     }}
                                     onResourceAuxClicked={(gvk) => {
-                                        tabContext?.setMeta(meta => ({ ...meta, title: makeTabTitle(gvk) }));
+                                        tabContext?.setMeta(meta => ({ ...meta, subtitle: makeTabSubtitle(gvk) }));
                                         pushResourceTab(
                                             makeTab(gvk)
                                         )
@@ -177,13 +177,13 @@ const ClusterView: React.FC<ClusterViewProps> = (props) => {
                                 <GvkList key={idx}
                                     gvks={gvks}
                                     onResourceClicked={(gvk) => {
-                                        tabContext?.setMeta(meta => ({ ...meta, title: makeTabTitle(gvk) }));
+                                        tabContext?.setMeta(meta => ({ ...meta, subtitle: makeTabSubtitle(gvk) }));
                                         replaceActiveResourceTab(
                                             makeTab(gvk)
                                         )
                                     }}
                                     onResourceAuxClicked={(gvk) => {
-                                        tabContext?.setMeta(meta => ({ ...meta, title: makeTabTitle(gvk) }));
+                                        tabContext?.setMeta(meta => ({ ...meta, subtitle: makeTabSubtitle(gvk) }));
                                         pushResourceTab(
                                             makeTab(gvk)
                                         )
