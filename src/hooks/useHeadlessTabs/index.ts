@@ -2,6 +2,7 @@ import { ReactElement, useEffect, useState } from "react";
 
 export type TabDefinition<T> = {
     meta: T,
+    setMeta: (updater: (meta: T) => T) => T,
     render: () => ReactElement
 }
 
@@ -20,8 +21,26 @@ export function useHeadlessTabs<T>(initialTabs: TabDefinition<T>[] = []): [
     const [tabs, setTabs] = useState<TabDefinition<T>[]>(initialTabs);
     const [activeTab, setActiveTab] = useState<TabIdentifier>(0);
 
+    function makeTab(meta: T, render: TabContentRenderer): TabDefinition<T> {
+        return ({
+            meta,
+            render,
+            setMeta(updater) {
+                const newMeta = updater(meta);
+
+                setTabs(tabs => tabs.map(tab => {
+                    if (tab.render !== render) return tab;
+
+                    return ({ ...tab, meta: newMeta });
+                }));
+
+                return newMeta;
+            }
+        });
+    }
+
     const pushTab = (meta: T, render: TabContentRenderer) => {
-        setTabs(tabs => [...tabs, { meta, render }]);
+        setTabs(tabs => [...tabs, makeTab(meta, render)]);
         setActiveTab(tabs.length);
     };
 
@@ -41,7 +60,7 @@ export function useHeadlessTabs<T>(initialTabs: TabDefinition<T>[] = []): [
 
         setTabs(tabs => tabs.map((tab, idx) => {
             if (idx !== activeTab) return tab;
-            return ({ meta, render })
+            return makeTab(meta, render)
         }))
     };
 

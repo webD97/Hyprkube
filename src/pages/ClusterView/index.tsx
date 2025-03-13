@@ -1,11 +1,12 @@
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
 import listClusterProfiles, { ClusterProfile } from '../../api/listClusterProfiles';
 import EmojiHint from '../../components/EmojiHint';
 import GvkList from '../../components/GvkList';
+import { MegaTabContext } from '../../components/MegaTabs/context';
 import TabView, { Tab } from '../../components/TabView';
 import { useTabs } from '../../components/TabView/hooks';
 import ResourceListInspector from '../../containers/ResourceListInspector';
@@ -32,6 +33,8 @@ const ClusterView: React.FC<ClusterViewProps> = (props) => {
 
     const [bottomTabs, activeBottomTab, pushBottomTab, removeBottomTab, setActiveBottomTab] = useTabs();
     const [resourceTabs, activeResourceTab, pushResourceTab, removeResourceTab, setActiveResourceTab, replaceActiveResourceTab] = useTabs();
+
+    const tabContext = useContext(MegaTabContext);
 
     useEffect(() => {
         listClusterProfiles()
@@ -74,6 +77,10 @@ const ClusterView: React.FC<ClusterViewProps> = (props) => {
             ;
     }
 
+    const makeTabTitle = useCallback((gvk: Gvk) => {
+        return `${contextSource.context} - ${gvk.kind}`;
+    }, [contextSource.context]);
+
     return (
         <div className={classes.container}>
             <nav>
@@ -85,11 +92,13 @@ const ClusterView: React.FC<ClusterViewProps> = (props) => {
                             <GvkList flat withGroupNames
                                 gvks={sortedPinnedGvks}
                                 onResourceClicked={(gvk) => {
+                                    tabContext?.setMeta(meta => ({ ...meta, title: makeTabTitle(gvk) }));
                                     replaceActiveResourceTab(
                                         makeTab(gvk)
                                     )
                                 }}
                                 onResourceAuxClicked={(gvk) => {
+                                    tabContext?.setMeta(meta => ({ ...meta, title: makeTabTitle(gvk) }));
                                     pushResourceTab(
                                         makeTab(gvk)
                                     )
@@ -125,11 +134,13 @@ const ClusterView: React.FC<ClusterViewProps> = (props) => {
                                 <GvkList key={idx}
                                     gvks={gvks}
                                     onResourceClicked={(gvk) => {
+                                        tabContext?.setMeta(meta => ({ ...meta, title: makeTabTitle(gvk) }));
                                         replaceActiveResourceTab(
                                             makeTab(gvk)
                                         )
                                     }}
                                     onResourceAuxClicked={(gvk) => {
+                                        tabContext?.setMeta(meta => ({ ...meta, title: makeTabTitle(gvk) }));
                                         pushResourceTab(
                                             makeTab(gvk)
                                         )
@@ -166,11 +177,13 @@ const ClusterView: React.FC<ClusterViewProps> = (props) => {
                                 <GvkList key={idx}
                                     gvks={gvks}
                                     onResourceClicked={(gvk) => {
+                                        tabContext?.setMeta(meta => ({ ...meta, title: makeTabTitle(gvk) }));
                                         replaceActiveResourceTab(
                                             makeTab(gvk)
                                         )
                                     }}
                                     onResourceAuxClicked={(gvk) => {
+                                        tabContext?.setMeta(meta => ({ ...meta, title: makeTabTitle(gvk) }));
                                         pushResourceTab(
                                             makeTab(gvk)
                                         )

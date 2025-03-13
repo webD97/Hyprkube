@@ -3,6 +3,7 @@ import React, { PropsWithChildren } from "react";
 import { createPortal } from "react-dom";
 import { ErrorBoundary } from "react-error-boundary";
 import { TabDefinition } from "../../hooks/useHeadlessTabs";
+import { MegaTabContext } from "./context";
 import classes from './styles.module.css';
 
 export type MegaTabDefinition = {
@@ -58,7 +59,7 @@ const MegaTabs: React.FC<PropsWithChildren<MegaTabsProps>> = (props) => {
                 !outlet.current
                     ? null
                     : createPortal(
-                        tabs.map(({ render, meta: { keepAlive } }, idx) => {
+                        tabs.map(({ render, setMeta, meta: { keepAlive } }, idx) => {
                             if (!keepAlive && activeTab !== idx) return;
                             return (
                                 <div key={idx} style={{ display: activeTab === idx ? 'initial' : 'none' }}>
@@ -70,7 +71,11 @@ const MegaTabs: React.FC<PropsWithChildren<MegaTabsProps>> = (props) => {
                                             </div>
                                         )}
                                     >
-                                        {render()}
+                                        <MegaTabContext.Provider
+                                            value={{ setMeta }}
+                                        >
+                                            {render()}
+                                        </MegaTabContext.Provider>
                                     </ErrorBoundary>
                                 </div>
                             );
