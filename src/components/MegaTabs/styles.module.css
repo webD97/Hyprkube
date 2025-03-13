@@ -7,10 +7,13 @@
 .tabWrapper>.tab {
     padding: 0.3em 0.5em;
     border-radius: 0.3em;
-    max-width: 250px;
     cursor: default;
     display: flex;
     align-items: center;
+}
+
+.tabWrapper>.tab:not(.mini) {
+    width: 250px;
 }
 
 .tabWrapper>.tab.mini {
@@ -45,18 +48,19 @@
     overflow: hidden;
 }
 
-.tabLabel, .tabSubtitle {
+.tabLabel,
+.tabSubtitle {
     text-overflow: ellipsis;
     white-space: nowrap;
     overflow: hidden;
 }
 
-.tabLabel {
-    font-size: 0.9em;
+.tabLabelWrapper:has(.tabSubtitle) .tabLabel {
+    font-size: 0.85em;
 }
 
 .tabSubtitle {
-    font-size: 0.8em;
+    font-size: 0.7em;
     opacity: 0.6;
 }
 
