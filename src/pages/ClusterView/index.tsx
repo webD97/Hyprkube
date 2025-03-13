@@ -1,40 +1,45 @@
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
-
-import { useCallback, useContext, useEffect, useMemo, useState } from 'react';
-
+import { useContext, useEffect, useMemo, useState } from 'react';
 import listClusterProfiles, { ClusterProfile } from '../../api/listClusterProfiles';
 import EmojiHint from '../../components/EmojiHint';
 import GvkList from '../../components/GvkList';
 import { MegaTabContext } from '../../components/MegaTabs/context';
-import TabView, { Tab } from '../../components/TabView';
+import TabView from '../../components/TabView';
 import { useTabs } from '../../components/TabView/hooks';
 import ResourceListInspector from '../../containers/ResourceListInspector';
-import { DiscoveryResult, useClusterDiscovery } from '../../hooks/useClusterDiscovery';
+import ApplicationTabsContext from '../../contexts/ApplicationTabs';
+import { useClusterDiscovery } from '../../hooks/useClusterDiscovery';
 import { KubeContextSource } from '../../hooks/useContextDiscovery';
 import useHiddenGvks from '../../hooks/useHiddenGvks';
 import usePinnedGvks from '../../hooks/usePinnedGvks';
 import { Gvk } from '../../model/k8s';
+import { capitalizeFirstLetter } from '../../utils/strings';
 import { createMenuForNormalGvks, createMenuForPinnedGvks } from './menus';
 import classes from './styles.module.css';
 
 export interface ClusterViewProps {
-    contextSource: KubeContextSource
+    contextSource: KubeContextSource,
+    preSelectedGvk?: Gvk
 }
 
-const ClusterView: React.FC<ClusterViewProps> = (props) => {
-    const { contextSource } = props;
-
+const ClusterView: React.FC<ClusterViewProps> = ({ contextSource, preSelectedGvk }) => {
     const [clusterProfiles, setClusterProfiles] = useState<ClusterProfile[]>([]);
+    const [activeGvk, setActiveGvk] = useState<Gvk | undefined>(preSelectedGvk);
     const pinnedGvks = usePinnedGvks(clusterProfiles?.[0]?.[0]);
     const hiddenGvks = useHiddenGvks(clusterProfiles?.[0]?.[0]);
-
     const { discovery } = useClusterDiscovery(contextSource.source, contextSource.context);
-
     const [bottomTabs, activeBottomTab, pushBottomTab, removeBottomTab, setActiveBottomTab] = useTabs();
-    const [resourceTabs, activeResourceTab, pushResourceTab, removeResourceTab, setActiveResourceTab, replaceActiveResourceTab] = useTabs();
-
+    const { pushApplicationTab } = useContext(ApplicationTabsContext)!;
     const tabContext = useContext(MegaTabContext);
+
+    useEffect(() => {
+        if (!activeGvk) {
+            tabContext?.setMeta(meta => ({ ...meta, subtitle: undefined }));
+        } else {
+            tabContext?.setMeta(meta => ({ ...meta, subtitle: makeTabSubtitle(activeGvk) }));
+        }
+    }, [activeGvk, tabContext]);
 
     useEffect(() => {
         listClusterProfiles()
@@ -59,27 +64,9 @@ const ClusterView: React.FC<ClusterViewProps> = (props) => {
         });
     }, [pinnedGvks]);
 
-    function makeTab(gvk: Gvk) {
-        return (
-            <Tab
-                title={'📄 ' + findResourcePlural(discovery, gvk)}
-            >
-                {() => (
-                    <ResourceListInspector
-                        gvk={gvk}
-                        contextSource={contextSource}
-                        clusterProfile={clusterProfiles[0][0]}
-                        pushBottomTab={pushBottomTab}
-                    />
-                )}
-            </Tab>
-        )
-            ;
+    if (!clusterProfiles[0]?.[0]) {
+        return null;
     }
-
-    const makeTabSubtitle = useCallback((gvk: Gvk) => {
-        return `${gvk.kind}`;
-    }, []);
 
     return (
         <div className={classes.container}>
@@ -92,16 +79,13 @@ const ClusterView: React.FC<ClusterViewProps> = (props) => {
                             <GvkList flat withGroupNames
                                 gvks={sortedPinnedGvks}
                                 onResourceClicked={(gvk) => {
-                                    tabContext?.setMeta(meta => ({ ...meta, subtitle: makeTabSubtitle(gvk) }));
-                                    replaceActiveResourceTab(
-                                        makeTab(gvk)
-                                    )
+                                    setActiveGvk(gvk);
                                 }}
                                 onResourceAuxClicked={(gvk) => {
-                                    tabContext?.setMeta(meta => ({ ...meta, subtitle: makeTabSubtitle(gvk) }));
-                                    pushResourceTab(
-                                        makeTab(gvk)
-                                    )
+                                    pushApplicationTab(
+                                        { title: capitalizeFirstLetter(contextSource.context), icon: '🌍', keepAlive: true },
+                                        () => <ClusterView contextSource={contextSource} preSelectedGvk={gvk} />
+                                    );
                                 }}
                                 onGvkContextMenu={(gvk) => createMenuForPinnedGvks({
                                     clusterProfile: clusterProfiles[0][0],
@@ -134,16 +118,13 @@ const ClusterView: React.FC<ClusterViewProps> = (props) => {
                                 <GvkList key={idx}
                                     gvks={gvks}
                                     onResourceClicked={(gvk) => {
-                                        tabContext?.setMeta(meta => ({ ...meta, subtitle: makeTabSubtitle(gvk) }));
-                                        replaceActiveResourceTab(
-                                            makeTab(gvk)
-                                        )
+                                        setActiveGvk(gvk);
                                     }}
                                     onResourceAuxClicked={(gvk) => {
-                                        tabContext?.setMeta(meta => ({ ...meta, subtitle: makeTabSubtitle(gvk) }));
-                                        pushResourceTab(
-                                            makeTab(gvk)
-                                        )
+                                        pushApplicationTab(
+                                            { title: capitalizeFirstLetter(contextSource.context), icon: '🌍', keepAlive: true },
+                                            () => <ClusterView contextSource={contextSource} preSelectedGvk={gvk} />
+                                        );
                                     }}
                                     onGvkContextMenu={(gvk) => createMenuForNormalGvks({
                                         clusterProfile: clusterProfiles[0][0],
@@ -177,16 +158,13 @@ const ClusterView: React.FC<ClusterViewProps> = (props) => {
                                 <GvkList key={idx}
                                     gvks={gvks}
                                     onResourceClicked={(gvk) => {
-                                        tabContext?.setMeta(meta => ({ ...meta, subtitle: makeTabSubtitle(gvk) }));
-                                        replaceActiveResourceTab(
-                                            makeTab(gvk)
-                                        )
+                                        setActiveGvk(gvk);
                                     }}
                                     onResourceAuxClicked={(gvk) => {
-                                        tabContext?.setMeta(meta => ({ ...meta, subtitle: makeTabSubtitle(gvk) }));
-                                        pushResourceTab(
-                                            makeTab(gvk)
-                                        )
+                                        pushApplicationTab(
+                                            { title: capitalizeFirstLetter(contextSource.context), icon: '🌍', keepAlive: true },
+                                            () => <ClusterView contextSource={contextSource} preSelectedGvk={gvk} />
+                                        );
                                     }}
                                     onGvkContextMenu={(gvk) => createMenuForNormalGvks({
                                         clusterProfile: clusterProfiles[0][0],
@@ -208,24 +186,24 @@ const ClusterView: React.FC<ClusterViewProps> = (props) => {
             </section>
             <section className={classes.mainArea}>
                 {
-                    resourceTabs.length < 1
+                    !activeGvk
                         ? <EmojiHint emoji="👈">Select a resource to get started.</EmojiHint>
-                        : null
+                        : (
+                            <ResourceListInspector
+                                gvk={activeGvk}
+                                contextSource={contextSource}
+                                clusterProfile={clusterProfiles[0][0]}
+                                pushBottomTab={pushBottomTab}
+                            />
+                        )
                 }
-                <TabView eager
-                    activeTab={activeResourceTab}
-                    onCloseClicked={(idx) => removeResourceTab(idx)}
-                    setActiveTab={setActiveResourceTab}
-                >
-                    {resourceTabs}
-                </TabView>
             </section>
         </div>
     )
 }
 
-function findResourcePlural(discovery: DiscoveryResult, gvk: Gvk): string {
-    return discovery.gvks[gvk.group]?.kinds.find(resource => resource.kind === gvk.kind)?.plural || gvk.kind + 's';
+function makeTabSubtitle(gvk: Gvk) {
+    return `${gvk.kind}`;
 }
 
 export default ClusterView;
