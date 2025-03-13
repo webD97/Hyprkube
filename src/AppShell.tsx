@@ -3,11 +3,14 @@ import { ErrorBoundary, FallbackProps } from "react-error-boundary";
 
 import { useCallback, useContext, useEffect, useRef } from "react";
 import classes from './AppShell.module.css';
+import { DevModeOnly } from "./components/DevModeOnly";
 import MegaTabs, { MegaTabDefinition, MegaTabsButton } from "./components/MegaTabs";
+import { WindowControls } from "./components/WindowControls";
 import StatusPanel from "./containers/StatusPanel";
 import ApplicationTabsContext from "./contexts/ApplicationTabs";
 import { useHeadlessTabs } from "./hooks/useHeadlessTabs";
 import ClusterOverview from "./pages/ClusterOverview";
+import { Playground } from "./pages/Playground";
 
 function fallbackRender(context: FallbackProps) {
     // Call resetErrorBoundary() to reset the error boundary and retry the render.
@@ -47,7 +50,7 @@ const Layout: React.FC = () => {
     return (
         <ErrorBoundary fallbackRender={fallbackRender}>
             <div className={classes.container}>
-                <header className={classes.header}>
+                <header className={classes.header} data-tauri-drag-region>
                     <MegaTabs
                         activeTab={activeApplicationTab}
                         setActiveTab={setActiveApplicationTab}
@@ -61,6 +64,14 @@ const Layout: React.FC = () => {
                             onClick={openClusterExplorer}
                         />
                     </MegaTabs>
+                    <section className={classes.right}>
+                        <DevModeOnly>
+                            <button title="Open development playground"
+                                onClick={() => pushApplicationTab({ title: 'Development playground', icon: '🛝' }, () => <Playground />)}
+                            >🛝</button>
+                        </DevModeOnly>
+                        <WindowControls />
+                    </section>
                 </header>
                 <main className={classes.main} ref={megaTabsOutlet}>
                 </main>
