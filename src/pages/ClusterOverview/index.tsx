@@ -1,6 +1,7 @@
 import { useContext, useMemo } from "react";
 import ApplicationTabsContext from "../../contexts/ApplicationTabs";
 import { KubeContextSource, useContextDiscovery } from "../../hooks/useContextDiscovery";
+import { capitalizeFirstLetter } from "../../utils/strings";
 import ClusterView from "../ClusterView";
 import classes from './styles.module.css';
 
@@ -55,7 +56,7 @@ const ClusterOverview: React.FC = () => {
                                                 e.preventDefault();
 
                                                 replaceApplicationTab(
-                                                    { title: contextSource.context, icon: '🌍', keepAlive: true },
+                                                    { title: capitalizeFirstLetter(contextSource.context), icon: '🌍', keepAlive: true },
                                                     () => <ClusterView contextSource={contextSource} />
                                                 );
                                             }}>{contextSource.context}</a>

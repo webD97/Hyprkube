@@ -79,7 +79,7 @@ const ClusterView: React.FC<ClusterViewProps> = (props) => {
 
     const makeTabSubtitle = useCallback((gvk: Gvk) => {
         return `${gvk.kind}`;
-    }, [contextSource.context]);
+    }, []);
 
     return (
         <div className={classes.container}>
