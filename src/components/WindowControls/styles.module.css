@@ -1,6 +1,15 @@
 .container {
     display: flex;
     margin-left: 2em;
+    /* Fill height to ensure that we can click from the edge */
+    height: 100%;
+    align-items: stretch;
+}
+
+.buttonWrapper {
+    display: flex;
+    align-items: center;
+    padding: 0 0.33em;
 }
 
 .button {
@@ -10,15 +19,14 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    margin-right: 0.5em;
     border-radius: 50%;
 }
 
-.button:hover {
+.buttonWrapper:hover .button {
     background-color: rgba(255, 255, 255, 0.2);
 }
 
-.close:hover {
+.buttonWrapper:hover .close {
     background-color: #E81123;
 }
 
