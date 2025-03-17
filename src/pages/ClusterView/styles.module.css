@@ -24,7 +24,7 @@ nav {
     max-height: 100%;
     overflow: scroll;
     border-right: 1px #333333 solid;
-    padding: 0 0.5rem;
+    padding-left: 0.5rem;
 }
 
 nav ul {
@@ -63,7 +63,7 @@ nav details summary:hover {
     grid-area: main;
     max-height: 100%;
     overflow: scroll;
-    padding: 0 0.5rem;
+    padding-left: 0.5rem;
 }
 
 .bottomPanel {
