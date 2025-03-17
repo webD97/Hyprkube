@@ -71,7 +71,7 @@ const ClusterView: React.FC<ClusterViewProps> = ({ contextSource, preSelectedGvk
     return (
         <div className={classes.container}>
             <nav>
-                <h2>Pinned resources</h2>
+                <h2 className={classes.resourceSectionTitle}>Pinned resources</h2>
                 {
                     sortedPinnedGvks.length == 0
                         ? null
@@ -101,7 +101,7 @@ const ClusterView: React.FC<ClusterViewProps> = ({ contextSource, preSelectedGvk
                         )
                 }
 
-                <h2>Builtin resources</h2>
+                <h2 className={classes.resourceSectionTitle}>Builtin resources</h2>
                 {
                     Object.values(discovery?.gvks || [])
                         .filter((group) => !group.isCrd)
@@ -147,7 +147,7 @@ const ClusterView: React.FC<ClusterViewProps> = ({ contextSource, preSelectedGvk
                         })
                 }
 
-                <h2>Custom resources</h2>
+                <h2 className={classes.resourceSectionTitle}>Custom resources</h2>
                 {
                     Object.values(discovery?.gvks || [])
                         .filter((group) => group.isCrd)
