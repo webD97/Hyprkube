@@ -121,7 +121,7 @@ const ResourceListInspector: React.FC<ResourceListInspectorProps> = (props) => {
     }
 
     return (
-        <>
+        <div className={classes.container}>
             <div className={classes.topBar}>
                 <h2>{resourceNamePlural}</h2>
                 <select value={selectedView} onChange={(e) => setSelectedView(e.target.value)}>
@@ -166,28 +166,30 @@ const ResourceListInspector: React.FC<ResourceListInspectorProps> = (props) => {
                 }
                 <div ref={searchbarRef}></div>
             </div>
-            <ResourceList
-                resourceNamePlural={resourceNamePlural}
-                gvk={gvk}
-                namespace={selectedNamespace}
-                columnTitles={columnTitles || []}
-                resourceData={resources}
-                onResourceClicked={yamlViewerFactory()}
-                searchbarPortal={searchbarRef}
-                onResourceContextMenu={(gvk, resourceUID) => {
-                    const { namespace, name } = resources[resourceUID];
+            <div className={classes.tableArea}>
+                <ResourceList
+                    resourceNamePlural={resourceNamePlural}
+                    gvk={gvk}
+                    namespace={selectedNamespace}
+                    columnTitles={columnTitles || []}
+                    resourceData={resources}
+                    onResourceClicked={yamlViewerFactory()}
+                    searchbarPortal={searchbarRef}
+                    onResourceContextMenu={(gvk, resourceUID) => {
+                        const { namespace, name } = resources[resourceUID];
 
-                    return createMenuForResource({
-                        clientId: clientId!, gvk, namespace, name, pushTab: pushBottomTab,
-                        onShowYaml: () => yamlViewerFactory()(gvk, resourceUID),
-                        onSelectNamespace: (namespace) => {
-                            setSelectedNamespace(namespace)
-                        },
-                    });
-                }}
-                onSelectionChanged={setSelectedResources}
-            />
-        </>
+                        return createMenuForResource({
+                            clientId: clientId!, gvk, namespace, name, pushTab: pushBottomTab,
+                            onShowYaml: () => yamlViewerFactory()(gvk, resourceUID),
+                            onSelectNamespace: (namespace) => {
+                                setSelectedNamespace(namespace)
+                            },
+                        });
+                    }}
+                    onSelectionChanged={setSelectedResources}
+                />
+            </div>
+        </div>
     );
 };
 
