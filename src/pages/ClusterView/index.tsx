@@ -89,6 +89,12 @@ const ClusterView: React.FC<ClusterViewProps> = ({ contextSource, preSelectedGvk
                                 }}
                                 onGvkContextMenu={(gvk) => createMenuForPinnedGvks({
                                     clusterProfile: clusterProfiles[0][0],
+                                    openInNewTab: (gvk) => {
+                                        pushApplicationTab(
+                                            { title: capitalizeFirstLetter(contextSource.context), icon: '🌍', keepAlive: true },
+                                            () => <ClusterView contextSource={contextSource} preSelectedGvk={gvk} />
+                                        )
+                                    },
                                     gvk
                                 })}
                             />
@@ -128,6 +134,12 @@ const ClusterView: React.FC<ClusterViewProps> = ({ contextSource, preSelectedGvk
                                     }}
                                     onGvkContextMenu={(gvk) => createMenuForNormalGvks({
                                         clusterProfile: clusterProfiles[0][0],
+                                        openInNewTab: (gvk) => {
+                                            pushApplicationTab(
+                                                { title: capitalizeFirstLetter(contextSource.context), icon: '🌍', keepAlive: true },
+                                                () => <ClusterView contextSource={contextSource} preSelectedGvk={gvk} />
+                                            )
+                                        },
                                         gvk
                                     })}
                                 />
@@ -168,6 +180,12 @@ const ClusterView: React.FC<ClusterViewProps> = ({ contextSource, preSelectedGvk
                                     }}
                                     onGvkContextMenu={(gvk) => createMenuForNormalGvks({
                                         clusterProfile: clusterProfiles[0][0],
+                                        openInNewTab: (gvk) => {
+                                            pushApplicationTab(
+                                                { title: capitalizeFirstLetter(contextSource.context), icon: '🌍', keepAlive: true },
+                                                () => <ClusterView contextSource={contextSource} preSelectedGvk={gvk} />
+                                            )
+                                        },
                                         gvk
                                     })}
                                 />
