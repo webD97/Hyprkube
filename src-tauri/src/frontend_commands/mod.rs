@@ -8,6 +8,7 @@ mod kube_stream_podlogs;
 mod list_pod_container_names;
 mod list_resource_views;
 mod pod_exec;
+mod restart;
 mod watch_gvk_with_view;
 mod watch_namespaces;
 
@@ -21,5 +22,6 @@ pub use kube_stream_podlogs::*;
 pub use list_pod_container_names::*;
 pub use list_resource_views::*;
 pub use pod_exec::*;
+pub use restart::*;
 pub use watch_gvk_with_view::*;
 pub use watch_namespaces::*;

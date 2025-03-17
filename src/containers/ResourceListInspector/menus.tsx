@@ -2,6 +2,7 @@ import { Menu, MenuItem, PredefinedMenuItem, Submenu } from "@tauri-apps/api/men
 import { confirm } from '@tauri-apps/plugin-dialog';
 import { deleteResource } from "../../api/deleteResource";
 import listPodContainerNames from "../../api/listPodContainerNames";
+import restartDeployment from "../../api/restartDeployment";
 import LogPanel from "../../components/LogPanel";
 import { Tab } from "../../components/TabView";
 import { TabElement } from "../../components/TabView/hooks";
@@ -46,6 +47,26 @@ export async function createMenuForResource(options: {
         }),
         PredefinedMenuItem.new({ item: 'Separator' }),
     ];
+
+    if (gvk.kind === "Deployment") {
+        itemPromises.push(
+            MenuItem.new({
+                text: 'Restart',
+                action() {
+                    void restartDeployment(clientId, namespace, name);
+                }
+            })
+        )
+    } else if (gvk.kind === "StatefulSet") {
+        itemPromises.push(
+            MenuItem.new({
+                text: 'Restart',
+                action() {
+                    void restartDeployment(clientId, namespace, name);
+                }
+            })
+        )
+    }
 
     if (namespace !== '') {
         itemPromises.push(

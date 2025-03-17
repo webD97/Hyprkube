@@ -70,6 +70,8 @@ pub fn run() {
             frontend_commands::get_resource_yaml,
             frontend_commands::apply_resource_yaml,
             cluster_profiles::list_cluster_profiles,
+            frontend_commands::restart_deployment,
+            frontend_commands::restart_statefulset,
             cluster_profiles::cluster_profile_add_pinned_gvk,
             cluster_profiles::cluster_profile_remove_pinned_gvk,
             cluster_profiles::cluster_profile_list_pinned_gvks,
