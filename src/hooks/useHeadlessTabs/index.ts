@@ -70,7 +70,5 @@ export function useHeadlessTabs<T>(initialTabs: TabDefinition<T>[] = []): [
         }
     }, [activeTab, tabs.length]);
 
-    console.log(activeTab)
-
     return [tabs, activeTab, pushTab, removeTab, setActiveTab, replaceActiveTab];
 };
