@@ -31,15 +31,15 @@ const ClusterView: React.FC<ClusterViewProps> = ({ contextSource, preSelectedGvk
     const { discovery } = useClusterDiscovery(contextSource.source, contextSource.context);
     const [bottomTabs, activeBottomTab, pushBottomTab, removeBottomTab, setActiveBottomTab] = useTabs();
     const { pushApplicationTab } = useContext(ApplicationTabsContext)!;
-    const tabContext = useContext(MegaTabContext);
+    const { setMeta } = useContext(MegaTabContext)!;
 
     useEffect(() => {
         if (!activeGvk) {
-            tabContext?.setMeta(meta => ({ ...meta, subtitle: undefined }));
+            setMeta(meta => ({ ...meta, subtitle: undefined }));
         } else {
-            tabContext?.setMeta(meta => ({ ...meta, subtitle: makeTabSubtitle(activeGvk) }));
+            setMeta(meta => ({ ...meta, subtitle: makeTabSubtitle(activeGvk) }));
         }
-    }, [activeGvk, tabContext]);
+    }, [activeGvk, setMeta]);
 
     useEffect(() => {
         listClusterProfiles()
