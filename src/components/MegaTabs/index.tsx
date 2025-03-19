@@ -37,7 +37,7 @@ const MegaTabs: React.FC<PropsWithChildren<MegaTabsProps>> = (props) => {
                 {
                     tabs.map(({ meta: { title, icon, immortal, subtitle } }, idx) => (
                         <div key={idx}
-                            title={title}
+                            title={`${title}${subtitle && ` - ${subtitle}`}`}
                             className={`${idx === activeTab ? classes.activeTab : ''} ${classes.tab}`}
                             onClick={() => setActiveTab(idx)}
                             onAuxClick={() => !immortal && onCloseClicked(idx)}
@@ -47,8 +47,8 @@ const MegaTabs: React.FC<PropsWithChildren<MegaTabsProps>> = (props) => {
                                 <span className={classes.tabLabel}>{title}</span>
                                 {
                                     subtitle
-                                    ? <span className={classes.tabSubtitle}>{subtitle}</span>
-                                    : null
+                                        ? <span className={classes.tabSubtitle}>{subtitle}</span>
+                                        : null
                                 }
                             </span>
                             {

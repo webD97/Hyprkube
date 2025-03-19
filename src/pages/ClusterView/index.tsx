@@ -26,6 +26,7 @@ export interface ClusterViewProps {
 const ClusterView: React.FC<ClusterViewProps> = ({ contextSource, preSelectedGvk }) => {
     const [clusterProfiles, setClusterProfiles] = useState<ClusterProfile[]>([]);
     const [activeGvk, setActiveGvk] = useState<Gvk | undefined>(preSelectedGvk);
+    const [currentNamespace, setCurrentNamespace] = useState('');
     const pinnedGvks = usePinnedGvks(clusterProfiles?.[0]?.[0]);
     const hiddenGvks = useHiddenGvks(clusterProfiles?.[0]?.[0]);
     const { discovery } = useClusterDiscovery(contextSource.source, contextSource.context);
@@ -37,9 +38,9 @@ const ClusterView: React.FC<ClusterViewProps> = ({ contextSource, preSelectedGvk
         if (!activeGvk) {
             setMeta(meta => ({ ...meta, subtitle: undefined }));
         } else {
-            setMeta(meta => ({ ...meta, subtitle: makeTabSubtitle(activeGvk) }));
+            setMeta(meta => ({ ...meta, subtitle: makeTabSubtitle(activeGvk, currentNamespace) }));
         }
-    }, [activeGvk, setMeta]);
+    }, [activeGvk, currentNamespace, setMeta]);
 
     useEffect(() => {
         listClusterProfiles()
@@ -212,6 +213,7 @@ const ClusterView: React.FC<ClusterViewProps> = ({ contextSource, preSelectedGvk
                                 contextSource={contextSource}
                                 clusterProfile={clusterProfiles[0][0]}
                                 pushBottomTab={pushBottomTab}
+                                onNamespaceChanged={setCurrentNamespace}
                             />
                         )
                 }
@@ -220,8 +222,8 @@ const ClusterView: React.FC<ClusterViewProps> = ({ contextSource, preSelectedGvk
     )
 }
 
-function makeTabSubtitle(gvk: Gvk) {
-    return `${gvk.kind}`;
+function makeTabSubtitle(gvk: Gvk, namespace: string) {
+    return `${gvk.kind}${namespace && ` (${namespace})`}`;
 }
 
 export default ClusterView;

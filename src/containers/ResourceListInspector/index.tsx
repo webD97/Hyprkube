@@ -23,11 +23,18 @@ export interface ResourceListInspectorProps {
     gvk: Gvk,
     contextSource: KubeContextSource,
     clusterProfile: string,
-    pushBottomTab: (tab: TabElement) => void
+    pushBottomTab: (tab: TabElement) => void,
+    onNamespaceChanged?: (namespace: string) => void,
 }
 
 const ResourceListInspector: React.FC<ResourceListInspectorProps> = (props) => {
-    const { gvk, contextSource, clusterProfile, pushBottomTab } = props;
+    const {
+        gvk,
+        contextSource,
+        clusterProfile,
+        pushBottomTab,
+        onNamespaceChanged = () => undefined
+    } = props;
 
     const [availableViews, setAvailableViews] = useState<ResourceViewDef[]>([]);
     const [selectedView, setSelectedView] = useState("");
@@ -60,9 +67,10 @@ const ResourceListInspector: React.FC<ResourceListInspectorProps> = (props) => {
             .then(namespace => {
                 setResourceDefaultNamespace(namespace);
                 setSelectedNamespace(namespace);
+                onNamespaceChanged(namespace);
             })
             .catch(e => alert(JSON.stringify(e)))
-    }, [clusterProfile, gvk]);
+    }, [clusterProfile, gvk, onNamespaceChanged]);
 
     const deleteSelectedResources = useCallback(() => {
         if (!clientId) return console.warn('Cannot delete, clientId is not set!');
@@ -136,7 +144,10 @@ const ResourceListInspector: React.FC<ResourceListInspectorProps> = (props) => {
                         ? null
                         : (
                             <>
-                                <select value={selectedNamespace} onChange={(e) => setSelectedNamespace(e.target.value)}>
+                                <select value={selectedNamespace} onChange={(e) => {
+                                    setSelectedNamespace(e.target.value);
+                                    onNamespaceChanged(e.target.value);
+                                }}>
                                     <option label="(All namespaces)"></option>
                                     {
                                         Object.values(allNamespaces).map(namespace => (
