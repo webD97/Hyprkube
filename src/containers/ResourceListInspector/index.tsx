@@ -21,6 +21,7 @@ import classes from './styles.module.css';
 
 export interface ResourceListInspectorProps {
     gvk: Gvk,
+    preSelectedNamespace: string,
     contextSource: KubeContextSource,
     clusterProfile: string,
     pushBottomTab: (tab: TabElement) => void,
@@ -33,6 +34,7 @@ const ResourceListInspector: React.FC<ResourceListInspectorProps> = (props) => {
         contextSource,
         clusterProfile,
         pushBottomTab,
+        preSelectedNamespace,
         onNamespaceChanged = () => undefined
     } = props;
 
@@ -40,7 +42,7 @@ const ResourceListInspector: React.FC<ResourceListInspectorProps> = (props) => {
     const [selectedView, setSelectedView] = useState("");
     const { discovery, clientId, lastError } = useClusterDiscovery(contextSource.source, contextSource.context);
     const allNamespaces = useClusterNamespaces(clientId);
-    const [selectedNamespace, setSelectedNamespace] = useState('default');
+    const [selectedNamespace, setSelectedNamespace] = useState(preSelectedNamespace);
     const [resourceDefaultNamespace, setResourceDefaultNamespace] = useState('default');
     const [selectedResources, setSelectedResources] = useState<[string, DisplayableResource][]>([]);
     const [columnTitles, resources] = useResourceWatch(clientId, gvk, selectedView, selectedNamespace);
@@ -63,6 +65,8 @@ const ResourceListInspector: React.FC<ResourceListInspectorProps> = (props) => {
     }, [clientId, gvk]);
 
     useEffect(() => {
+        if (preSelectedNamespace) return;
+
         getDefaultNamespace(clusterProfile, gvk)
             .then(namespace => {
                 setResourceDefaultNamespace(namespace);
@@ -70,7 +74,7 @@ const ResourceListInspector: React.FC<ResourceListInspectorProps> = (props) => {
                 onNamespaceChanged(namespace);
             })
             .catch(e => alert(JSON.stringify(e)))
-    }, [clusterProfile, gvk, onNamespaceChanged]);
+    }, [clusterProfile, gvk, onNamespaceChanged, preSelectedNamespace]);
 
     const deleteSelectedResources = useCallback(() => {
         if (!clientId) return console.warn('Cannot delete, clientId is not set!');

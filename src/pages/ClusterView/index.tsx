@@ -1,6 +1,6 @@
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
-import { useContext, useEffect, useMemo, useState } from 'react';
+import { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import listClusterProfiles, { ClusterProfile } from '../../api/listClusterProfiles';
 import EmojiHint from '../../components/EmojiHint';
 import GvkList from '../../components/GvkList';
@@ -9,7 +9,7 @@ import TabView from '../../components/TabView';
 import { useTabs } from '../../components/TabView/hooks';
 import ResourceListInspector from '../../containers/ResourceListInspector';
 import ApplicationTabsContext from '../../contexts/ApplicationTabs';
-import { useClusterDiscovery } from '../../hooks/useClusterDiscovery';
+import { DiscoveryResult, useClusterDiscovery } from '../../hooks/useClusterDiscovery';
 import { KubeContextSource } from '../../hooks/useContextDiscovery';
 import useHiddenGvks from '../../hooks/useHiddenGvks';
 import usePinnedGvks from '../../hooks/usePinnedGvks';
@@ -20,27 +20,28 @@ import classes from './styles.module.css';
 
 export interface ClusterViewProps {
     contextSource: KubeContextSource,
-    preSelectedGvk?: Gvk
+    preSelectedGvk?: Gvk,
+    preSelectedNamespace?: string
 }
 
-const ClusterView: React.FC<ClusterViewProps> = ({ contextSource, preSelectedGvk }) => {
+const ClusterView: React.FC<ClusterViewProps> = ({ contextSource, preSelectedGvk, preSelectedNamespace }) => {
     const [clusterProfiles, setClusterProfiles] = useState<ClusterProfile[]>([]);
     const [activeGvk, setActiveGvk] = useState<Gvk | undefined>(preSelectedGvk);
-    const [currentNamespace, setCurrentNamespace] = useState('');
     const pinnedGvks = usePinnedGvks(clusterProfiles?.[0]?.[0]);
     const hiddenGvks = useHiddenGvks(clusterProfiles?.[0]?.[0]);
     const { discovery } = useClusterDiscovery(contextSource.source, contextSource.context);
     const [bottomTabs, activeBottomTab, pushBottomTab, removeBottomTab, setActiveBottomTab] = useTabs();
     const { pushApplicationTab } = useContext(ApplicationTabsContext)!;
     const { setMeta } = useContext(MegaTabContext)!;
+    const [currentNamespace, setCurrentNamespace] = useState(preSelectedNamespace || 'default');
 
     useEffect(() => {
         if (!activeGvk) {
             setMeta(meta => ({ ...meta, subtitle: undefined }));
         } else {
-            setMeta(meta => ({ ...meta, subtitle: makeTabSubtitle(activeGvk, currentNamespace) }));
+            setMeta(meta => ({ ...meta, subtitle: makeTabSubtitle(discovery, activeGvk, currentNamespace) }));
         }
-    }, [activeGvk, currentNamespace, setMeta]);
+    }, [activeGvk, currentNamespace, discovery, setMeta]);
 
     useEffect(() => {
         listClusterProfiles()
@@ -48,6 +49,11 @@ const ClusterView: React.FC<ClusterViewProps> = ({ contextSource, preSelectedGvk
                 setClusterProfiles(profiles);
             })
             .catch(e => alert(JSON.stringify(e)));
+    }, []);
+
+    const onNamespaceChanged = useCallback((namespace: string) => {
+        console.log({ namespace })
+        setCurrentNamespace(namespace);
     }, []);
 
     dayjs.extend(relativeTime);
@@ -85,7 +91,7 @@ const ClusterView: React.FC<ClusterViewProps> = ({ contextSource, preSelectedGvk
                                 onResourceAuxClicked={(gvk) => {
                                     pushApplicationTab(
                                         { title: capitalizeFirstLetter(contextSource.context), icon: '🌍', keepAlive: true },
-                                        () => <ClusterView contextSource={contextSource} preSelectedGvk={gvk} />
+                                        () => <ClusterView preSelectedNamespace={currentNamespace} contextSource={contextSource} preSelectedGvk={gvk} />
                                     );
                                 }}
                                 onGvkContextMenu={(gvk) => createMenuForPinnedGvks({
@@ -210,10 +216,11 @@ const ClusterView: React.FC<ClusterViewProps> = ({ contextSource, preSelectedGvk
                         : (
                             <ResourceListInspector
                                 gvk={activeGvk}
+                                preSelectedNamespace={preSelectedNamespace || 'default'}
+                                onNamespaceChanged={onNamespaceChanged}
                                 contextSource={contextSource}
                                 clusterProfile={clusterProfiles[0][0]}
                                 pushBottomTab={pushBottomTab}
-                                onNamespaceChanged={setCurrentNamespace}
                             />
                         )
                 }
@@ -222,8 +229,15 @@ const ClusterView: React.FC<ClusterViewProps> = ({ contextSource, preSelectedGvk
     )
 }
 
-function makeTabSubtitle(gvk: Gvk, namespace: string) {
-    return `${gvk.kind}${namespace && ` (${namespace})`}`;
+function makeTabSubtitle(discovery: DiscoveryResult, gvk: Gvk, namespace: string) {
+    if (findResourceScope(discovery, gvk) === 'namespaced') {
+        return `${gvk.kind}${namespace && ` (${namespace})`}`;
+    }
+    return `${gvk.kind}`;
+}
+
+function findResourceScope(discovery: DiscoveryResult, gvk: Gvk) {
+    return discovery.gvks[gvk.group]?.kinds.find(resource => resource.kind === gvk.kind)?.scope || 'namespaced';
 }
 
 export default ClusterView;
