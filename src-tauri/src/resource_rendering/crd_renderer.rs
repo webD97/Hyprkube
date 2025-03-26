@@ -82,28 +82,39 @@ impl ResourceRenderer for CrdRenderer {
             let empty_str = json!("");
 
             apts.iter()
-                .map(|c| (c.name.clone(), c.json_path.clone()))
-                .map(|(title, json_path)| {
-                    let is_age_column = title == *"Age";
-                    has_own_age_column = has_own_age_column || is_age_column;
+                .map(|c| (c.name.clone(), c.json_path.clone(), c.type_.clone()))
+                .map(|(title, json_path, type_)| {
+                    has_own_age_column = has_own_age_column || (title == *"Age");
 
                     let value = JsonPath::parse(format!("${}", json_path).as_str())
-                        .unwrap()
-                        .query(&obj)
-                        .at_most_one()
-                        .ok()
-                        .flatten()
-                        .unwrap_or(&empty_str)
-                        .as_str()
-                        .unwrap_or("");
+                        .map_err(|e| format!("\"{}\": {}", json_path, e))
+                        .map(|jsonpath| {
+                            jsonpath
+                                .query(&obj)
+                                .at_most_one()
+                                .ok()
+                                .flatten()
+                                .unwrap_or(&empty_str)
+                        })
+                        .map(|e| e.as_str().unwrap());
 
-                    if is_age_column {
-                        return FrontendValue::RelativeTime(super::RelativeTime {
-                            iso: value.to_owned(),
-                        });
+                    match value {
+                        Err(e) => {
+                            FrontendValue::ColoredString(crate::resource_rendering::ColoredString {
+                                string: e,
+                                color: "red".into(),
+                            })
+                        }
+                        Ok(value) => {
+                            if type_ == *"date" {
+                                return FrontendValue::RelativeTime(super::RelativeTime {
+                                    iso: value.to_owned(),
+                                });
+                            }
+
+                            FrontendValue::PlainString(value.to_owned())
+                        }
                     }
-
-                    FrontendValue::PlainString(value.to_owned())
                 })
                 .map(|s| Ok(vec![s]))
                 .for_each(|value| values.push(value));
