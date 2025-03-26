@@ -34,7 +34,9 @@ impl ResourceRenderer for CrdRenderer {
                 .for_each(|name| columns.push(name));
         }
 
-        columns.push("Age".to_owned());
+        if !columns.contains(&"Age".to_owned()) {
+            columns.push("Age".to_owned());
+        }
 
         Ok(columns)
     }
@@ -73,14 +75,19 @@ impl ResourceRenderer for CrdRenderer {
             )]));
         }
 
+        let mut has_own_age_column = false;
+
         if let Some(apts) = crd_version.additional_printer_columns.as_ref() {
             let obj = json!(obj);
             let empty_str = json!("");
 
             apts.iter()
-                .map(|c| c.clone().json_path)
-                .map(|json_path| {
-                    JsonPath::parse(format!("${}", json_path).as_str())
+                .map(|c| (c.name.clone(), c.json_path.clone()))
+                .map(|(title, json_path)| {
+                    let is_age_column = title == *"Age";
+                    has_own_age_column = has_own_age_column || is_age_column;
+
+                    let value = JsonPath::parse(format!("${}", json_path).as_str())
                         .unwrap()
                         .query(&obj)
                         .at_most_one()
@@ -88,20 +95,30 @@ impl ResourceRenderer for CrdRenderer {
                         .flatten()
                         .unwrap_or(&empty_str)
                         .as_str()
-                        .unwrap_or("")
+                        .unwrap_or("");
+
+                    if is_age_column {
+                        return FrontendValue::RelativeTime(super::RelativeTime {
+                            iso: value.to_owned(),
+                        });
+                    }
+
+                    FrontendValue::PlainString(value.to_owned())
                 })
-                .map(|s| Ok(vec![FrontendValue::PlainString(s.to_owned())]))
+                .map(|s| Ok(vec![s]))
                 .for_each(|value| values.push(value));
         }
 
-        values.push(Ok(vec![FrontendValue::RelativeTime(super::RelativeTime {
-            iso: obj
-                .metadata
-                .creation_timestamp
-                .as_ref()
-                .map_or("".into(), |v| v.0.to_rfc3339())
-                .to_owned(),
-        })]));
+        if !has_own_age_column {
+            values.push(Ok(vec![FrontendValue::RelativeTime(super::RelativeTime {
+                iso: obj
+                    .metadata
+                    .creation_timestamp
+                    .as_ref()
+                    .map_or("".into(), |v| v.0.to_rfc3339())
+                    .to_owned(),
+            })]));
+        }
 
         Ok(values)
     }
