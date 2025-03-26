@@ -42,7 +42,7 @@ function createColumns(titles: string[]) {
     const columnHelper = createColumnHelper<_TData>();
     const dataColumns = titles.map((title, idx) => {
         return columnHelper.accessor(row => row[1].columns[idx], {
-            id: title,
+            id: `${idx}_${title}`,
             header: () => title,
             sortingFn: (rowA, rowB, columnId) => {
                 const valueA = rowA.getValue<ResourceField>(columnId).sortableValue;
