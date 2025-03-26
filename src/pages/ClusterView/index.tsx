@@ -52,7 +52,6 @@ const ClusterView: React.FC<ClusterViewProps> = ({ contextSource, preSelectedGvk
     }, []);
 
     const onNamespaceChanged = useCallback((namespace: string) => {
-        console.log({ namespace })
         setCurrentNamespace(namespace);
     }, []);
 
