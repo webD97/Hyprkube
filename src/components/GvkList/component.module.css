@@ -27,6 +27,15 @@
     margin: 0 .5em;
 }
 
+.container summary {
+    list-style: none;
+}
+
+.container summary::-webkit-details-marker,
+.container summary::marker {
+    display: none;
+}
+
 .apiGroup {
     color: rgba(255, 255, 255, 0.4);
 }

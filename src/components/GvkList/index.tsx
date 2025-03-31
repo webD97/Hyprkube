@@ -75,38 +75,44 @@ const GvkList: React.FC<GvkListProps> = (props) => {
         groupedGvks[group].push(gvk);
     });
 
-    return Object.entries(groupedGvks)
-        .sort(([groupA], [groupB]) => groupA.localeCompare(groupB))
-        .map(([group, gvks], idx) => (
-            <details key={idx}>
-                <summary>
-                    {
-                        (() => {
-                            if (group.length == 0) {
-                                return 'core';
-                            }
-
-                            const groupFragments = group.split('.');
-
-                            return <>
-                                <span>{groupFragments[0]}</span>
+    return (
+        <div className={[classes.container, className].filter(c => !!c).join(' ')}>
+            {
+                Object.entries(groupedGvks)
+                    .sort(([groupA], [groupB]) => groupA.localeCompare(groupB))
+                    .map(([group, gvks], idx) => (
+                        <details key={idx}>
+                            <summary>
                                 {
-                                    groupFragments.length > 1
-                                        ? <span className={classes.apiGroup}>.{groupFragments.slice(1).join('.')}</span>
-                                        : null
+                                    (() => {
+                                        if (group.length == 0) {
+                                            return 'core';
+                                        }
+
+                                        const groupFragments = group.split('.');
+
+                                        return <>
+                                            <span>{groupFragments[0]}</span>
+                                            {
+                                                groupFragments.length > 1
+                                                    ? <span className={classes.apiGroup}>.{groupFragments.slice(1).join('.')}</span>
+                                                    : null
+                                            }
+                                        </>;
+                                    })()
                                 }
-                            </>;
-                        })()
-                    }
-                </summary>
-                <GvkList flat className={classes.indent}
-                    gvks={gvks}
-                    onResourceClicked={onResourceClicked}
-                    onResourceAuxClicked={onResourceAuxClicked}
-                    onGvkContextMenu={onGvkContextMenu}
-                />
-            </details>
-        ));
+                            </summary>
+                            <GvkList flat className={classes.indent}
+                                gvks={gvks}
+                                onResourceClicked={onResourceClicked}
+                                onResourceAuxClicked={onResourceAuxClicked}
+                                onGvkContextMenu={onGvkContextMenu}
+                            />
+                        </details>
+                    ))
+            }
+        </div>
+    );
 };
 
 export default GvkList;
