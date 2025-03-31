@@ -158,8 +158,16 @@ const ResourceList: React.FC<ResourceViewProps> = (props) => {
                             <input type="text"
                                 className={styles.quickSearch}
                                 placeholder="Quick search"
-                                value={columnFilters.find(x => x.id === 'Name')?.value as string ?? ''}
-                                onChange={(e) => table.setColumnFilters(() => ([{ id: 'Name', value: e.target.value }]))}
+                                value={columnFilters.find(x => x.id.endsWith('Name'))?.value as string ?? ''}
+                                onChange={(e) => table.setColumnFilters((currentFilters) => {
+                                    const nameColumnId = columns.map(column => column.id!).find((id) => id.endsWith('Name'));
+                                    if (!nameColumnId) return currentFilters;
+
+                                    return [
+                                        ...currentFilters.filter(({ id }) => id !== nameColumnId),
+                                        { id: nameColumnId, value: e.target.value }
+                                    ];
+                                })}
                             />
                         ),
                         searchbarPortal.current
