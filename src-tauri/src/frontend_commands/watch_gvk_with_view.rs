@@ -1,6 +1,10 @@
-use std::sync::Arc;
+use std::{pin::pin, sync::Arc};
 
-use futures::{StreamExt as _, TryStreamExt as _};
+use futures::StreamExt as _;
+use kube::runtime::{
+    watcher::{self, Event},
+    WatchStreamExt,
+};
 use serde::Serialize;
 use tauri::State;
 
@@ -14,13 +18,7 @@ use crate::{
 pub enum WatchStreamEvent {
     #[serde(rename_all = "camelCase")]
     AnnounceColumns { titles: Vec<String> },
-    Created {
-        uid: String,
-        namespace: String,
-        name: String,
-        columns: Vec<Result<Vec<FrontendValue>, String>>,
-    },
-    Updated {
+    Applied {
         uid: String,
         namespace: String,
         name: String,
@@ -67,11 +65,6 @@ pub async fn watch_gvk_with_view(
     let views = Arc::clone(&views);
     let client_registry_arc = Arc::clone(&client_registry_arc);
 
-    let mut stream = api
-        .watch(&kube::api::WatchParams::default(), "0")
-        .await?
-        .boxed();
-
     let stream = async move {
         let view = views.get_renderer(&gvk, view_name.as_str()).await;
 
@@ -87,49 +80,47 @@ pub async fn watch_gvk_with_view(
             })
             .unwrap();
 
-        loop {
-            let status = stream.try_next().await;
-            let event = match status {
-                Ok(event) => event,
-                Err(error) => {
-                    eprintln!("{error}");
+        let watch_stream = kube::runtime::watcher(
+            api,
+            watcher::Config {
+                initial_list_strategy: watcher::InitialListStrategy::StreamingList,
+                ..Default::default()
+            },
+        );
+
+        let mut stream = pin!(watch_stream.default_backoff());
+
+        while let Some(event) = stream.next().await {
+            let downstream_event = match event {
+                Ok(Event::Init) => {
+                    println!("Watch init");
                     None
                 }
-            };
-
-            let to_send = match event {
-                Some(kube::api::WatchEvent::Added(obj)) => {
+                Ok(Event::InitDone) => {
+                    println!("Watch init done");
+                    None
+                }
+                Ok(Event::InitApply(obj)) | Ok(Event::Apply(obj)) => {
                     let columns = view.render(&gvk, crd, &obj).unwrap();
-                    Some(WatchStreamEvent::Created {
+                    Some(WatchStreamEvent::Applied {
                         uid: obj.metadata.uid.expect("no uid"),
                         namespace: obj.metadata.namespace.unwrap_or("".into()),
                         name: obj.metadata.name.unwrap_or("".into()),
                         columns,
                     })
                 }
-                Some(kube::api::WatchEvent::Modified(obj)) => {
-                    let columns = view.render(&gvk, crd, &obj).unwrap();
-                    Some(WatchStreamEvent::Updated {
-                        uid: obj.metadata.uid.expect("no uid"),
-                        namespace: obj.metadata.namespace.unwrap_or("".into()),
-                        name: obj.metadata.name.unwrap_or("".into()),
-                        columns,
-                    })
-                }
-                Some(kube::api::WatchEvent::Deleted(obj)) => Some(WatchStreamEvent::Deleted {
+                Ok(Event::Delete(obj)) => Some(WatchStreamEvent::Deleted {
                     namespace: obj.metadata.namespace.unwrap_or("".into()),
                     name: obj.metadata.name.unwrap_or("".into()),
                     uid: obj.metadata.uid.expect("no uid"),
                 }),
-                Some(kube::api::WatchEvent::Bookmark(_obj)) => None,
-                Some(kube::api::WatchEvent::Error(error)) => {
-                    eprintln!("{error}");
-                    return;
+                Err(e) => {
+                    eprintln!("Watch error: {e}");
+                    None
                 }
-                None => None,
             };
 
-            if let Some(message) = to_send {
+            if let Some(message) = downstream_event {
                 match channel.send(message) {
                     Ok(()) => (),
                     Err(error) => eprintln!("error sending to channel: {error}"),

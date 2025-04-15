@@ -1,7 +1,7 @@
 import { Channel, invoke } from "@tauri-apps/api/core";
+import dayjs from "dayjs";
 import { useEffect, useState } from "react";
 import { Gvk } from "../../model/k8s";
-import dayjs from "dayjs";
 
 type ResourceFieldComponent =
     {
@@ -59,11 +59,7 @@ export type DisplayableResource = {
 
 export type WatchEvent =
     | {
-        event: 'created';
-        data: Resource
-    }
-    | {
-        event: 'updated';
+        event: 'applied';
         data: Resource
     }
     | {
@@ -126,14 +122,7 @@ export default function useKubernetesResourceWatch(kubernetesClientId: string | 
             if (message.event === 'announceColumns') {
                 setColumnTitles(message.data.titles);
             }
-            else if (message.event === 'created') {
-                const { uid } = message.data;
-                setResources(datasets => ({
-                    ...datasets,
-                    [uid]: resourceToDisplayableResource(message.data)
-                }));
-            }
-            else if (message.event === 'updated') {
+            else if (message.event === 'applied') {
                 const { uid } = message.data;
                 setResources(datasets => ({
                     ...datasets,
@@ -161,7 +150,7 @@ export default function useKubernetesResourceWatch(kubernetesClientId: string | 
             .catch(e => alert(e));
 
         return () => {
-            invoke('cleanup_channel', { channel });
+            void invoke('cleanup_channel', { channel });
         };
     }, [gvk, kubernetesClientId, viewName, namespace]);
 

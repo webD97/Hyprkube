@@ -3,11 +3,7 @@ import { useEffect, useState } from "react";
 
 export type WatchEvent =
     | {
-        event: 'created';
-        data: string
-    }
-    | {
-        event: 'updated';
+        event: 'applied';
         data: string
     }
     | {
@@ -24,7 +20,7 @@ export default function useClusterNamespaces(kubernetesClientId: string | undefi
         const channel = new Channel<WatchEvent>();
 
         channel.onmessage = (message) => {
-            if (message.event === 'created') {
+            if (message.event === 'applied') {
                 setNamespaces(namespaces => ([
                     ...namespaces,
                     message.data
@@ -43,7 +39,7 @@ export default function useClusterNamespaces(kubernetesClientId: string | undefi
             .catch(e => alert(e));
 
         return () => {
-            invoke('cleanup_channel', { channel });
+            void invoke('cleanup_channel', { channel });
         };
     }, [kubernetesClientId]);
 

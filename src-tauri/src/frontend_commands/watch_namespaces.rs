@@ -1,5 +1,11 @@
-use futures::{StreamExt as _, TryStreamExt as _};
+use std::pin::pin;
+
+use futures::StreamExt as _;
 use k8s_openapi::api::core::v1::Namespace;
+use kube::runtime::{
+    watcher::{self, Event},
+    WatchStreamExt as _,
+};
 use serde::Serialize;
 use tauri::State;
 
@@ -11,7 +17,7 @@ use crate::{
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase", tag = "event", content = "data")]
 pub enum WatchNamespacesEvent {
-    Created(String),
+    Applied(String),
     Deleted(String),
 }
 
@@ -29,38 +35,40 @@ pub async fn watch_namespaces(
 
     let api: kube::Api<Namespace> = kube::Api::all(client);
 
-    let mut stream = api
-        .watch(&kube::api::WatchParams::default(), "0")
-        .await?
-        .boxed();
+    let watch_stream = kube::runtime::watcher(
+        api,
+        watcher::Config {
+            initial_list_strategy: watcher::InitialListStrategy::StreamingList,
+            ..Default::default()
+        },
+    );
 
     let stream = async move {
-        loop {
-            let event = match stream.try_next().await {
-                Ok(event) => event,
-                Err(error) => {
-                    eprintln!("{error}");
+        let mut stream = pin!(watch_stream.default_backoff());
+
+        while let Some(event) = stream.next().await {
+            let downstream_event = match event {
+                Ok(Event::Init) => {
+                    println!("Watch init");
+                    None
+                }
+                Ok(Event::InitDone) => {
+                    println!("Watch init done");
+                    None
+                }
+                Ok(Event::InitApply(obj)) | Ok(Event::Apply(obj)) => Some(
+                    WatchNamespacesEvent::Applied(obj.metadata.name.unwrap_or("".into())),
+                ),
+                Ok(Event::Delete(obj)) => Some(WatchNamespacesEvent::Deleted(
+                    obj.metadata.name.unwrap_or("".into()),
+                )),
+                Err(e) => {
+                    eprintln!("Watch error: {e}");
                     None
                 }
             };
 
-            let to_send = match event {
-                Some(kube::api::WatchEvent::Added(obj)) => Some(WatchNamespacesEvent::Created(
-                    obj.metadata.name.unwrap_or("".into()),
-                )),
-                Some(kube::api::WatchEvent::Deleted(obj)) => Some(WatchNamespacesEvent::Deleted(
-                    obj.metadata.name.unwrap_or("".into()),
-                )),
-                Some(kube::api::WatchEvent::Modified(_obj)) => None,
-                Some(kube::api::WatchEvent::Bookmark(_obj)) => None,
-                Some(kube::api::WatchEvent::Error(error)) => {
-                    eprintln!("{error}");
-                    return;
-                }
-                None => None,
-            };
-
-            if let Some(message) = to_send {
+            if let Some(message) = downstream_event {
                 match channel.send(message) {
                     Ok(()) => (),
                     Err(error) => eprintln!("error sending to channel: {error}"),
