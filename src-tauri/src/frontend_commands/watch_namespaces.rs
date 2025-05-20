@@ -31,6 +31,7 @@ pub async fn watch_namespaces(
 
     let stream = async move {
         crate::internal::resources::watch(api)
+            .await
             .map(|event| match event {
                 ResourceWatchStreamEvent::Applied { resource } => {
                     WatchNamespacesEvent::Applied(resource.metadata.name.unwrap_or_default())

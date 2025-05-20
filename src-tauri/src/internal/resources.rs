@@ -1,11 +1,12 @@
 use futures::{Stream, StreamExt as _};
 use kube::{
     runtime::{
-        watcher::{self, Event},
+        watcher::{self, Event, InitialListStrategy},
         WatchStreamExt as _,
     },
-    Api, Resource,
+    Api, Client, Resource,
 };
+use semver::VersionReq;
 use serde::{de::DeserializeOwned, Serialize};
 use std::fmt::Debug;
 
@@ -17,14 +18,14 @@ pub enum ResourceWatchStreamEvent<K: Resource + Clone + DeserializeOwned + Debug
 }
 
 /// Create a resource watch stream for a Kubernetes resource.
-pub fn watch<K>(api: Api<K>) -> impl Stream<Item = ResourceWatchStreamEvent<K>>
+pub async fn watch<K>(api: Api<K>) -> impl Stream<Item = ResourceWatchStreamEvent<K>>
 where
     K: Resource + Clone + DeserializeOwned + std::fmt::Debug + Send + 'static,
 {
     kube::runtime::watcher(
-        api,
+        api.clone(),
         watcher::Config {
-            initial_list_strategy: watcher::InitialListStrategy::StreamingList,
+            initial_list_strategy: determine_initial_list_strategy(api.into_client()).await,
             ..Default::default()
         },
     )
@@ -49,4 +50,26 @@ where
             }
         }
     })
+}
+
+pub async fn determine_initial_list_strategy(client: Client) -> InitialListStrategy {
+    let streaming_list_requirement =
+        VersionReq::parse(">=1.32,<1.33").expect("must be a valid semver");
+
+    let apiserver_version = client.apiserver_version().await.unwrap();
+    let apiserver_version = apiserver_version.git_version.trim_start_matches('v');
+
+    let apiserver_version = semver::Version::parse(apiserver_version)
+        .expect("expected a valid version from apiserver request");
+
+    match streaming_list_requirement.matches(&apiserver_version) {
+        true => {
+            println!("Using StreamingList");
+            InitialListStrategy::StreamingList
+        }
+        false => {
+            println!("Using ListWatch");
+            InitialListStrategy::ListWatch
+        }
+    }
 }

@@ -75,6 +75,7 @@ pub async fn watch_gvk_with_view(
             .unwrap();
 
         crate::internal::resources::watch(api)
+            .await
             .map(|event| match event {
                 ResourceWatchStreamEvent::Applied { resource } => ResourceEvent::Applied {
                     uid: resource.metadata.uid.clone().expect("no uid"),
