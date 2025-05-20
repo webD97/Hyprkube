@@ -1,17 +1,12 @@
-use std::pin::pin;
-
 use futures::StreamExt as _;
 use k8s_openapi::api::core::v1::Namespace;
-use kube::runtime::{
-    watcher::{self, Event},
-    WatchStreamExt as _,
-};
 use serde::Serialize;
 use tauri::State;
 
 use crate::{
     app_state::{ClientId, JoinHandleStoreState, KubernetesClientRegistryState},
     frontend_types::BackendError,
+    internal::resources::ResourceWatchStreamEvent,
 };
 
 #[derive(Clone, Serialize)]
@@ -32,49 +27,24 @@ pub async fn watch_namespaces(
     println!("Streaming namespaces to channel {channel_id}");
 
     let client = client_registry_arc.try_clone(&client_id)?;
-
     let api: kube::Api<Namespace> = kube::Api::all(client);
 
-    let watch_stream = kube::runtime::watcher(
-        api,
-        watcher::Config {
-            initial_list_strategy: watcher::InitialListStrategy::StreamingList,
-            ..Default::default()
-        },
-    );
-
     let stream = async move {
-        let mut stream = pin!(watch_stream.default_backoff());
-
-        while let Some(event) = stream.next().await {
-            let downstream_event = match event {
-                Ok(Event::Init) => {
-                    println!("Watch init");
-                    None
+        crate::internal::resources::watch(api)
+            .map(|event| match event {
+                ResourceWatchStreamEvent::Applied { resource } => {
+                    WatchNamespacesEvent::Applied(resource.metadata.name.unwrap_or_default())
                 }
-                Ok(Event::InitDone) => {
-                    println!("Watch init done");
-                    None
+                ResourceWatchStreamEvent::Deleted { resource } => {
+                    WatchNamespacesEvent::Deleted(resource.metadata.name.unwrap_or_default())
                 }
-                Ok(Event::InitApply(obj)) | Ok(Event::Apply(obj)) => Some(
-                    WatchNamespacesEvent::Applied(obj.metadata.name.unwrap_or("".into())),
-                ),
-                Ok(Event::Delete(obj)) => Some(WatchNamespacesEvent::Deleted(
-                    obj.metadata.name.unwrap_or("".into()),
-                )),
-                Err(e) => {
-                    eprintln!("Watch error: {e}");
-                    None
+            })
+            .for_each(|frontend_event| async {
+                if let Err(error) = channel.send(frontend_event) {
+                    eprintln!("error sending to channel: {error}")
                 }
-            };
-
-            if let Some(message) = downstream_event {
-                match channel.send(message) {
-                    Ok(()) => (),
-                    Err(error) => eprintln!("error sending to channel: {error}"),
-                }
-            }
-        }
+            })
+            .await;
     };
 
     join_handle_store.submit(channel_id, stream);

@@ -5,6 +5,7 @@ mod app_state;
 mod cluster_profiles;
 mod frontend_commands;
 mod frontend_types;
+mod internal;
 mod persistence;
 mod resource_rendering;
 

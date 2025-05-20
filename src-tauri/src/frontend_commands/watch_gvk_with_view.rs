@@ -1,21 +1,19 @@
-use std::{pin::pin, sync::Arc};
+use std::sync::Arc;
 
 use futures::StreamExt as _;
-use kube::runtime::{
-    watcher::{self, Event},
-    WatchStreamExt,
-};
+use kube::api::DynamicObject;
 use serde::Serialize;
 use tauri::State;
 
 use crate::{
     app_state::{ClientId, JoinHandleStoreState, KubernetesClientRegistryState, RendererRegistry},
     frontend_types::{BackendError, FrontendValue},
+    internal::resources::ResourceWatchStreamEvent,
 };
 
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase", tag = "event", content = "data")]
-pub enum WatchStreamEvent {
+pub enum ResourceEvent {
     #[serde(rename_all = "camelCase")]
     AnnounceColumns { titles: Vec<String> },
     Applied {
@@ -40,14 +38,11 @@ pub async fn watch_gvk_with_view(
     client_id: ClientId,
     gvk: kube::api::GroupVersionKind,
     view_name: String,
-    channel: tauri::ipc::Channel<WatchStreamEvent>,
+    channel: tauri::ipc::Channel<ResourceEvent>,
     namespace: &str,
 ) -> Result<(), BackendError> {
     let channel_id = channel.id();
-    println!(
-        "Streaming {:?} in namespace {:?} to channel {channel_id}",
-        gvk, namespace
-    );
+    println!("Streaming {gvk:?} in namespace {namespace} to channel {channel_id}");
 
     let client = client_registry_arc.try_clone(&client_id)?;
 
@@ -55,7 +50,9 @@ pub async fn watch_gvk_with_view(
         kube::discovery::oneshot::pinned_kind(&client, &gvk).await?;
 
     let api = match resource_capabilities.scope {
-        kube::discovery::Scope::Cluster => kube::Api::all_with(client, &api_resource),
+        kube::discovery::Scope::Cluster => {
+            kube::Api::<DynamicObject>::all_with(client, &api_resource)
+        }
         kube::discovery::Scope::Namespaced => match namespace {
             "" => kube::Api::all_with(client, &api_resource),
             namespace => kube::Api::namespaced_with(client, namespace, &api_resource),
@@ -67,66 +64,36 @@ pub async fn watch_gvk_with_view(
 
     let stream = async move {
         let view = views.get_renderer(&gvk, view_name.as_str()).await;
-
         let (_, _, discovery) = client_registry_arc.get_cluster(&client_id).unwrap();
-
         let crd = discovery.crds.get(&gvk);
-
         let column_titles = view.titles(&gvk, crd);
 
         channel
-            .send(WatchStreamEvent::AnnounceColumns {
+            .send(ResourceEvent::AnnounceColumns {
                 titles: column_titles.unwrap(),
             })
             .unwrap();
 
-        let watch_stream = kube::runtime::watcher(
-            api,
-            watcher::Config {
-                initial_list_strategy: watcher::InitialListStrategy::StreamingList,
-                ..Default::default()
-            },
-        );
-
-        let mut stream = pin!(watch_stream.default_backoff());
-
-        while let Some(event) = stream.next().await {
-            let downstream_event = match event {
-                Ok(Event::Init) => {
-                    println!("Watch init");
-                    None
+        crate::internal::resources::watch(api)
+            .map(|event| match event {
+                ResourceWatchStreamEvent::Applied { resource } => ResourceEvent::Applied {
+                    uid: resource.metadata.uid.clone().expect("no uid"),
+                    namespace: resource.metadata.namespace.clone().unwrap_or_default(),
+                    name: resource.metadata.name.clone().unwrap_or_default(),
+                    columns: view.render(&gvk, crd, &resource).unwrap(),
+                },
+                ResourceWatchStreamEvent::Deleted { resource } => ResourceEvent::Deleted {
+                    uid: resource.metadata.uid.expect("no uid"),
+                    namespace: resource.metadata.namespace.unwrap_or_default(),
+                    name: resource.metadata.name.unwrap_or_default(),
+                },
+            })
+            .for_each(|frontend_event| async {
+                if let Err(error) = channel.send(frontend_event) {
+                    eprintln!("error sending to channel: {error}")
                 }
-                Ok(Event::InitDone) => {
-                    println!("Watch init done");
-                    None
-                }
-                Ok(Event::InitApply(obj)) | Ok(Event::Apply(obj)) => {
-                    let columns = view.render(&gvk, crd, &obj).unwrap();
-                    Some(WatchStreamEvent::Applied {
-                        uid: obj.metadata.uid.expect("no uid"),
-                        namespace: obj.metadata.namespace.unwrap_or("".into()),
-                        name: obj.metadata.name.unwrap_or("".into()),
-                        columns,
-                    })
-                }
-                Ok(Event::Delete(obj)) => Some(WatchStreamEvent::Deleted {
-                    namespace: obj.metadata.namespace.unwrap_or("".into()),
-                    name: obj.metadata.name.unwrap_or("".into()),
-                    uid: obj.metadata.uid.expect("no uid"),
-                }),
-                Err(e) => {
-                    eprintln!("Watch error: {e}");
-                    None
-                }
-            };
-
-            if let Some(message) = downstream_event {
-                match channel.send(message) {
-                    Ok(()) => (),
-                    Err(error) => eprintln!("error sending to channel: {error}"),
-                }
-            }
-        }
+            })
+            .await;
     };
 
     join_handle_store.submit(channel_id, stream);
