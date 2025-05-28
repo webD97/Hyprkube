@@ -10,6 +10,7 @@ use std::{
 use k8s_openapi::apiextensions_apiserver::pkg::apis::apiextensions::v1::CustomResourceDefinition;
 use kube::api::{GroupVersionKind, ListParams};
 use serde::{Deserialize, Serialize};
+use tracing::{debug, info};
 
 use crate::{frontend_commands::KubeContextSource, frontend_types::BackendError};
 
@@ -127,7 +128,7 @@ impl KubernetesClientRegistry {
         let registered_arc = Arc::clone(&self.registered);
 
         let discovery_handle = async move {
-            println!("Discovering builtins");
+            info!("Discovering builtins");
             let apigroups = &new_client.list_api_groups().await?;
             let builtins: Vec<&str> = apigroups
                 .groups
@@ -136,10 +137,10 @@ impl KubernetesClientRegistry {
                 .map(|group| group.name.as_str())
                 .chain(Some(""))
                 .collect();
-            println!("Finished discovering builtins");
+            debug!("Finished discovering builtins");
 
             // Discover builtin resources
-            println!("Starting discovery of builtin resources");
+            info!("Starting discovery of builtin resources");
             {
                 let discovery_builtins = kube::Discovery::new(new_client.clone())
                     .filter(&builtins)
@@ -181,10 +182,10 @@ impl KubernetesClientRegistry {
                     }
                 }
             }
-            println!("Finished discovery of builtin resources");
+            debug!("Finished discovery of builtin resources");
 
             // Discover custom resources
-            println!("Starting discovery of custom resources");
+            info!("Starting discovery of custom resources");
             {
                 let discovery_builtins = kube::Discovery::new(new_client.clone())
                     .exclude(&builtins)
@@ -226,10 +227,10 @@ impl KubernetesClientRegistry {
                     }
                 }
             }
-            println!("Finished discovery of custom resources");
+            debug!("Finished discovery of custom resources");
 
             // Cache custom resource definitions
-            println!("Starting caching of custom resource definitions");
+            info!("Starting caching of custom resource definitions");
             {
                 let api: kube::Api<CustomResourceDefinition> = kube::Api::all(new_client.clone());
                 let crd_list = api.list(&ListParams::default()).await?;
@@ -249,11 +250,11 @@ impl KubernetesClientRegistry {
                     discovery.crds.insert(gvk, crd);
                 }
             }
-            println!("Finished caching of custom resource definitions");
+            debug!("Finished caching of custom resource definitions");
             Ok(())
         };
 
-        println!("Managing new client {}", context_source.to_string());
+        info!("Managing new client {}", context_source.to_string());
 
         Ok((context_source.to_string(), downstream_rx, discovery_handle))
     }

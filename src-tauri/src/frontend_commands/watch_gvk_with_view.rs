@@ -4,6 +4,7 @@ use futures::StreamExt as _;
 use kube::api::DynamicObject;
 use serde::Serialize;
 use tauri::State;
+use tracing::{error, info};
 
 use crate::{
     app_state::{ClientId, JoinHandleStoreState, KubernetesClientRegistryState, RendererRegistry},
@@ -31,6 +32,7 @@ pub enum ResourceEvent {
 
 #[allow(clippy::too_many_arguments)]
 #[tauri::command]
+#[tracing::instrument(skip_all, fields(request_id = tracing::field::Empty))]
 pub async fn watch_gvk_with_view(
     client_registry_arc: State<'_, KubernetesClientRegistryState>,
     join_handle_store: State<'_, JoinHandleStoreState>,
@@ -41,8 +43,10 @@ pub async fn watch_gvk_with_view(
     channel: tauri::ipc::Channel<ResourceEvent>,
     namespace: &str,
 ) -> Result<(), BackendError> {
+    crate::internal::tracing::set_span_request_id();
+
     let channel_id = channel.id();
-    println!("Streaming {gvk:?} in namespace {namespace} to channel {channel_id}");
+    info!("Streaming {gvk:?} in namespace {namespace} to channel {channel_id}");
 
     let client = client_registry_arc.try_clone(&client_id)?;
 
@@ -91,7 +95,7 @@ pub async fn watch_gvk_with_view(
             })
             .for_each(|frontend_event| async {
                 if let Err(error) = channel.send(frontend_event) {
-                    eprintln!("error sending to channel: {error}")
+                    error!("error sending to channel: {error}")
                 }
             })
             .await;

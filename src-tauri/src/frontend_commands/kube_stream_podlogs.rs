@@ -3,6 +3,7 @@ use serde::Serialize;
 use tauri::State;
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio_util::compat::FuturesAsyncReadCompatExt;
+use tracing::info;
 
 use crate::{
     app_state::{ClientId, JoinHandleStoreState, KubernetesClientRegistryState},
@@ -50,7 +51,7 @@ pub async fn kube_stream_podlogs(
     let mut reader = BufReader::new(log_stream).lines();
 
     let channel_id = channel.id();
-    println!("kube_stream_podlogs: channel {namespace}/{name} to {channel_id}");
+    info!("kube_stream_podlogs: channel {namespace}/{name} to {channel_id}");
 
     let stream_task = async move {
         loop {

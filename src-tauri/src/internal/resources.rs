@@ -9,6 +9,7 @@ use kube::{
 use semver::VersionReq;
 use serde::{de::DeserializeOwned, Serialize};
 use std::fmt::Debug;
+use tracing::{debug, error, info, instrument};
 
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase", tag = "event", content = "data")]
@@ -33,11 +34,11 @@ where
     .filter_map(|obj| async move {
         match obj {
             Ok(Event::Init) => {
-                println!("Watch init");
+                debug!("Watch init");
                 None
             }
             Ok(Event::InitDone) => {
-                println!("Watch init done");
+                debug!("Watch init done");
                 None
             }
             Ok(Event::InitApply(obj)) | Ok(Event::Apply(obj)) => {
@@ -45,13 +46,14 @@ where
             }
             Ok(Event::Delete(obj)) => Some(ResourceWatchStreamEvent::Deleted { resource: obj }),
             Err(e) => {
-                eprintln!("Watch error: {e}");
+                error!("Watch error: {e}");
                 None
             }
         }
     })
 }
 
+#[instrument(skip(client))]
 pub async fn determine_initial_list_strategy(client: Client) -> InitialListStrategy {
     let streaming_list_requirement =
         VersionReq::parse(">=1.32,<1.33").expect("must be a valid semver");
@@ -64,11 +66,11 @@ pub async fn determine_initial_list_strategy(client: Client) -> InitialListStrat
 
     match streaming_list_requirement.matches(&apiserver_version) {
         true => {
-            println!("Using StreamingList");
+            info!("Using StreamingList");
             InitialListStrategy::StreamingList
         }
         false => {
-            println!("Using ListWatch");
+            info!("Using ListWatch");
             InitialListStrategy::ListWatch
         }
     }

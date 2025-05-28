@@ -45,6 +45,10 @@ tauri-plugin-dialog = "2.2.2"
 tauri-plugin-store = "2.2.0"
 serde_yaml = "0.9.21"
 semver = "1.0.26"
+tracing = "0.1.41"
+tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
+tracing-futures = "0.2.5"
+rand = "0.9.1"
 
 [features]
 # this feature is used for production builds or when `devPath` points to the filesystem and the built-in dev server is disabled.

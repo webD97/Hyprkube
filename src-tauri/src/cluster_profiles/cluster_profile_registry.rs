@@ -3,6 +3,7 @@ use std::{collections::HashMap, fs::OpenOptions, path::PathBuf, sync::Arc};
 use scan_dir::ScanDir;
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager};
+use tracing::{error, info};
 
 #[derive(Eq, Hash, PartialEq, Clone, Serialize, Deserialize, Debug)]
 pub struct ClusterProfileId(String);
@@ -63,7 +64,7 @@ impl ClusterProfileRegistry {
                 .or_insert((display_name, path));
         }
 
-        println!("Profiles: {:?}", self.profiles);
+        info!("Profiles: {:?}", self.profiles);
     }
 
     pub fn get_profiles(&self) -> Vec<(ClusterProfileId, String)> {
@@ -87,7 +88,7 @@ fn get_cluster_profiles_dir(app: &AppHandle) -> Option<PathBuf> {
         match std::fs::create_dir_all(&cluster_profiles_dir) {
             Ok(()) => (),
             Err(error) => {
-                eprintln!(
+                error!(
                     "Failed to create directory {:?} for cluster profiles: {:?}",
                     cluster_profiles_dir, error
                 );

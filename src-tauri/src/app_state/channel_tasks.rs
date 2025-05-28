@@ -5,9 +5,10 @@ use std::{
 };
 
 use futures::future::{AbortHandle, Abortable};
-
 use serde::Serialize;
 use tauri::{async_runtime::spawn, Emitter};
+use tracing::info;
+use tracing_futures::Instrument;
 
 pub type JoinHandleStoreState = Arc<ChannelTasks>;
 
@@ -57,7 +58,7 @@ impl ChannelTasks {
     {
         // Check if we can already kill this task
         if self.to_kill.try_read().unwrap().contains(&channel_id) {
-            println!("Ignoring future of channel {}", &channel_id);
+            info!("Ignoring future of channel {}", &channel_id);
             self.to_kill.write().unwrap().retain(|&el| el != channel_id);
             return;
         }
@@ -66,7 +67,7 @@ impl ChannelTasks {
         let (abort_handle, abort_registration) = AbortHandle::new_pair();
         let abortable = Abortable::new(future, abort_registration);
 
-        let join_handle = spawn(abortable);
+        let join_handle = spawn(abortable.in_current_span());
 
         {
             let mut handles = self.handles.write().unwrap();
@@ -81,20 +82,23 @@ impl ChannelTasks {
         let app_handle = Arc::clone(&self.app_handle);
 
         // Wait for completion, then remove the task from our tracking
-        spawn(async move {
-            match join_handle.await.unwrap() {
-                Ok(_) => println!("Task for channel {} ended naturally", &channel_id),
-                Err(_) => println!("Task for channel {} was aborted", &channel_id),
+        spawn(
+            async move {
+                match join_handle.await.unwrap() {
+                    Ok(_) => info!("Task for channel {} ended naturally", &channel_id),
+                    Err(_) => info!("Task for channel {} was aborted", &channel_id),
+                }
+
+                let mut handles = handles.write().unwrap();
+
+                handles.remove(&channel_id);
+
+                app_handle
+                    .emit("join_handle_store_stats", Stats::from(handles))
+                    .unwrap();
             }
-
-            let mut handles = handles.write().unwrap();
-
-            handles.remove(&channel_id);
-
-            app_handle
-                .emit("join_handle_store_stats", Stats::from(handles))
-                .unwrap();
-        });
+            .in_current_span(),
+        );
     }
 
     pub fn abort_all(&self) {
@@ -112,10 +116,10 @@ impl ChannelTasks {
         let handles = self.handles.read().unwrap();
 
         if let Some(abort_handle) = handles.get(channel_id) {
-            println!("Trying to kill channel {}", channel_id);
+            info!("Trying to kill channel {}", channel_id);
             abort_handle.abort();
         } else {
-            println!("Channel {} now on kill list", &channel_id);
+            info!("Channel {} now on kill list", &channel_id);
             self.to_kill.write().unwrap().push(channel_id.to_owned());
         }
     }

@@ -15,6 +15,7 @@ use serde::Serialize;
 use tauri::{ipc::Channel, State};
 use tokio::{io::AsyncWriteExt, sync::mpsc};
 use tokio_util::io::ReaderStream;
+use tracing::info;
 
 #[derive(Serialize, Clone)]
 pub enum ExecSessionEvent {
@@ -120,14 +121,14 @@ pub async fn pod_exec_start_session(
                                 terminal_stdin_writer.flush().await.unwrap();
                             },
                             ExecSessionRequest::Resize(columns, rows) => {
-                                println!("Resizing to {}x{}", columns, rows);
+                                info!("Resizing to {}x{}", columns, rows);
                                 terminal_size_writer.try_send(TerminalSize {
                                     height: rows,
                                     width: columns,
                                 }).unwrap();
                             },
                             ExecSessionRequest::Abort => {
-                                println!("Aborting exec session");
+                                info!("Aborting exec session");
                                 attached_process.abort();
                             },
                         }
@@ -136,7 +137,7 @@ pub async fn pod_exec_start_session(
             };
         }
 
-        println!("End of loop");
+        info!("End of loop");
         session_event_channel.send(ExecSessionEvent::End).unwrap();
     };
 

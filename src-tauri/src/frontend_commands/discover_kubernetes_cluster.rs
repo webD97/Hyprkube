@@ -3,6 +3,7 @@ use std::sync::Arc;
 use kube::config::{KubeConfigOptions, Kubeconfig};
 use serde::Serialize;
 use tauri::{Emitter, State};
+use tracing::{error, info};
 
 use crate::{
     app_state::{
@@ -23,6 +24,7 @@ pub enum DiscoveryResult {
 }
 
 #[tauri::command]
+#[tracing::instrument(skip_all, fields(request_id = tracing::field::Empty))]
 pub async fn discover_kubernetes_cluster(
     app_handle: tauri::AppHandle,
     client_registry: tauri::State<'_, KubernetesClientRegistryState>,
@@ -31,13 +33,15 @@ pub async fn discover_kubernetes_cluster(
     context_source: KubeContextSource,
     repository: State<'_, Arc<Repository>>,
 ) -> Result<DiscoveredCluster, BackendError> {
+    crate::internal::tracing::set_span_request_id();
+
     if context_source.provider != "file" {
         return Err(BackendError::Generic(
             "Unsupported kubeconfig provider".into(),
         ));
     }
 
-    println!("Starting discovery for cluster {}", context_source);
+    info!("Starting discovery for cluster {}", context_source);
 
     let context_name = &context_source.context;
     let kubeconfig = Kubeconfig::read_from(&context_source.source)?;
@@ -63,7 +67,7 @@ pub async fn discover_kubernetes_cluster(
 
     join_handle_store.submit(channel.id(), async move {
         if let Err(e) = discovery_handle.await {
-            eprintln!("Error during cluster discovery: {e}");
+            error!("Error during cluster discovery: {e}");
             app_handle.emit("ERR_CLUSTER_DISCOVERY", &e).unwrap();
         }
     });

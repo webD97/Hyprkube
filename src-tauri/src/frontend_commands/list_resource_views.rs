@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use kube::api::GroupVersionKind;
+use tracing::info;
 
 use crate::{
     app_state::{ClientId, RendererRegistry},
@@ -16,7 +17,7 @@ pub async fn list_resource_views(
     kind: &str,
 ) -> Result<Vec<String>, BackendError> {
     let gvk = GroupVersionKind::gvk(group, version, kind);
-    println!("list_resource_views: {:?}", &gvk);
+    info!("list_resource_views: {:?}", &gvk);
 
     Ok(view_registry.get_renderers(&client_id, &gvk).await)
 }

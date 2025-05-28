@@ -3,6 +3,7 @@ use kube::{
     Api,
 };
 use tauri::State;
+use tracing::info;
 
 use crate::{
     app_state::{ClientId, KubernetesClientRegistryState},
@@ -18,7 +19,7 @@ pub async fn delete_resource(
     name: &str,
     dry_run: Option<bool>,
 ) -> Result<(), BackendError> {
-    println!("Deleting {:?} in namespace {}", gvk, namespace);
+    info!("Deleting {:?} in namespace {}", gvk, namespace);
 
     let client = client_registry_arc.try_clone(&client_id)?;
 

@@ -5,6 +5,7 @@ use rust_embed::Embed;
 use scan_dir::ScanDir;
 
 use tauri::{AppHandle, Manager as _};
+use tracing::{debug, error};
 
 use crate::{
     app_state::KubernetesClientRegistryState,
@@ -73,7 +74,7 @@ impl RendererRegistry {
                 kind: view.definition.match_kind.clone(),
             };
 
-            println!("Found view {:?} for {:?}", view.definition.name, gvk);
+            debug!("Found view {:?} for {:?}", view.definition.name, gvk);
 
             renderers.entry(gvk).or_default().push(Box::new(view));
         }
@@ -135,7 +136,7 @@ impl RendererRegistry {
         match specific_view {
             Some(view) => view.to_owned(),
             None => {
-                eprintln!(
+                error!(
                     "View {:?} not found for {:?}, returning fallback.",
                     &view_name, &gvk
                 );
@@ -153,7 +154,7 @@ fn get_views_dir(app: &AppHandle) -> Option<PathBuf> {
         match std::fs::create_dir_all(&views_dir) {
             Ok(()) => (),
             Err(error) => {
-                eprintln!(
+                error!(
                     "Failed to create directory {:?} for view scripts: {:?}",
                     views_dir, error
                 );

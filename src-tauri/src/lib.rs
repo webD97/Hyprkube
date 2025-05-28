@@ -16,9 +16,15 @@ use app_state::{
 };
 use persistence::{cluster_profile_service::ClusterProfileService, Repository};
 use tauri::{async_runtime::spawn, Listener, Manager};
+use tracing::{info, warn};
+use tracing_subscriber::{fmt, layer::SubscriberExt as _, util::SubscriberInitExt as _, EnvFilter};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    setup_tracing();
+
+    info!("Hyprkube is starting.");
+
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
@@ -45,7 +51,7 @@ pub fn run() {
             app.manage(pinned_cluster_profile_service);
 
             app.listen("frontend-onbeforeunload", move |_event| {
-                println!("ONBEFOREUNLOAD");
+                warn!("ONBEFOREUNLOAD");
                 let app_handle = app_handle.clone();
                 spawn(async move {
                     reset_state(app_handle).await;
@@ -89,4 +95,14 @@ pub fn run() {
 async fn reset_state(app_handle: tauri::AppHandle) {
     let join_handle_store = app_handle.state::<JoinHandleStoreState>();
     join_handle_store.abort_all();
+}
+
+fn setup_tracing() {
+    let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
+
+    tracing_subscriber::registry()
+        .with(fmt::layer())
+        .with(filter)
+        .try_init()
+        .expect("tracing-subscriber setup failed");
 }

@@ -2,6 +2,7 @@ use futures::StreamExt as _;
 use k8s_openapi::api::core::v1::Namespace;
 use serde::Serialize;
 use tauri::State;
+use tracing::{error, info};
 
 use crate::{
     app_state::{ClientId, JoinHandleStoreState, KubernetesClientRegistryState},
@@ -17,14 +18,17 @@ pub enum WatchNamespacesEvent {
 }
 
 #[tauri::command]
+#[tracing::instrument(skip_all, fields(request_id = tracing::field::Empty))]
 pub async fn watch_namespaces(
     client_registry_arc: State<'_, KubernetesClientRegistryState>,
     join_handle_store: State<'_, JoinHandleStoreState>,
     client_id: ClientId,
     channel: tauri::ipc::Channel<WatchNamespacesEvent>,
 ) -> Result<(), BackendError> {
+    crate::internal::tracing::set_span_request_id();
+
     let channel_id = channel.id();
-    println!("Streaming namespaces to channel {channel_id}");
+    info!("Streaming namespaces to channel {channel_id}");
 
     let client = client_registry_arc.try_clone(&client_id)?;
     let api: kube::Api<Namespace> = kube::Api::all(client);
@@ -42,7 +46,7 @@ pub async fn watch_namespaces(
             })
             .for_each(|frontend_event| async {
                 if let Err(error) = channel.send(frontend_event) {
-                    eprintln!("error sending to channel: {error}")
+                    error!("error sending to channel: {error}")
                 }
             })
             .await;
