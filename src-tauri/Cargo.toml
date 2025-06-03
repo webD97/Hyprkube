@@ -29,7 +29,7 @@ tokio = { version = "1.45.1" }
 tokio-util = { version = "0.7.15", features = ["compat"] }
 thiserror = "2.0.12"
 uuid = { version = "1.16.0", features = ["v4"] }
-rhai = { version = "1.21.0", features = [
+rhai = { version = "1.22.0", features = [
     "serde",
     "sync",
     "no_module",
