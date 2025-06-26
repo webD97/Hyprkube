@@ -34,6 +34,7 @@ const Layout: React.FC = () => {
         pushApplicationTab,
         removeApplicationTab,
         setActiveApplicationTab,
+        updateTabMeta
     } = useContext(ApplicationTabsContext)!;
 
     const megaTabsOutlet = useRef<HTMLDivElement>(null);
@@ -55,6 +56,7 @@ const Layout: React.FC = () => {
                         activeTab={activeApplicationTab}
                         setActiveTab={setActiveApplicationTab}
                         onCloseClicked={removeApplicationTab}
+                        updateTabMeta={updateTabMeta}
                         tabs={applicationTabs}
                         outlet={megaTabsOutlet}
                     >
@@ -90,11 +92,12 @@ const AppShell: React.FC = () => {
         pushApplicationTab,
         removeApplicationTab,
         setActiveApplicationTab,
-        replaceApplicationTab
+        replaceApplicationTab,
+        updateTabMeta
     ] = useHeadlessTabs<MegaTabDefinition>();
 
     return (
-        <ApplicationTabsContext.Provider value={{ applicationTabs, activeApplicationTab, pushApplicationTab, removeApplicationTab, setActiveApplicationTab, replaceApplicationTab }}>
+        <ApplicationTabsContext.Provider value={{ applicationTabs, activeApplicationTab, pushApplicationTab, removeApplicationTab, setActiveApplicationTab, replaceApplicationTab, updateTabMeta }}>
             <Layout />
         </ApplicationTabsContext.Provider>
     );

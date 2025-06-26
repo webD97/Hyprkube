@@ -1,8 +1,10 @@
 import React from "react";
 import { MegaTabDefinition } from ".";
+import { TabIdentifier } from "../../hooks/useHeadlessTabs";
 
 export type MegaTabContextType<T> = {
-    setMeta: (updater: (meta: T) => T) => T
+    tabIdentifier: TabIdentifier,
+    setMeta: (idx: TabIdentifier, updater: (meta: T) => T) => void
 };
 
 export const MegaTabContext = React.createContext<MegaTabContextType<MegaTabDefinition> | null>(null);

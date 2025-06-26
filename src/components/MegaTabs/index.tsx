@@ -2,7 +2,7 @@
 import React, { PropsWithChildren } from "react";
 import { createPortal } from "react-dom";
 import { ErrorBoundary } from "react-error-boundary";
-import { TabDefinition } from "../../hooks/useHeadlessTabs";
+import { TabDefinition, TabMetaUpdateFunction } from "../../hooks/useHeadlessTabs";
 import { MegaTabContext } from "./context";
 import classes from './styles.module.css';
 
@@ -18,6 +18,7 @@ export interface MegaTabsProps {
     activeTab: number,
     setActiveTab?: (idx: number) => void,
     onCloseClicked?: (idx: number) => void,
+    updateTabMeta?: (idx: number, updater: TabMetaUpdateFunction<MegaTabDefinition>) => void,
     tabs: TabDefinition<MegaTabDefinition>[],
     outlet: React.RefObject<HTMLDivElement | null>
 }
@@ -28,6 +29,7 @@ const MegaTabs: React.FC<PropsWithChildren<MegaTabsProps>> = (props) => {
         tabs,
         setActiveTab = () => undefined,
         onCloseClicked = () => undefined,
+        updateTabMeta = () => undefined,
         outlet
     } = props;
 
@@ -67,7 +69,7 @@ const MegaTabs: React.FC<PropsWithChildren<MegaTabsProps>> = (props) => {
                 !outlet.current
                     ? null
                     : createPortal(
-                        tabs.map(({ render, setMeta, meta: { keepAlive } }, idx) => {
+                        tabs.map(({ render, meta: { keepAlive } }, idx) => {
                             if (!keepAlive && activeTab !== idx) return;
                             return (
                                 <div key={idx} style={{ display: activeTab === idx ? 'initial' : 'none' }}>
@@ -80,7 +82,10 @@ const MegaTabs: React.FC<PropsWithChildren<MegaTabsProps>> = (props) => {
                                         )}
                                     >
                                         <MegaTabContext.Provider
-                                            value={{ setMeta }}
+                                            value={{
+                                                tabIdentifier: idx,
+                                                setMeta: updateTabMeta
+                                            }}
                                         >
                                             {render()}
                                         </MegaTabContext.Provider>
