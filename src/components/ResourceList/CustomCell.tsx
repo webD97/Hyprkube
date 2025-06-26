@@ -1,10 +1,11 @@
 import { CellContext } from "@tanstack/react-table";
 import dayjs from "dayjs";
 import LocalizedFormat from "dayjs/plugin/localizedFormat";
-import RelativeTime from "dayjs/plugin/relativeTime";
+import RelativeTimePlugin from "dayjs/plugin/relativeTime";
 import { DisplayableResource, ResourceField } from "../../hooks/useResourceWatch";
+import RelativeTime from "../RelativeTime";
 
-dayjs.extend(RelativeTime);
+dayjs.extend(RelativeTimePlugin);
 dayjs.extend(LocalizedFormat);
 
 export const CustomCell: React.FC<CellContext<[string, DisplayableResource], unknown>> = (props) => {
@@ -27,7 +28,7 @@ export const CustomCell: React.FC<CellContext<[string, DisplayableResource], unk
         else if ("RelativeTime" in inner) {
             const { iso } = inner.RelativeTime;
             const date = dayjs(iso);
-            return <span key={idx} title={date.format("LLL")}>{dayjs().to(date, true)}</span>;
+            return <span key={idx} title={date.toDate().toLocaleString()}><RelativeTime timestamp={iso} /></span>;
         }
 
         return <span key={idx}>(Unhandled)</span>;
