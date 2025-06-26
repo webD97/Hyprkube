@@ -87,6 +87,7 @@ pub fn run() {
             cluster_profiles::cluster_profile_list_hidden_gvks,
             cluster_profiles::get_default_namespace,
             cluster_profiles::set_default_namespace,
+            frontend_commands::log_stdout
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
