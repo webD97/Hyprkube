@@ -5,7 +5,7 @@
     padding: 0.4rem;
 }
 
-.tabWrapper>.tab {
+.tabWrapper .tab {
     padding: 0.3em 0.5em;
     border-radius: 0.3em;
     cursor: default;
@@ -13,26 +13,43 @@
     align-items: center;
 }
 
-.tabWrapper>.tab:not(.mini) {
+.tabWrapper .tab:not(.mini) {
     width: 250px;
 }
 
-.tabWrapper>.tab.mini {
+.tabWrapper .tab.mini {
     font-size: 1.1em;
     text-align: center;
     line-height: 2em;
 }
 
-.tabWrapper>.tab:hover:not(.activeTab) {
+@keyframes cropFromRight {
+    from {
+        clip-path: inset(0 0 0 0);
+        width: 250px;
+    }
+
+    to {
+        clip-path: inset(0 100% 0 0);
+        width: 0px;
+    }
+}
+
+.tabWrapper .fadeOut {
+    animation: cropFromRight 150ms ease-out forwards;
+    overflow: hidden;
+}
+
+.tabWrapper>div {
+    margin-right: 0.5em;
+}
+
+.tabWrapper .tab:hover:not(.activeTab) {
     background: rgba(255, 255, 255, 0.05);
 }
 
 .activeTab {
     background: rgba(255, 255, 255, 0.1);
-}
-
-.tabWrapper>.tab:not(:last-child) {
-    margin-right: 0.5em;
 }
 
 .tabIcon {

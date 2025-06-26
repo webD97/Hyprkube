@@ -1,8 +1,8 @@
 
-import React, { PropsWithChildren } from "react";
+import React, { PropsWithChildren, useCallback, useState } from "react";
 import { createPortal } from "react-dom";
 import { ErrorBoundary } from "react-error-boundary";
-import { TabDefinition, TabMetaUpdateFunction } from "../../hooks/useHeadlessTabs";
+import { TabDefinition, TabIdentifier, TabMetaUpdateFunction } from "../../hooks/useHeadlessTabs";
 import { MegaTabContext } from "./context";
 import classes from './styles.module.css';
 
@@ -33,31 +33,43 @@ const MegaTabs: React.FC<PropsWithChildren<MegaTabsProps>> = (props) => {
         outlet
     } = props;
 
+    const [closingTabs, setClosingTabs] = useState<TabIdentifier[]>([]);
+
+    const handleClose = useCallback((tabId: TabIdentifier) => {
+        setClosingTabs(closingTabs => [...closingTabs, tabId]);
+        setTimeout(() => {
+            setClosingTabs(closingTabs => closingTabs.filter(current => current !== tabId));
+            onCloseClicked(tabId);
+        }, 150);
+    }, [onCloseClicked]);
+
     return (
         <div>
             <div className={classes.tabWrapper}>
                 {
                     tabs.map(({ meta: { title, icon, immortal, subtitle } }, idx) => (
-                        <div key={idx}
-                            title={`${title}${subtitle && ` - ${subtitle}`}`}
-                            className={`${idx === activeTab ? classes.activeTab : ''} ${classes.tab}`}
-                            onClick={() => setActiveTab(idx)}
-                            onAuxClick={() => !immortal && onCloseClicked(idx)}
-                        >
-                            <span className={classes.tabIcon}>{icon}</span>
-                            <span className={classes.tabLabelWrapper}>
-                                <span className={classes.tabLabel}>{title}</span>
+                        <div key={idx} className={`${closingTabs.includes(idx) ? classes.fadeOut : ''}`}>
+                            <div
+                                title={`${title}${subtitle && ` - ${subtitle}`}`}
+                                className={`${idx === activeTab ? classes.activeTab : ''} ${classes.tab}`}
+                                onClick={() => setActiveTab(idx)}
+                                onAuxClick={() => !immortal && handleClose(idx)}
+                            >
+                                <span className={classes.tabIcon}>{icon}</span>
+                                <span className={classes.tabLabelWrapper}>
+                                    <span className={classes.tabLabel}>{title}</span>
+                                    {
+                                        subtitle
+                                            ? <span className={classes.tabSubtitle}>{subtitle}</span>
+                                            : null
+                                    }
+                                </span>
                                 {
-                                    subtitle
-                                        ? <span className={classes.tabSubtitle}>{subtitle}</span>
-                                        : null
+                                    immortal
+                                        ? null
+                                        : <span className={classes.closeIcon} title="Close tab" onClick={() => !immortal && handleClose(idx)}>🗙</span>
                                 }
-                            </span>
-                            {
-                                immortal
-                                    ? null
-                                    : <span className={classes.closeIcon} title="Close tab" onClick={() => !immortal && onCloseClicked(idx)}>🗙</span>
-                            }
+                            </div>
                         </div>
                     ))
                 }
