@@ -7,7 +7,7 @@ use std::{
 use futures::future::{AbortHandle, Abortable};
 use serde::Serialize;
 use tauri::{async_runtime::spawn, Emitter};
-use tracing::info;
+use tracing::{error, info};
 use tracing_futures::Instrument;
 
 pub type JoinHandleStoreState = Arc<ChannelTasks>;
@@ -84,9 +84,10 @@ impl ChannelTasks {
         // Wait for completion, then remove the task from our tracking
         spawn(
             async move {
-                match join_handle.await.unwrap() {
-                    Ok(_) => info!("Task for channel {} ended naturally", &channel_id),
-                    Err(_) => info!("Task for channel {} was aborted", &channel_id),
+                match join_handle.await {
+                    Ok(Ok(_)) => info!("Task for channel {channel_id} ended naturally"),
+                    Ok(Err(_)) => info!("Task for channel {channel_id} was aborted"),
+                    Err(e) => error!("Task for channel {channel_id} panicked: {e}"),
                 }
 
                 let mut handles = handles.write().unwrap();

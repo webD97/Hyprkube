@@ -15,9 +15,11 @@ use app_state::{
     ChannelTasks, ExecSessions, JoinHandleStoreState, KubernetesClientRegistry, RendererRegistry,
 };
 use persistence::{cluster_profile_service::ClusterProfileService, Repository};
-use tauri::{async_runtime::spawn, Listener, Manager};
+use tauri::{async_runtime::spawn, Emitter as _, Listener, Manager};
 use tracing::{info, warn};
 use tracing_subscriber::{fmt, layer::SubscriberExt as _, util::SubscriberInitExt as _, EnvFilter};
+
+use crate::frontend_types::BackendPanic;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -31,6 +33,8 @@ pub fn run() {
         .plugin(tauri_plugin_store::Builder::default().build())
         .setup(|app| {
             let app_handle = app.handle().clone();
+
+            setup_panic_handler(app_handle.clone());
 
             app.manage(RendererRegistry::new_state(app_handle.clone()));
             app.manage(KubernetesClientRegistry::new_state());
@@ -106,4 +110,37 @@ fn setup_tracing() {
         .with(filter)
         .try_init()
         .expect("tracing-subscriber setup failed");
+}
+
+fn setup_panic_handler(app_handle: tauri::AppHandle) {
+    use std::panic;
+
+    let default_hook = panic::take_hook();
+
+    panic::set_hook(Box::new(move |info| {
+        default_hook(info);
+
+        let panic_msg = info
+            .payload()
+            .downcast_ref::<&str>()
+            .map(|s| (*s).to_string())
+            .or_else(|| info.payload().downcast_ref::<String>().cloned());
+
+        let frontend_panic_info = BackendPanic {
+            thread: std::thread::current().name().map(|s| s.to_owned()),
+            location: info.location().map(|location| {
+                format!(
+                    "{}:{}:{}",
+                    location.file(),
+                    location.line(),
+                    location.column(),
+                )
+            }),
+            message: panic_msg,
+        };
+
+        if let Err(e) = app_handle.emit("background_task_panic", frontend_panic_info) {
+            eprintln!("Failed to emit panic event to frontend: {e}");
+        }
+    }));
 }

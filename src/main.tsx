@@ -2,8 +2,8 @@ import { invoke } from '@tauri-apps/api/core';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import AppShell from './AppShell.tsx';
+import BackendPanicListener from './components/BackendPanicListener/index.tsx';
 import './index.css';
-
 
 const consoleLog = console.log;
 
@@ -22,7 +22,10 @@ console.log = function (...data: unknown[]) {
 }
 
 createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <AppShell />
-  </StrictMode>,
+  <>
+    <BackendPanicListener />
+    <StrictMode>
+      <AppShell />
+    </StrictMode>
+  </>,
 );
