@@ -2,7 +2,7 @@ use super::ResourceRenderer;
 use crate::frontend_types::{BackendError, FrontendValue};
 use k8s_openapi::apiextensions_apiserver::pkg::apis::apiextensions::v1::CustomResourceDefinition;
 use kube::api::GroupVersionKind;
-use serde_json::json;
+use serde_json::{json, Value};
 use serde_json_path::JsonPath;
 
 #[derive(Default)]
@@ -96,7 +96,10 @@ impl ResourceRenderer for CrdRenderer {
                                 .flatten()
                                 .unwrap_or(&empty_str)
                         })
-                        .map(|e| e.as_str().unwrap());
+                        .map(|e| match e {
+                            Value::String(value) => value.to_owned(),
+                            other => other.to_string(),
+                        });
 
                     match value {
                         Err(e) => {
