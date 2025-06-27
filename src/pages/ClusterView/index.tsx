@@ -5,6 +5,7 @@ import listClusterProfiles, { ClusterProfile } from '../../api/listClusterProfil
 import EmojiHint from '../../components/EmojiHint';
 import GvkList from '../../components/GvkList';
 import { MegaTabContext } from '../../components/MegaTabs/context';
+import RotatingSpinner from '../../components/RotatingSpinner';
 import TabView from '../../components/TabView';
 import { useTabs } from '../../components/TabView/hooks';
 import ResourceListInspector from '../../containers/ResourceListInspector';
@@ -29,11 +30,20 @@ const ClusterView: React.FC<ClusterViewProps> = ({ contextSource, preSelectedGvk
     const [activeGvk, setActiveGvk] = useState<Gvk | undefined>(preSelectedGvk);
     const pinnedGvks = usePinnedGvks(clusterProfiles?.[0]?.[0]);
     const hiddenGvks = useHiddenGvks(clusterProfiles?.[0]?.[0]);
-    const { discovery } = useClusterDiscovery(contextSource.source, contextSource.context);
+    const { discovery, loading: discoveryPending } = useClusterDiscovery(contextSource.source, contextSource.context);
     const [bottomTabs, activeBottomTab, pushBottomTab, removeBottomTab, setActiveBottomTab] = useTabs();
     const { pushApplicationTab } = useContext(ApplicationTabsContext)!;
     const { setMeta, tabIdentifier } = useContext(MegaTabContext)!;
     const [currentNamespace, setCurrentNamespace] = useState(preSelectedNamespace || 'default');
+
+    useEffect(() => {
+        if (discoveryPending) {
+            setMeta(tabIdentifier, (meta) => ({ ...meta, icon: <RotatingSpinner reverse /> }));
+        } else {
+            setMeta(tabIdentifier, (meta) => ({ ...meta, icon: '🌍' }));
+        }
+
+    }, [discoveryPending, setMeta, tabIdentifier]);
 
     useEffect(() => {
         if (!activeGvk) {

@@ -1,0 +1,24 @@
+@keyframes rotating {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.container {
+    animation: rotating 2s linear infinite;
+    width: 1em;
+    height: 1em;
+}
+
+.container.reverse {
+    animation-direction: reverse;
+}
+
+.container>* {
+    display: block;
+    transform: translateX(-0.33px) translateY(-0.33px) scale(1.2);
+}

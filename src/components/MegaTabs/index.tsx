@@ -8,7 +8,7 @@ import classes from './styles.module.css';
 
 export type MegaTabDefinition = {
     title: string,
-    icon: string,
+    icon: React.ReactNode,
     subtitle?: string,
     keepAlive?: boolean,
     immortal?: boolean
