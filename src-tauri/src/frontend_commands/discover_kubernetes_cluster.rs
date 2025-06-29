@@ -3,7 +3,7 @@ use std::{collections::HashSet, sync::Arc};
 use kube::config::{KubeConfigOptions, Kubeconfig};
 use serde::Serialize;
 use tauri::{Emitter, State};
-use tracing::{error, info};
+use tracing::{error, info, warn};
 
 use crate::{
     app_state::{
@@ -11,7 +11,7 @@ use crate::{
         KubernetesClientRegistryState,
     },
     frontend_types::{BackendError, DiscoveredCluster},
-    persistence::{DiscoveryCacheService, Repository},
+    persistence::{discovery_cache_service::DiscoveryCacheService, repository::Repository},
 };
 
 use super::KubeContextSource;
@@ -40,9 +40,7 @@ pub async fn discover_kubernetes_cluster(
     crate::internal::tracing::set_span_request_id();
 
     if context_source.provider != "file" {
-        return Err(BackendError::Generic(
-            "Unsupported kubeconfig provider".into(),
-        ));
+        return Err(BackendError::UnsupportedKubeconfigProvider);
     }
 
     info!("Starting discovery for cluster {}", context_source);
@@ -60,7 +58,7 @@ pub async fn discover_kubernetes_cluster(
 
     let discovery_cache =
         DiscoveryCacheService::new(&context_name.clone(), Arc::clone(&repository));
-    for cached in discovery_cache.read_cache() {
+    for cached in discovery_cache.read_cache()? {
         channel
             .send(DiscoveryResult::DiscoveredResource(cached))
             .unwrap();
@@ -76,13 +74,17 @@ pub async fn discover_kubernetes_cluster(
         }
     })?;
 
-    let previous_cache_contents = discovery_cache.read_cache();
+    let previous_cache_contents = discovery_cache.read_cache()?;
     let mut discovered_resources = HashSet::new();
 
     while let Ok(discovery) = internal_discovery.recv() {
         let send_result = match discovery {
             AsyncDiscoveryResult::DiscoveredResource(resource) => {
-                discovery_cache.cache_resource(resource.clone());
+                match discovery_cache.cache_resource(resource.clone()) {
+                    Ok(_) => {}
+                    Err(e) => warn!("Error caching resource: {}", e),
+                };
+
                 discovered_resources.insert(resource.clone());
                 channel.send(DiscoveryResult::DiscoveredResource(resource))
             }
@@ -101,7 +103,10 @@ pub async fn discover_kubernetes_cluster(
             removed_resource.kind, removed_resource.group
         );
 
-        discovery_cache.forget_resource(removed_resource);
+        match discovery_cache.forget_resource(removed_resource) {
+            Ok(_) => {}
+            Err(e) => warn!("Error removing resource from cache: {}", e),
+        };
 
         channel
             .send(DiscoveryResult::RemovedResource(

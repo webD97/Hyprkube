@@ -4,13 +4,16 @@ use kube::api::GroupVersionKind;
 use serde::Serialize;
 use tauri::{AppHandle, Emitter as _};
 
-use crate::{cluster_profiles::ClusterProfileId, persistence};
+use crate::{
+    cluster_profiles::ClusterProfileId,
+    persistence::repository::{self, Repository},
+};
 
 use super::ToFlatString as _;
 
 pub struct ClusterProfileService {
     app: AppHandle,
-    repository: Arc<persistence::Repository>,
+    repository: Arc<Repository>,
 }
 
 const PERISTENCE_KEY_PINNED_GVKS: &str = "pinned_gvks";
@@ -18,7 +21,7 @@ const PERISTENCE_KEY_HIDDEN_GVKS: &str = "hidden_gvks";
 const PERISTENCE_KEY_DEFAULT_NAMESPACES: &str = "default_namespaces";
 
 impl ClusterProfileService {
-    pub fn new(app: AppHandle, repository: Arc<persistence::Repository>) -> Self {
+    pub fn new(app: AppHandle, repository: Arc<Repository>) -> Self {
         Self { app, repository }
     }
 
@@ -120,7 +123,7 @@ impl ClusterProfileService {
         Ok(self
             .repository
             .read_key(
-                &persistence::Context::PerClusterProfile(profile.clone()),
+                &repository::Context::PerClusterProfile(profile.clone()),
                 PERISTENCE_KEY_DEFAULT_NAMESPACES,
             )
             .map_err(self::Error::Repository)?
@@ -141,7 +144,7 @@ impl ClusterProfileService {
         let mut defaults = self
             .repository
             .read_key(
-                &persistence::Context::PerClusterProfile(profile.clone()),
+                &repository::Context::PerClusterProfile(profile.clone()),
                 PERISTENCE_KEY_DEFAULT_NAMESPACES,
             )
             .map_err(self::Error::Repository)?
@@ -153,7 +156,7 @@ impl ClusterProfileService {
 
         self.repository
             .set_key(
-                &persistence::Context::PerClusterProfile(profile.clone()),
+                &repository::Context::PerClusterProfile(profile.clone()),
                 PERISTENCE_KEY_DEFAULT_NAMESPACES,
                 serde_json::to_value(defaults)?,
             )
@@ -166,7 +169,7 @@ impl ClusterProfileService {
         persistence_key: &str,
     ) -> Result<Vec<GroupVersionKind>, self::Error> {
         let items = self.repository.read_key(
-            &persistence::Context::PerClusterProfile(profile.clone()),
+            &repository::Context::PerClusterProfile(profile.clone()),
             persistence_key,
         )?;
 
@@ -194,7 +197,7 @@ impl ClusterProfileService {
         pinned.push(gvk.clone());
 
         self.repository.set_key(
-            &persistence::Context::PerClusterProfile(profile.clone()),
+            &repository::Context::PerClusterProfile(profile.clone()),
             persistence_key,
             serde_json::to_value(pinned.clone())?,
         )?;
@@ -217,7 +220,7 @@ impl ClusterProfileService {
         pinned.retain(|g| g != gvk);
 
         self.repository.set_key(
-            &persistence::Context::PerClusterProfile(profile.clone()),
+            &repository::Context::PerClusterProfile(profile.clone()),
             persistence_key,
             serde_json::to_value(pinned.clone())?,
         )?;
@@ -245,7 +248,7 @@ pub enum Error {
     Serialization(#[from] serde_json::Error),
 
     #[error(transparent)]
-    Repository(#[from] persistence::Error),
+    Repository(#[from] repository::Error),
 }
 
 impl Serialize for Error {

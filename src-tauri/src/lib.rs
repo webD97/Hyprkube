@@ -14,12 +14,12 @@ use std::sync::Arc;
 use app_state::{
     ChannelTasks, ExecSessions, JoinHandleStoreState, KubernetesClientRegistry, RendererRegistry,
 };
-use persistence::{cluster_profile_service::ClusterProfileService, Repository};
+use persistence::cluster_profile_service::ClusterProfileService;
 use tauri::{async_runtime::spawn, Emitter as _, Listener, Manager};
 use tracing::{info, warn};
 use tracing_subscriber::{fmt, layer::SubscriberExt as _, util::SubscriberInitExt as _, EnvFilter};
 
-use crate::frontend_types::BackendPanic;
+use crate::{frontend_types::BackendPanic, persistence::repository::Repository};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {

@@ -1,4 +1,7 @@
-use crate::{app_state::Rejected, resource_rendering::ResourceViewError};
+use crate::{
+    app_state::Rejected, persistence::discovery_cache_service,
+    resource_rendering::ResourceViewError,
+};
 
 #[derive(thiserror::Error, Debug)]
 pub enum BackendError {
@@ -15,7 +18,13 @@ pub enum BackendError {
     TauriError(#[from] tauri::Error),
 
     #[error("BackgroundTaskRejected")]
-    BackgroundTaskRejected(Rejected),
+    BackgroundTaskRejected,
+
+    #[error("UnsupportedKubeconfigProvider")]
+    UnsupportedKubeconfigProvider,
+
+    #[error(transparent)]
+    DiscoveryCacheServiceError(#[from] discovery_cache_service::Error),
 
     #[error("{0}")]
     Generic(String),
@@ -43,7 +52,7 @@ impl From<&str> for BackendError {
 }
 
 impl From<Rejected> for BackendError {
-    fn from(rejected: Rejected) -> Self {
-        Self::BackgroundTaskRejected(rejected)
+    fn from(_: Rejected) -> Self {
+        Self::BackgroundTaskRejected
     }
 }
