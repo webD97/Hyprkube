@@ -66,7 +66,6 @@ pub enum ApiGroupSource {
 #[serde(rename_all = "camelCase")]
 pub enum AsyncDiscoveryResult {
     DiscoveredResource(DiscoveredResource),
-    ObtainedClientId(ClientId),
 }
 
 pub type KubernetesClientRegistryState = Arc<KubernetesClientRegistry>;
@@ -106,12 +105,6 @@ impl KubernetesClientRegistry {
         let client_id = context_source.to_string();
 
         let (downstream_tx, downstream_rx) = channel::<AsyncDiscoveryResult>();
-
-        downstream_tx
-            .send(AsyncDiscoveryResult::ObtainedClientId(
-                client_id.to_string(),
-            ))
-            .unwrap();
 
         self.registered.write().unwrap().insert(
             client_id.clone(),

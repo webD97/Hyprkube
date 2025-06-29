@@ -67,6 +67,10 @@ pub async fn discover_kubernetes_cluster(
     let (client_id, internal_discovery, discovery_handle) =
         client_registry.manage(client_config, &context_source)?;
 
+    channel
+        .send(DiscoveryResult::ClientId(client_id.clone()))
+        .unwrap();
+
     join_handle_store.submit(channel.id(), async move {
         if let Err(e) = discovery_handle.await {
             error!("Error during cluster discovery: {e}");
@@ -87,9 +91,6 @@ pub async fn discover_kubernetes_cluster(
 
                 discovered_resources.insert(resource.clone());
                 channel.send(DiscoveryResult::DiscoveredResource(resource))
-            }
-            AsyncDiscoveryResult::ObtainedClientId(client_id) => {
-                channel.send(DiscoveryResult::ClientId(client_id))
             }
         };
 
