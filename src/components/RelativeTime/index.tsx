@@ -5,23 +5,26 @@ import { useEffect, useState } from "react";
 dayjs.extend(DurationPlugin);
 
 function formatRelative(duration: Duration): string {
-    if (duration.asSeconds() <= 0) return '0s';
+    const units = [
+        { label: 'y', seconds: 365 * 24 * 60 * 60 },
+        { label: 'd', seconds: 24 * 60 * 60 },
+        { label: 'h', seconds: 60 * 60 },
+        { label: 'm', seconds: 60 },
+        { label: 's', seconds: 1 },
+    ];
 
-    const years = duration.years();
-    const days = duration.days();
-    const hours = duration.hours();
-    const minutes = duration.minutes();
-    const seconds = duration.seconds();
+    let seconds = duration.asSeconds();
+    const parts: string[] = [];
 
-    const result: string[] = [];
+    for (const unit of units) {
+        const value = Math.floor(seconds / unit.seconds);
+        if (value > 0) {
+            parts.push(`${value}${unit.label}`);
+            seconds %= unit.seconds;
+        }
+    }
 
-    if (years) result.push(`${years}y`);
-    if (days) result.push(`${days}d`);
-    if (hours) result.push(`${hours}h`);
-    if (minutes) result.push(`${minutes}m`);
-    if (seconds || result.length === 0) result.push(`${seconds}s`);
-
-    return result.slice(0, 2).join('');
+    return parts.length > 0 ? parts.slice(0, 2).join('') : '0s';
 }
 
 export interface RelativeTimeProps {
