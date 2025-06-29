@@ -1,9 +1,38 @@
 .container {
     color: white;
     font-family: monospace;
-    height: 300px;
-    max-height: 300px;
+    height: 500px;
+    max-height: 500px;
     max-width: 100%;
     margin: 0;
-    overflow: auto;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.logWrapper {
+    width: 100%;
+    position: relative;
+    user-select: initial;
+    -webkit-user-select: initial;
+    cursor: text;
+    overflow: scroll;
+}
+
+.logWrapper pre {
+    padding: 0;
+    margin: 0;
+}
+
+.logWrapper pre:hover {
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+.toolbar {
+    display: flex;
+    padding: 0.5em;
+}
+
+.toolbar>* {
+    margin-left: 1em;
 }

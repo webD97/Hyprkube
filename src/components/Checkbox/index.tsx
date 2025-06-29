@@ -1,16 +1,18 @@
 import { useCallback } from 'react';
 import styles from './styles.module.css';
 
-type CheckboxProps = React.DetailedHTMLProps<React.InputHTMLAttributes<HTMLInputElement>, HTMLInputElement>;
+type CheckboxProps = { label?: string } & React.DetailedHTMLProps<React.InputHTMLAttributes<HTMLInputElement>, HTMLInputElement>;
 
 const Checkbox: React.FC<CheckboxProps> = (props) => {
     const stopPropagation: React.MouseEventHandler = useCallback((e) => e.stopPropagation(), []);
 
     return (
-        <label className={styles.container} onClick={stopPropagation}>&nbsp;
-            <input type="checkbox" {...props} />
-            <span className={styles.checkmark}></span>
-        </label>
+        <span className={`${styles.container} ${props.label ? styles.withLabel : ''}`}>
+            <label onClick={stopPropagation}>{props.label ? props.label : null}&nbsp;
+                <input type="checkbox" {...props} />
+                <span className={styles.checkmark}></span>
+            </label>
+        </span>
     );
 };
 

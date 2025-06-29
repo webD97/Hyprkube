@@ -1,10 +1,15 @@
 .container {
-    display: block;
     position: relative;
     cursor: pointer;
     user-select: none;
-    height: 1.1em;
-    width: 1.1em;
+    height: 100%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.container.withLabel {
+    padding-right: 1em;
 }
 
 .container input {
@@ -12,16 +17,15 @@
     opacity: 0;
     cursor: pointer;
     height: 0;
-    width: 0;
     margin: 0;
 }
 
 .checkmark {
     position: absolute;
-    top: 0;
-    left: 0;
-    height: 100%;
-    width: 100%;
+    top: 50%;
+    transform: translateY(-50%);
+    height: 1em;
+    width: 1em;
     outline: 1px #aaaaaa solid;
     border-radius: .2em;
 }

@@ -1,5 +1,5 @@
-import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react-swc'
+import { defineConfig } from 'vite'
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -22,8 +22,7 @@ export default defineConfig({
       output: {
         manualChunks: {
           xterm: ['@xterm/xterm', '@xterm/addon-clipboard', '@xterm/addon-fit', '@xterm/addon-webgl'],
-          monaco: ['@monaco-editor/react', '@monaco-editor/loader', 'monaco-editor'],
-          logviewer: ['@melloware/react-logviewer']
+          monaco: ['@monaco-editor/react', '@monaco-editor/loader', 'monaco-editor']
         }
       }
     }
