@@ -1,3 +1,37 @@
+fn evaluateInitContainer(status) {
+    if "terminated" in status.state {
+        if status.state.terminated.exitCode == 0 {
+            return ColoredBox("lightgreen");
+        }
+        return ColoredBox("orangered");
+    }
+
+    if "waiting" in status.state {
+        return ColoredBox("orange");
+    }
+
+    ColoredBox("darkgrey")
+}
+
+fn evaluateContainer(status) {
+    if "terminated" in status.state {
+        if status.state.terminated.exitCode == 0 {
+            return ColoredBox("lightgreen");
+        }
+        return ColoredBox("orangered");
+    }
+
+    if status.ready {
+        return ColoredBox("lime");
+    }
+
+    if "running" in status.state || "waiting" in status.state {
+        return ColoredBox("orange");
+    }
+
+    ColoredBox("darkgrey")
+}
+
 #{
     name: "Pods default view",
     matchApiVersion: "v1",
@@ -18,17 +52,19 @@
         #{
             title: "Containers",
             accessor: |obj| {
-                obj.status?.containerStatuses?.map(|status| {
-                    if status.ready {
-                        return ColoredBox("lime");
-                    }
+                let initContainers = obj.status?.initContainerStatuses ?? [];
+                let containers = obj.status?.containerStatuses ?? [];
+                let display = [];
 
-                    if "running" in status.state {
-                        return ColoredBox("orange");
-                    }
-    
-                    ColoredBox("darkgrey")
-                })
+                display.append(containers.map(evaluateContainer));
+
+                if initContainers.len > 0 {
+                    display.push("| ");
+                }
+
+                display.append(initContainers.map(evaluateInitContainer));
+
+                display
             }
         },
         #{
