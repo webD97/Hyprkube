@@ -22,6 +22,8 @@ pub struct ChannelTasks {
 struct Stats {
     handles: usize,
 }
+#[derive(Debug)]
+pub struct Rejected;
 
 impl From<RwLockWriteGuard<'_, HashMap<u32, AbortHandle>>> for Stats {
     fn from(value: RwLockWriteGuard<'_, HashMap<u32, AbortHandle>>) -> Self {
@@ -52,7 +54,7 @@ impl ChannelTasks {
         }
     }
 
-    pub fn submit<F>(&self, channel_id: u32, future: F)
+    pub fn submit<F>(&self, channel_id: u32, future: F) -> Result<(), Rejected>
     where
         F: Future<Output = ()> + Send + 'static,
     {
@@ -60,7 +62,7 @@ impl ChannelTasks {
         if self.to_kill.try_read().unwrap().contains(&channel_id) {
             info!("Ignoring future of channel {}", &channel_id);
             self.to_kill.write().unwrap().retain(|&el| el != channel_id);
-            return;
+            return Err(Rejected);
         }
 
         // Task may run, track it
@@ -100,6 +102,8 @@ impl ChannelTasks {
             }
             .in_current_span(),
         );
+
+        Ok(())
     }
 
     pub fn abort_all(&self) {

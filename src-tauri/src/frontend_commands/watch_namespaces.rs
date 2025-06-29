@@ -52,7 +52,7 @@ pub async fn watch_namespaces(
             .await;
     };
 
-    join_handle_store.submit(channel_id, stream);
+    join_handle_store.submit(channel_id, stream)?;
 
     Ok(())
 }

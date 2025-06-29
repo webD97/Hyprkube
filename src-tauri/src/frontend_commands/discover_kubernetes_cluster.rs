@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{collections::HashSet, sync::Arc};
 
 use kube::config::{KubeConfigOptions, Kubeconfig};
 use serde::Serialize;
@@ -19,8 +19,12 @@ use super::KubeContextSource;
 #[derive(Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub enum DiscoveryResult {
-    DiscoveredResource(DiscoveredResource),
+    /// The client id for later use
     ClientId(String),
+    /// A resource kind that was either discovered from the cluster or read from cache
+    DiscoveredResource(DiscoveredResource),
+    /// A resource kind that was previously cached but vanished from the cluster (i.e. CRD uninstall)
+    RemovedResource(DiscoveredResource),
 }
 
 #[tauri::command]
@@ -70,12 +74,16 @@ pub async fn discover_kubernetes_cluster(
             error!("Error during cluster discovery: {e}");
             app_handle.emit("ERR_CLUSTER_DISCOVERY", &e).unwrap();
         }
-    });
+    })?;
+
+    let previous_cache_contents = discovery_cache.read_cache();
+    let mut discovered_resources = HashSet::new();
 
     while let Ok(discovery) = internal_discovery.recv() {
         let send_result = match discovery {
             AsyncDiscoveryResult::DiscoveredResource(resource) => {
                 discovery_cache.cache_resource(resource.clone());
+                discovered_resources.insert(resource.clone());
                 channel.send(DiscoveryResult::DiscoveredResource(resource))
             }
             AsyncDiscoveryResult::ObtainedClientId(client_id) => {
@@ -84,6 +92,22 @@ pub async fn discover_kubernetes_cluster(
         };
 
         send_result.unwrap();
+    }
+
+    // Find resource kinds that vanished from the cluster and remove them from UI and cache
+    for removed_resource in previous_cache_contents.difference(&discovered_resources) {
+        info!(
+            "Removing stale resource {}.{} from cache as it no longer exists in the cluster",
+            removed_resource.kind, removed_resource.group
+        );
+
+        discovery_cache.forget_resource(removed_resource);
+
+        channel
+            .send(DiscoveryResult::RemovedResource(
+                removed_resource.to_owned(),
+            ))
+            .unwrap();
     }
 
     Ok(DiscoveredCluster { client_id })

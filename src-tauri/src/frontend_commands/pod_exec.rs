@@ -141,7 +141,7 @@ pub async fn pod_exec_start_session(
         session_event_channel.send(ExecSessionEvent::End).unwrap();
     };
 
-    join_handle_store.submit(channel_id, exec_task);
+    join_handle_store.submit(channel_id, exec_task)?;
 
     Ok(exec_session_id)
 }

@@ -78,7 +78,7 @@ pub async fn kube_stream_podlogs(
         }
     };
 
-    join_handle_store.submit(channel_id, stream_task);
+    join_handle_store.submit(channel_id, stream_task)?;
 
     Ok(())
 }

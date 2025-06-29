@@ -26,9 +26,14 @@ export type DiscoveryResult = {
     gvks: { [key: string]: DiscoveredGroup },
 }
 
+type DiscoveryResource = { group: string, version: string, kind: string, plural: string, source: 'Builtin' | 'CustomResource', scope: 'cluster' | 'namespaced' };
+
 export type AsyncDiscovery =
     {
-        discoveredResource: { group: string, version: string, kind: string, plural: string, source: 'Builtin' | 'CustomResource', scope: 'cluster' | 'namespaced' },
+        discoveredResource: DiscoveryResource,
+    }
+    | {
+        removedResource: DiscoveryResource,
     }
     | {
         clientId: string
@@ -49,6 +54,19 @@ export function useClusterDiscovery(source: string | null, context: string | nul
         channel.onmessage = (message) => {
             if ("clientId" in message) {
                 setClientId(message.clientId);
+            } else if ("removedResource" in message) {
+                const toBeRemoved = message.removedResource;
+
+                setDiscovery((discovery) => {
+                    if (!(toBeRemoved.group in discovery.gvks)) {
+                        return discovery;
+                    }
+
+                    const gvks = { ...discovery.gvks };
+                    gvks[toBeRemoved.group].kinds = gvks[toBeRemoved.group].kinds.filter(({ kind, version }) => kind !== toBeRemoved.kind || version !== toBeRemoved.version);
+
+                    return ({ ...discovery, gvks });
+                });
             } else if ("discoveredResource" in message) {
                 const resource = message.discoveredResource;
 
@@ -84,7 +102,10 @@ export function useClusterDiscovery(source: string | null, context: string | nul
             .then((unlisten) => {
                 invoke<{ clientId: string }>('discover_kubernetes_cluster', { channel, contextSource: { provider: 'file', source, context } })
                     .then((response) => setClientId(response.clientId))
-                    .catch((e) => setLastError(e as unknown as string))
+                    .catch((e) => {
+                        if (e === 'BackgroundTaskRejected') return;
+                        setLastError(e as unknown as string);
+                    })
                     .finally(() => {
                         setLoading(false);
                         unlisten();

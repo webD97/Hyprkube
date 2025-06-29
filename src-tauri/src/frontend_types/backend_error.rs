@@ -1,4 +1,4 @@
-use crate::resource_rendering::ResourceViewError;
+use crate::{app_state::Rejected, resource_rendering::ResourceViewError};
 
 #[derive(thiserror::Error, Debug)]
 pub enum BackendError {
@@ -13,6 +13,9 @@ pub enum BackendError {
 
     #[error(transparent)]
     TauriError(#[from] tauri::Error),
+
+    #[error("BackgroundTaskRejected")]
+    BackgroundTaskRejected(Rejected),
 
     #[error("{0}")]
     Generic(String),
@@ -36,5 +39,11 @@ impl From<String> for BackendError {
 impl From<&str> for BackendError {
     fn from(value: &str) -> Self {
         Self::Generic(value.to_owned())
+    }
+}
+
+impl From<Rejected> for BackendError {
+    fn from(rejected: Rejected) -> Self {
+        Self::BackgroundTaskRejected(rejected)
     }
 }

@@ -22,7 +22,7 @@ pub struct DiscoveredGroup {
     pub kinds: Vec<DiscoveredResource>,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
 #[serde(rename_all = "camelCase")]
 pub enum Scope {
     Cluster,
@@ -38,7 +38,7 @@ impl From<kube::discovery::Scope> for Scope {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
 #[serde(rename_all = "camelCase")]
 pub struct DiscoveredResource {
     pub group: String,
@@ -56,7 +56,7 @@ pub struct DiscoveryResult {
     pub crds: HashMap<GroupVersionKind, CustomResourceDefinition>,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
 pub enum ApiGroupSource {
     Builtin,
     CustomResource,

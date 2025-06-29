@@ -101,7 +101,7 @@ pub async fn watch_gvk_with_view(
             .await;
     };
 
-    join_handle_store.submit(channel_id, stream);
+    join_handle_store.submit(channel_id, stream)?;
 
     Ok(())
 }

@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{collections::HashSet, sync::Arc};
 
 use crate::app_state::DiscoveredResource;
 
@@ -17,11 +17,11 @@ impl DiscoveryCacheService {
         }
     }
 
-    pub fn read_cache(&self) -> Vec<DiscoveredResource> {
+    pub fn read_cache(&self) -> HashSet<DiscoveredResource> {
         self.repository
             .read_key(&self.persistence_context, "discovery_cache")
             .unwrap()
-            .map_or(Vec::new(), |current| {
+            .map_or(HashSet::new(), |current| {
                 serde_json::from_value(current).unwrap()
             })
     }
@@ -31,7 +31,7 @@ impl DiscoveryCacheService {
             .repository
             .read_key(&self.persistence_context, "discovery_cache")
             .unwrap()
-            .map_or(Vec::new(), |current| {
+            .map_or(HashSet::new(), |current| {
                 serde_json::from_value(current).unwrap()
             });
 
@@ -39,7 +39,31 @@ impl DiscoveryCacheService {
             return;
         }
 
-        current.push(resource);
+        current.insert(resource);
+
+        self.repository
+            .set_key(
+                &self.persistence_context,
+                "discovery_cache",
+                serde_json::to_value(current).unwrap(),
+            )
+            .unwrap();
+    }
+
+    pub fn forget_resource(&self, resource: &DiscoveredResource) {
+        let mut current = self
+            .repository
+            .read_key(&self.persistence_context, "discovery_cache")
+            .unwrap()
+            .map_or(Vec::new(), |current| {
+                serde_json::from_value(current).unwrap()
+            });
+
+        if !current.contains(resource) {
+            return;
+        }
+
+        current.retain(|cached| *cached != *resource);
 
         self.repository
             .set_key(
