@@ -40,7 +40,7 @@ const GvkList: React.FC<GvkListProps> = (props) => {
                                     <li key={`${kind}.${group}/${version}`}>
                                         <span
                                             onClick={() => onResourceClicked(gvk)}
-                                            onAuxClick={() => onResourceAuxClicked(gvk)}
+                                            onAuxClick={(e) => e.button === 1 && onResourceAuxClicked(gvk)}
                                             onContextMenu={e => {
                                                 e.preventDefault();
                                                 onGvkContextMenu(gvk)

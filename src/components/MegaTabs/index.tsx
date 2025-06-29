@@ -53,7 +53,7 @@ const MegaTabs: React.FC<PropsWithChildren<MegaTabsProps>> = (props) => {
                                 title={`${title}${subtitle && ` - ${subtitle}`}`}
                                 className={`${idx === activeTab ? classes.activeTab : ''} ${classes.tab}`}
                                 onClick={() => setActiveTab(idx)}
-                                onAuxClick={() => !immortal && handleClose(idx)}
+                                onAuxClick={(e) => e.button === 1 && !immortal && handleClose(idx)}
                             >
                                 <span className={classes.tabIcon}>{icon}</span>
                                 <span className={classes.tabLabelWrapper}>
