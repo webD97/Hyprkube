@@ -16,7 +16,7 @@
     "@tanstack/react-virtual": "^3.13.12",
     "@tauri-apps/api": "2.6.0",
     "@tauri-apps/plugin-dialog": "^2.2.2",
-    "@tauri-apps/plugin-shell": "2.2.1",
+    "@tauri-apps/plugin-shell": "2.3.0",
     "@xterm/addon-clipboard": "^0.1.0",
     "@xterm/addon-fit": "^0.10.0",
     "@xterm/addon-webgl": "^0.18.0",
