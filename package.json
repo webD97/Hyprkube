@@ -44,6 +44,6 @@
     "monaco-editor": "^0.52.2",
     "typescript": "5.9.2",
     "typescript-eslint": "8.40.0",
-    "vite": "7.1.2"
+    "vite": "7.1.3"
   }
 }
