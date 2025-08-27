@@ -34,7 +34,7 @@
     "@tauri-apps/cli": "2.8.3",
     "@types/node": "24.2.0",
     "@types/react": "19.1.11",
-    "@types/react-dom": "19.1.6",
+    "@types/react-dom": "19.1.8",
     "@vitejs/plugin-react-swc": "4.0.1",
     "eslint": "9.34.0",
     "eslint-plugin-react": "^7.37.5",
