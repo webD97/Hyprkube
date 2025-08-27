@@ -15,18 +15,10 @@ updates:
           - "kube"
           - "k8s-openapi"
           - "schemars"
-        update-types:
-          - "major"
-          - "minor"
-          - "patch"
       tauri:
         patterns:
           - "tauri"
           - "tauri-plugin-*"
-        update-types:
-          - "major"
-          - "minor"
-          - "patch"
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
@@ -35,17 +27,9 @@ updates:
       tauri:
         patterns:
           - "@tauri-apps/*"
-        update-types:
-          - "major"
-          - "minor"
-          - "patch"
       react:
         patterns:
           - "react"
           - "react-dom"
           - "@types/react"
           - "@types/react-dom"
-        update-types:
-          - "major"
-          - "minor"
-          - "patch"
