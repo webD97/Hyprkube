@@ -83,37 +83,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c042108f3ed77fd83760a5fd79b53be043192bb3b9dba91d8c574c0ada7850c8"
 
 [[package]]
-name = "app"
-version = "0.1.0"
-dependencies = [
- "dirs",
- "futures",
- "k8s-openapi",
- "kube",
- "rand 0.9.2",
- "rhai",
- "rust-embed",
- "scan_dir",
- "semver",
- "serde",
- "serde_json",
- "serde_json_path",
- "serde_yaml",
- "tauri",
- "tauri-build",
- "tauri-plugin-dialog",
- "tauri-plugin-shell",
- "tauri-plugin-store",
- "thiserror 2.0.16",
- "tokio",
- "tokio-util",
- "tracing",
- "tracing-futures",
- "tracing-subscriber",
- "uuid",
-]
-
-[[package]]
 name = "ashpd"
 version = "0.9.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1819,6 +1788,37 @@ dependencies = [
  "tokio",
  "tower-service",
  "tracing",
+]
+
+[[package]]
+name = "hyprkube"
+version = "0.1.0"
+dependencies = [
+ "dirs",
+ "futures",
+ "k8s-openapi",
+ "kube",
+ "rand 0.9.2",
+ "rhai",
+ "rust-embed",
+ "scan_dir",
+ "semver",
+ "serde",
+ "serde_json",
+ "serde_json_path",
+ "serde_yaml",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-dialog",
+ "tauri-plugin-shell",
+ "tauri-plugin-store",
+ "thiserror 2.0.16",
+ "tokio",
+ "tokio-util",
+ "tracing",
+ "tracing-futures",
+ "tracing-subscriber",
+ "uuid",
 ]
 
 [[package]]

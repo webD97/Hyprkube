@@ -1,16 +1,16 @@
 [package]
-name = "app"
+name = "hyprkube"
 version = "0.1.0"
-description = "A Tauri App"
-authors = ["you"]
-license = ""
-repository = ""
-default-run = "app"
+description = "A Kubernetes GUI"
+authors = ["Christian Danscheid"]
+license = "MIT"
+repository = "https://github.com/webD97/hyprkube"
+default-run = "hyprkube"
 edition = "2021"
 rust-version = "1.70"
 
 [lib]
-name = "app_lib"
+name = "hyprkube_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
