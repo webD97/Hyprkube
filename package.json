@@ -30,7 +30,7 @@
     "react-icons": "^5.5.0"
   },
   "devDependencies": {
-    "@eslint/js": "9.35.0",
+    "@eslint/js": "9.36.0",
     "@tauri-apps/cli": "2.8.4",
     "@types/node": "24.5.2",
     "@types/react": "19.1.13",
@@ -39,11 +39,11 @@
     "eslint": "9.35.0",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "6.0.0",
-    "eslint-plugin-react-refresh": "0.4.20",
+    "eslint-plugin-react-refresh": "0.4.22",
     "globals": "16.4.0",
     "monaco-editor": "^0.53.0",
     "typescript": "5.9.2",
-    "typescript-eslint": "8.44.0",
+    "typescript-eslint": "8.44.1",
     "vite": "7.1.7"
   }
 }
