@@ -33,11 +33,6 @@ updates:
           - "react-dom"
           - "@types/react"
           - "@types/react-dom"
-  - package-ecosystem: "npm"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-    groups:
       eslint:
         patterns:
           - "@eslint/js"
