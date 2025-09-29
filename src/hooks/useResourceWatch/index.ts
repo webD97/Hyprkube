@@ -147,7 +147,10 @@ export default function useKubernetesResourceWatch(kubernetesClientId: string | 
         setColumnTitles([]);
 
         invoke('watch_gvk_with_view', { clientId: kubernetesClientId, gvk, channel, viewName, namespace })
-            .catch(e => alert(e));
+            .catch(e => {
+                if (e === 'BackgroundTaskRejected') return;
+                alert("blubb" + e);
+            });
 
         return () => {
             void invoke('cleanup_channel', { channel });
