@@ -1,3 +1,7 @@
+.container {
+    height: 100%;
+}
+
 .container table {
     font-family: monospace;
     border-spacing: 0;

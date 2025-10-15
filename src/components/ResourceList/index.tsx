@@ -161,81 +161,86 @@ const ResourceList: React.FC<ResourceViewProps> = (props) => {
                         searchbarPortal.current
                     )
             }
-            <table>
-                <thead>
-                    {
-                        table.getHeaderGroups().map((headerGroup) => (
-                            <React.Fragment key={headerGroup.id}>
-                                <tr>
-                                    {
-                                        headerGroup.headers.map((header) => (
-                                            <th key={header.id} colSpan={header.colSpan}
-                                                onClick={header.column.getToggleSortingHandler()}
-                                                className={header.column.getCanSort() ? styles.sortable : undefined}
-                                            >
-                                                {flexRender(header.column.columnDef.header, header.getContext())}
-                                                {{ asc: ' ⬆️', desc: ' ⬇️' }[header.column.getIsSorted() as string] ?? null}
-                                            </th>
-                                        ))}
-                                </tr>
-                                <tr>
-                                    {
-                                        headerGroup.headers.map((header) => (
-                                            <th key={header.id} colSpan={header.colSpan}>
-                                                {
-                                                    header.column.getCanFilter() && (
-                                                        <input type="text"
-                                                            value={columnFilters.find(({ id }) => id === header.column.id)?.value as string ?? ''}
-                                                            onChange={(e) => table.setColumnFilters((currentFilters) => {
-                                                                const columnId = columns.find(({ id }) => id === header.column.id)?.id;
-                                                                if (!columnId) return currentFilters;
-
-                                                                return [
-                                                                    ...currentFilters.filter(({ id }) => id !== columnId),
-                                                                    { id: columnId, value: e.target.value }
-                                                                ];
-                                                            })}
-                                                        />
-                                                    )
-                                                }
-                                            </th>
-                                        ))
-                                    }
-                                </tr>
-                            </React.Fragment>
-                        ))}
-                </thead>
-                <tbody>
-                    {
-                        table.getRowModel().rows.map((row) => {
-                            return (
-                                <tr key={row.id}
-                                    onClick={() => onResourceClicked(gvk, row.original[0])}
-                                    onContextMenu={(e) => {
-                                        e.preventDefault();
-
-                                        onResourceContextMenu(gvk, row.original[0])
-                                            .then(menu => menu.popup(new PhysicalPosition(e.screenX, e.screenY)))
-                                            .catch(e => JSON.stringify(e));
-                                    }}
-                                >
-                                    {
-                                        row.getVisibleCells().map((cell) => {
-                                            return (
-                                                <td key={cell.id}>
-                                                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                                                </td>
-                                            )
-                                        })}
-                                </tr>
-                            )
-                        })}
-                </tbody>
-            </table>
             {
                 Object.keys(resourceData).length == 0
-                    ? <EmojiHint emoji="⏳">No {resourceNamePlural} {namespace ? `in namespace "${namespace}" yet` : 'in this cluster yet'}</EmojiHint>
-                    : null
+                    ? (
+                        <EmojiHint emoji="⏳">
+                            <p>No {resourceNamePlural} {namespace ? `in namespace "${namespace}" yet` : 'in this cluster yet'}.</p>
+                        </EmojiHint>
+                    )
+                    : (
+                        <table>
+                            <thead>
+                                {
+                                    table.getHeaderGroups().map((headerGroup) => (
+                                        <React.Fragment key={headerGroup.id}>
+                                            <tr>
+                                                {
+                                                    headerGroup.headers.map((header) => (
+                                                        <th key={header.id} colSpan={header.colSpan}
+                                                            onClick={header.column.getToggleSortingHandler()}
+                                                            className={header.column.getCanSort() ? styles.sortable : undefined}
+                                                        >
+                                                            {flexRender(header.column.columnDef.header, header.getContext())}
+                                                            {{ asc: ' ⬆️', desc: ' ⬇️' }[header.column.getIsSorted() as string] ?? null}
+                                                        </th>
+                                                    ))}
+                                            </tr>
+                                            <tr>
+                                                {
+                                                    headerGroup.headers.map((header) => (
+                                                        <th key={header.id} colSpan={header.colSpan}>
+                                                            {
+                                                                header.column.getCanFilter() && (
+                                                                    <input type="text"
+                                                                        value={columnFilters.find(({ id }) => id === header.column.id)?.value as string ?? ''}
+                                                                        onChange={(e) => table.setColumnFilters((currentFilters) => {
+                                                                            const columnId = columns.find(({ id }) => id === header.column.id)?.id;
+                                                                            if (!columnId) return currentFilters;
+
+                                                                            return [
+                                                                                ...currentFilters.filter(({ id }) => id !== columnId),
+                                                                                { id: columnId, value: e.target.value }
+                                                                            ];
+                                                                        })}
+                                                                    />
+                                                                )
+                                                            }
+                                                        </th>
+                                                    ))
+                                                }
+                                            </tr>
+                                        </React.Fragment>
+                                    ))}
+                            </thead>
+                            <tbody>
+                                {
+                                    table.getRowModel().rows.map((row) => {
+                                        return (
+                                            <tr key={row.id}
+                                                onClick={() => onResourceClicked(gvk, row.original[0])}
+                                                onContextMenu={(e) => {
+                                                    e.preventDefault();
+
+                                                    onResourceContextMenu(gvk, row.original[0])
+                                                        .then(menu => menu.popup(new PhysicalPosition(e.screenX, e.screenY)))
+                                                        .catch(e => JSON.stringify(e));
+                                                }}
+                                            >
+                                                {
+                                                    row.getVisibleCells().map((cell) => {
+                                                        return (
+                                                            <td key={cell.id}>
+                                                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                                            </td>
+                                                        )
+                                                    })}
+                                            </tr>
+                                        )
+                                    })}
+                            </tbody>
+                        </table>
+                    )
             }
         </div>
     );
