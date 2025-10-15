@@ -27,11 +27,11 @@
                 let phase = obj.status?.phase;
 
                 if phase == "Bound" {
-                    return ColoredString(phase, "lime");
+                    return Text(phase, #{color: "lime"});
                 }
 
                 if phase == "Released" {
-                    return ColoredString(phase, "orange");
+                    return Text(phase, #{color: "orange"});
                 }
 
                 phase

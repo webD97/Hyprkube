@@ -3,43 +3,47 @@ import dayjs from "dayjs";
 import { useEffect, useState } from "react";
 import { Gvk } from "../../model/k8s";
 
+type Properties = {
+    color?: string,
+    title?: string,
+}
+
 type ResourceFieldComponent =
     {
-        PlainString: string
-    }
-    |
-    {
-        ColoredString: {
-            string: string,
-            color: string
-        }
-    }
-    |
-    {
-        ColoredBox: {
-            color: string,
-        }
+        Text: {
+            content: string,
+            properties: Properties | null
+        },
     }
     |
     {
         Hyperlink: {
             url: string,
-            display_text: string
+            display: string,
+            properties: Properties | null
         }
     }
     |
     {
         RelativeTime: {
-            iso: string,
+            timestamp: string,
+            properties: Properties | null
+        }
+    }
+    |
+    {
+        ColoredBoxes: {
+            boxes: { color: string, properties: Properties | null }[][],
+            properties: Properties | null
         }
     };
 
 export type ResourceField = {
-    components: ResourceFieldComponent[],
+    component: ResourceFieldComponent,
     sortableValue: string
 };
 
-export type OkData = { "Ok": ResourceFieldComponent[] };
+export type OkData = { "Ok": ResourceFieldComponent };
 export type ErrData = { "Err": string };
 export type ColumnData = (OkData | ErrData)[];
 
@@ -91,23 +95,23 @@ function resourceToDisplayableResource(resource: Resource): DisplayableResource 
         uid: resource.uid,
         columns: resource.columns.map((column) => {
             if ("Err" in column) {
-                return ({ components: [{ PlainString: column.Err }], sortableValue: column.Err });
+                return ({ component: { Text: { content: column.Err, properties: null } }, sortableValue: column.Err });
             }
             if ("Ok" in column) {
-                const components = column.Ok;
+                const component = column.Ok;
                 return ({
-                    components,
-                    sortableValue: components.map(component => {
+                    component: component,
+                    sortableValue: (() => {
                         if ("RelativeTime" in component) {
-                            return dayjs(component.RelativeTime.iso).unix();
+                            return dayjs(component.RelativeTime.timestamp).unix().toString();
                         }
                         return component[Object.keys(component)[0] as keyof ResourceFieldComponent];
-                    }).join()
+                    })()
                 });
             }
 
             // We cannot reach this
-            return ({ components: [], sortableValue: "" });
+            return ({ component: { Text: { content: "Unreachable", properties: null } }, sortableValue: "" });
         })
     });
 }

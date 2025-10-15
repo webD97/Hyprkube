@@ -3,13 +3,15 @@ use kube::api::GroupVersionKind;
 use thiserror::Error;
 
 use crate::{
-    frontend_types::{BackendError, FrontendValue},
-    resource_rendering::{ColoredBox, ColoredString, RelativeTime},
+    frontend_types::BackendError,
+    resource_rendering::scripting::types::{
+        ColoredBox, ColoredBoxes, Hyperlink, RelativeTime, ResourceViewField, Text,
+    },
 };
 
 use super::{
     resource_view_definition::{ColumnDefinion, InvalidViewDefinition, ResourceViewDefinition},
-    Hyperlink, ResourceRenderer,
+    ResourceRenderer,
 };
 
 pub struct ScriptedResourceView {
@@ -34,10 +36,11 @@ impl ScriptedResourceView {
     pub fn new(script: &str) -> Result<Self, ResourceViewError> {
         let mut engine = rhai::Engine::new();
         engine
-            .build_type::<ColoredString>()
-            .build_type::<ColoredBox>()
+            .build_type::<Text>()
             .build_type::<Hyperlink>()
             .build_type::<RelativeTime>()
+            .build_type::<ColoredBox>()
+            .build_type::<ColoredBoxes>()
             .register_type_with_name::<ColumnDefinion>("Column")
             .register_type_with_name::<ResourceViewDefinition>("ResourceView");
 
@@ -70,7 +73,7 @@ impl ScriptedResourceView {
     pub fn render_columns(
         &self,
         obj: &kube::api::DynamicObject,
-    ) -> Vec<Result<Vec<FrontendValue>, String>> {
+    ) -> Vec<Result<ResourceViewField, String>> {
         let obj_as_map: rhai::Dynamic =
             rhai::serde::to_dynamic(obj).expect("failed to convert Kubernetes resource to dynamic");
 
@@ -82,52 +85,27 @@ impl ScriptedResourceView {
                     .accessor
                     .call::<rhai::Dynamic>(&self.engine, &self.ast, (obj_as_map.clone(),))
                     .map_err(|e| e.to_string())
-                    .map(|dyn_value| {
-                        // Poor man's coloring: 0 -> value, 1 -> color
-                        if dyn_value.is::<Vec<rhai::Dynamic>>() {
-                            return dyn_value
-                                .into_array()
-                                .unwrap()
-                                .iter()
-                                .map(|value| {
-                                    if value.is::<ColoredString>() {
-                                        return FrontendValue::ColoredString(value.clone().cast());
-                                    }
-
-                                    if value.is::<ColoredBox>() {
-                                        return FrontendValue::ColoredBox(value.clone().cast());
-                                    }
-
-                                    if value.is::<Hyperlink>() {
-                                        return FrontendValue::Hyperlink(value.clone().cast());
-                                    }
-
-                                    if value.is::<RelativeTime>() {
-                                        return FrontendValue::RelativeTime(value.clone().cast());
-                                    }
-
-                                    FrontendValue::PlainString(value.to_string())
-                                })
-                                .collect();
+                    .map(|value| {
+                        if value.is::<Text>() {
+                            return ResourceViewField::Text(value.cast::<Text>());
                         }
 
-                        if dyn_value.is::<ColoredString>() {
-                            return vec![FrontendValue::ColoredString(dyn_value.clone().cast())];
+                        if value.is::<Hyperlink>() {
+                            return ResourceViewField::Hyperlink(value.cast::<Hyperlink>());
                         }
 
-                        if dyn_value.is::<ColoredBox>() {
-                            return vec![FrontendValue::ColoredBox(dyn_value.clone().cast())];
+                        if value.is::<RelativeTime>() {
+                            return ResourceViewField::RelativeTime(value.cast::<RelativeTime>());
                         }
 
-                        if dyn_value.is::<Hyperlink>() {
-                            return vec![FrontendValue::Hyperlink(dyn_value.clone().cast())];
+                        if value.is::<ColoredBoxes>() {
+                            return ResourceViewField::ColoredBoxes(value.cast::<ColoredBoxes>());
                         }
 
-                        if dyn_value.is::<RelativeTime>() {
-                            return vec![FrontendValue::RelativeTime(dyn_value.clone().cast())];
-                        }
-
-                        vec![FrontendValue::PlainString(dyn_value.to_string())]
+                        ResourceViewField::Text(Text {
+                            content: value.to_string(),
+                            properties: None,
+                        })
                     })
             })
             .collect()
@@ -152,7 +130,7 @@ impl ResourceRenderer for ScriptedResourceView {
         _gvk: &GroupVersionKind,
         _crd: Option<&CustomResourceDefinition>,
         obj: &kube::api::DynamicObject,
-    ) -> Result<Vec<Result<Vec<FrontendValue>, String>>, BackendError> {
+    ) -> Result<Vec<Result<ResourceViewField, String>>, BackendError> {
         Ok(self.render_columns(obj))
     }
 }

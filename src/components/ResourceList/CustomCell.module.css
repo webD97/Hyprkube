@@ -1,0 +1,20 @@
+.boxGroup {
+    display: inline-flex;
+    align-items: flex-end;
+}
+
+.boxGroup>* {
+    width: 0.75em;
+    height: 0.75em;
+    border-radius: 20%;
+    flex-grow: 0;
+    flex-shrink: 0;
+}
+
+.boxGroup:not(:last-child) {
+    margin-right: 0.75em;
+}
+
+.boxGroup>*:not(:last-child) {
+    margin-right: 0.375em;
+}

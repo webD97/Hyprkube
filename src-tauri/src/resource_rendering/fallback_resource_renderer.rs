@@ -1,7 +1,10 @@
 use k8s_openapi::apiextensions_apiserver::pkg::apis::apiextensions::v1::CustomResourceDefinition;
 use kube::api::GroupVersionKind;
 
-use crate::frontend_types::{BackendError, FrontendValue};
+use crate::{
+    frontend_types::BackendError,
+    resource_rendering::scripting::types::{RelativeTime, ResourceViewField, Text},
+};
 
 use super::ResourceRenderer;
 
@@ -38,21 +41,24 @@ impl ResourceRenderer for FallbackRenderer {
         _gvk: &GroupVersionKind,
         _crd: Option<&CustomResourceDefinition>,
         obj: &kube::api::DynamicObject,
-    ) -> Result<Vec<Result<Vec<FrontendValue>, String>>, BackendError> {
+    ) -> Result<Vec<Result<ResourceViewField, String>>, BackendError> {
         Ok(vec![
-            Ok(vec![FrontendValue::PlainString(
-                obj.metadata.clone().namespace.unwrap_or("".into()),
-            )]),
-            Ok(vec![FrontendValue::PlainString(
-                obj.metadata.clone().name.unwrap_or("".into()),
-            )]),
-            Ok(vec![FrontendValue::RelativeTime(super::RelativeTime {
-                iso: obj
+            Ok(ResourceViewField::Text(Text {
+                content: obj.metadata.clone().namespace.unwrap_or("".into()),
+                properties: None,
+            })),
+            Ok(ResourceViewField::Text(Text {
+                content: obj.metadata.clone().name.unwrap_or("".into()),
+                properties: None,
+            })),
+            Ok(ResourceViewField::RelativeTime(RelativeTime {
+                timestamp: obj
                     .metadata
                     .clone()
                     .creation_timestamp
                     .map_or("".into(), |v| v.0.to_rfc3339()),
-            })]),
+                properties: None,
+            })),
         ])
     }
 }

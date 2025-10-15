@@ -8,9 +8,9 @@ use tracing::{error, info};
 
 use crate::{
     app_state::{ClientId, JoinHandleStoreState, KubernetesClientRegistryState, RendererRegistry},
-    frontend_types::{BackendError, FrontendValue},
+    frontend_types::BackendError,
     internal::resources::ResourceWatchStreamEvent,
-    resource_rendering::ResourceColumnDefinition,
+    resource_rendering::{scripting::types::ResourceViewField, ResourceColumnDefinition},
 };
 
 #[derive(Clone, Serialize)]
@@ -24,7 +24,7 @@ pub enum ResourceEvent {
         uid: String,
         namespace: String,
         name: String,
-        columns: Vec<Result<Vec<FrontendValue>, String>>,
+        columns: Vec<Result<ResourceViewField, String>>,
     },
     Deleted {
         uid: String,

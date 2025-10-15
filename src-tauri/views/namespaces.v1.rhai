@@ -15,11 +15,11 @@
                 let phase = obj.status?.phase;
 
                 if phase == "Active" {
-                    return ColoredString(phase, "lime");
+                    return Text(phase, #{color: "lime"});
                 }
 
                 if phase == "Terminating" {
-                    return ColoredString(phase, "orange");
+                    return Text(phase, #{color: "orange"});
                 }
 
                 phase

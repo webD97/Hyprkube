@@ -35,10 +35,10 @@
                     ?.status == "True";
                 
                 if available {
-                    return ColoredString("Available", "lime");
+                    return Text("Available", #{color: "lime"});
                 }
 
-                ColoredString("Unavailable", "crimson")
+                Text("Unavailable", #{color: "crimson"})
             }
         },
         #{

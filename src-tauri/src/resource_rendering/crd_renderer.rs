@@ -1,5 +1,8 @@
 use super::ResourceRenderer;
-use crate::frontend_types::{BackendError, FrontendValue};
+use crate::{
+    frontend_types::BackendError,
+    resource_rendering::scripting::types::{Properties, RelativeTime, ResourceViewField, Text},
+};
 use k8s_openapi::apiextensions_apiserver::pkg::apis::apiextensions::v1::CustomResourceDefinition;
 use kube::api::GroupVersionKind;
 use serde_json::{json, Value};
@@ -58,7 +61,7 @@ impl ResourceRenderer for CrdRenderer {
         _gvk: &GroupVersionKind,
         crd: Option<&CustomResourceDefinition>,
         obj: &kube::api::DynamicObject,
-    ) -> Result<Vec<Result<Vec<FrontendValue>, String>>, BackendError> {
+    ) -> Result<Vec<Result<ResourceViewField, String>>, BackendError> {
         let crd = crd.expect("must pass a CustomResourceDefinition");
 
         let crd_version = crd
@@ -67,24 +70,28 @@ impl ResourceRenderer for CrdRenderer {
             .first()
             .ok_or(BackendError::from("CRD version not found"))?;
 
-        let mut values: Vec<Result<Vec<crate::frontend_types::FrontendValue>, String>> = vec![];
+        let mut values: Vec<Result<ResourceViewField, String>> = vec![];
 
-        values.push(Ok(vec![FrontendValue::PlainString(
-            obj.metadata
+        values.push(Ok(ResourceViewField::Text(Text {
+            content: obj
+                .metadata
                 .name
                 .as_ref()
                 .unwrap_or(&"".to_owned())
                 .to_owned(),
-        )]));
+            properties: None,
+        })));
 
         if crd.spec.scope == "Namespaced" {
-            values.push(Ok(vec![FrontendValue::PlainString(
-                obj.metadata
+            values.push(Ok(ResourceViewField::Text(Text {
+                content: obj
+                    .metadata
                     .namespace
                     .as_ref()
                     .unwrap_or(&"".to_owned())
                     .to_owned(),
-            )]));
+                properties: None,
+            })));
         }
 
         let mut has_own_age_column = false;
@@ -98,8 +105,8 @@ impl ResourceRenderer for CrdRenderer {
                 .map(|(title, json_path, type_)| {
                     has_own_age_column = has_own_age_column || (title == *"Age");
 
-                    let value = JsonPath::parse(format!("${}", json_path).as_str())
-                        .map_err(|e| format!("\"{}\": {}", json_path, e))
+                    let value = JsonPath::parse(format!("${json_path}").as_str())
+                        .map_err(|e| format!("\"{json_path}\": {e}"))
                         .map(|jsonpath| {
                             jsonpath
                                 .query(&obj)
@@ -114,36 +121,41 @@ impl ResourceRenderer for CrdRenderer {
                         });
 
                     match value {
-                        Err(e) => {
-                            FrontendValue::ColoredString(crate::resource_rendering::ColoredString {
-                                string: e,
-                                color: "red".into(),
-                            })
-                        }
+                        Err(e) => ResourceViewField::Text(Text {
+                            content: e,
+                            properties: Some(Properties {
+                                color: Some("red".into()),
+                                ..Default::default()
+                            }),
+                        }),
                         Ok(value) => {
                             if type_ == *"date" {
-                                return FrontendValue::RelativeTime(super::RelativeTime {
-                                    iso: value.to_owned(),
+                                return ResourceViewField::RelativeTime(RelativeTime {
+                                    timestamp: value.to_owned(),
+                                    properties: None,
                                 });
                             }
 
-                            FrontendValue::PlainString(value.to_owned())
+                            ResourceViewField::Text(Text {
+                                content: value.to_owned(),
+                                properties: None,
+                            })
                         }
                     }
                 })
-                .map(|s| Ok(vec![s]))
-                .for_each(|value| values.push(value));
+                .for_each(|value| values.push(Ok(value)));
         }
 
         if !has_own_age_column {
-            values.push(Ok(vec![FrontendValue::RelativeTime(super::RelativeTime {
-                iso: obj
+            values.push(Ok(ResourceViewField::RelativeTime(RelativeTime {
+                timestamp: obj
                     .metadata
                     .creation_timestamp
                     .as_ref()
                     .map_or("".into(), |v| v.0.to_rfc3339())
                     .to_owned(),
-            })]));
+                properties: None,
+            })));
         }
 
         Ok(values)

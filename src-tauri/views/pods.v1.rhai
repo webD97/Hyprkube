@@ -1,35 +1,38 @@
 fn evaluateInitContainer(status) {
+    let name = status.name;
+
     if "terminated" in status.state {
         if status.state.terminated.exitCode == 0 {
-            return ColoredBox("lightgreen");
+            return Box("lightgreen", #{title: name});
         }
-        return ColoredBox("orangered");
+        return Box("orangered", #{title: name});
     }
 
     if "waiting" in status.state {
-        return ColoredBox("orange");
+        return Box("orange", #{title: name});
     }
 
-    ColoredBox("darkgrey")
+    Box("darkgrey", #{title: name})
 }
 
 fn evaluateContainer(status) {
+    let name = status.name;
     if "terminated" in status.state {
         if status.state.terminated.exitCode == 0 {
-            return ColoredBox("lightgreen");
+            return Box("lightgreen", #{title: name});
         }
-        return ColoredBox("orangered");
+        return Box("orangered", #{title: name});
     }
 
     if status.ready {
-        return ColoredBox("lime");
+        return Box("lime", #{title: name});
     }
 
     if "running" in status.state || "waiting" in status.state {
-        return ColoredBox("orange");
+        return Box("orange", #{title: name});
     }
 
-    ColoredBox("darkgrey")
+    Box("darkgrey", #{title: name})
 }
 
 #{
@@ -55,17 +58,8 @@ fn evaluateContainer(status) {
             accessor: |obj| {
                 let initContainers = obj.status?.initContainerStatuses ?? [];
                 let containers = obj.status?.containerStatuses ?? [];
-                let display = [];
 
-                display.append(containers.map(evaluateContainer));
-
-                if initContainers.len > 0 {
-                    display.push("| ");
-                }
-
-                display.append(initContainers.map(evaluateInitContainer));
-
-                display
+                Boxes([containers.map(evaluateContainer), initContainers.map(evaluateInitContainer)])
             }
         },
         #{
@@ -90,15 +84,15 @@ fn evaluateContainer(status) {
                 let phase = obj.status.phase;
 
                 if "deletionTimestamp" in obj.metadata {
-                    return ColoredString("Terminating", "orange");
+                    return Text("Terminating", #{color: "orange"});
                 }
 
                 if phase == "Running" {
-                    return ColoredString(phase, "lime");
+                    return Text(phase, #{color: "lime"});
                 }
 
                 if phase == "Succeeded" {
-                    return ColoredString(phase, "lightgreen");
+                    return Text(phase, #{color: "lightgreen"});
                 }
 
                 if phase == "Pending" {
@@ -106,18 +100,18 @@ fn evaluateContainer(status) {
                     let badContainer = obj.status?.containerStatuses?.find(|c| c.state?.waiting?.reason != ());
 
                     if badInitContainer != () {
-                        return ColoredString(badInitContainer.state?.waiting?.reason + " (Init)", "orange");
+                        return Text(badInitContainer.state?.waiting?.reason + " (Init)", #{color: "orange"});
                     }
 
                     if badContainer != () {
-                        return ColoredString(badContainer.state?.waiting?.reason, "orange");
+                        return Text(badContainer.state?.waiting?.reason, #{color: "orange"});
                     }
 
-                    return ColoredString(phase, "orange");
+                    return Text(phase, #{color: "orange"});
                 }
 
                 if phase == "Failed" {
-                    return ColoredString(phase, "crimson");
+                    return Text(phase, #{color: "crimson"});
                 }
 
                 return phase;
