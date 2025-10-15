@@ -10,13 +10,16 @@ use crate::{
     app_state::{ClientId, JoinHandleStoreState, KubernetesClientRegistryState, RendererRegistry},
     frontend_types::{BackendError, FrontendValue},
     internal::resources::ResourceWatchStreamEvent,
+    resource_rendering::ResourceColumnDefinition,
 };
 
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase", tag = "event", content = "data")]
 pub enum ResourceEvent {
     #[serde(rename_all = "camelCase")]
-    AnnounceColumns { titles: Vec<String> },
+    AnnounceColumns {
+        columns: Vec<ResourceColumnDefinition>,
+    },
     Applied {
         uid: String,
         namespace: String,
@@ -70,11 +73,11 @@ pub async fn watch_gvk_with_view(
         let view = views.get_renderer(&gvk, view_name.as_str()).await;
         let (_, _, discovery) = client_registry_arc.get_cluster(&client_id).unwrap();
         let crd = discovery.crds.get(&gvk);
-        let column_titles = view.titles(&gvk, crd);
+        let column_definitions = view.column_definitions(&gvk, crd).unwrap();
 
         channel
             .send(ResourceEvent::AnnounceColumns {
-                titles: column_titles.unwrap(),
+                columns: column_definitions,
             })
             .unwrap();
 

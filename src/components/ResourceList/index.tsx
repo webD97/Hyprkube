@@ -1,4 +1,4 @@
-import { DisplayableResource, ResourceField, ResourceViewData } from "../../hooks/useResourceWatch";
+import { ColumnDefinition, DisplayableResource, ResourceField, ResourceViewData } from "../../hooks/useResourceWatch";
 import EmojiHint from "../EmojiHint";
 
 import { useEffect, useMemo, useState } from "react";
@@ -19,6 +19,7 @@ import {
 } from '@tanstack/react-table';
 import { PhysicalPosition } from "@tauri-apps/api/dpi";
 import { Menu } from "@tauri-apps/api/menu";
+import React from "react";
 import { createPortal } from "react-dom";
 import { Gvk } from "../../model/k8s";
 import Checkbox from "../Checkbox";
@@ -29,7 +30,7 @@ type _TData = [string, DisplayableResource];
 export interface ResourceViewProps {
     namespace?: string,
     resourceNamePlural?: string,
-    columnTitles: string[],
+    columnDefinitions: ColumnDefinition[],
     resourceData: ResourceViewData,
     gvk: Gvk,
     onResourceContextMenu: (gvk: Gvk, uid: string) => Promise<Menu>,
@@ -38,9 +39,9 @@ export interface ResourceViewProps {
     searchbarPortal: React.RefObject<HTMLDivElement | null>
 }
 
-function createColumns(titles: string[]) {
+function createColumns(columnDefinitions: ColumnDefinition[]) {
     const columnHelper = createColumnHelper<_TData>();
-    const dataColumns = titles.map((title, idx) => {
+    const dataColumns = columnDefinitions.map(({ title, filterable }, idx) => {
         return columnHelper.accessor(row => row[1].columns[idx], {
             id: `${idx}_${title}`,
             header: () => title,
@@ -52,7 +53,9 @@ function createColumns(titles: string[]) {
             },
             filterFn: (row, columnId, filterValue) => {
                 return row.getValue<ResourceField>(columnId).sortableValue.includes(filterValue as string);
-            }
+            },
+            enableColumnFilter: filterable,
+            enableSorting: true, // TODO: View in backend should decide this
         });
     });
 
@@ -80,7 +83,7 @@ const ResourceList: React.FC<ResourceViewProps> = (props) => {
     const {
         namespace,
         resourceNamePlural,
-        columnTitles,
+        columnDefinitions,
         gvk,
         resourceData = {},
         onResourceContextMenu,
@@ -89,7 +92,7 @@ const ResourceList: React.FC<ResourceViewProps> = (props) => {
         searchbarPortal
     } = props;
 
-    const columns = useMemo(() => createColumns(columnTitles), [columnTitles]);
+    const columns = useMemo(() => createColumns(columnDefinitions), [columnDefinitions]);
     const data = useMemo(() => Object.entries(resourceData), [resourceData]);
     const [sorting, setSorting] = useState<SortingState>([]);
     const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
@@ -101,9 +104,9 @@ const ResourceList: React.FC<ResourceViewProps> = (props) => {
         }
 
         return {
-            [columnTitles.indexOf("Namespace")]: false
+            [columnDefinitions.findIndex(c => c.title === "Namespace")]: false
         };
-    }, [namespace, columnTitles]);
+    }, [namespace, columnDefinitions]);
 
     const table = useReactTable({
         columns,
@@ -154,22 +157,7 @@ const ResourceList: React.FC<ResourceViewProps> = (props) => {
                 !searchbarPortal.current
                     ? null
                     : createPortal(
-                        (
-                            <input type="text"
-                                className={styles.quickSearch}
-                                placeholder="Quick search"
-                                value={columnFilters.find(x => x.id.endsWith('Name'))?.value as string ?? ''}
-                                onChange={(e) => table.setColumnFilters((currentFilters) => {
-                                    const nameColumnId = columns.map(column => column.id!).find((id) => id.endsWith('Name'));
-                                    if (!nameColumnId) return currentFilters;
-
-                                    return [
-                                        ...currentFilters.filter(({ id }) => id !== nameColumnId),
-                                        { id: nameColumnId, value: e.target.value }
-                                    ];
-                                })}
-                            />
-                        ),
+                        <></>,
                         searchbarPortal.current
                     )
             }
@@ -177,19 +165,44 @@ const ResourceList: React.FC<ResourceViewProps> = (props) => {
                 <thead>
                     {
                         table.getHeaderGroups().map((headerGroup) => (
-                            <tr key={headerGroup.id}>
-                                {
-                                    headerGroup.headers.map((header) => (
-                                        <th key={header.id} colSpan={header.colSpan}
-                                            onClick={header.column.getToggleSortingHandler()}
-                                            className={header.column.getCanSort() ? styles.sortable : undefined}
-                                        >
-                                            {flexRender(header.column.columnDef.header, header.getContext())}
-                                            {{ asc: ' ⬆️', desc: ' ⬇️' }[header.column.getIsSorted() as string] ?? null}
-                                            {header.column.getIsFiltered() ? ' 🔍' : null}
-                                        </th>
-                                    ))}
-                            </tr>
+                            <React.Fragment key={headerGroup.id}>
+                                <tr>
+                                    {
+                                        headerGroup.headers.map((header) => (
+                                            <th key={header.id} colSpan={header.colSpan}
+                                                onClick={header.column.getToggleSortingHandler()}
+                                                className={header.column.getCanSort() ? styles.sortable : undefined}
+                                            >
+                                                {flexRender(header.column.columnDef.header, header.getContext())}
+                                                {{ asc: ' ⬆️', desc: ' ⬇️' }[header.column.getIsSorted() as string] ?? null}
+                                            </th>
+                                        ))}
+                                </tr>
+                                <tr>
+                                    {
+                                        headerGroup.headers.map((header) => (
+                                            <th key={header.id} colSpan={header.colSpan}>
+                                                {
+                                                    header.column.getCanFilter() && (
+                                                        <input type="text"
+                                                            value={columnFilters.find(({ id }) => id === header.column.id)?.value as string ?? ''}
+                                                            onChange={(e) => table.setColumnFilters((currentFilters) => {
+                                                                const columnId = columns.find(({ id }) => id === header.column.id)?.id;
+                                                                if (!columnId) return currentFilters;
+
+                                                                return [
+                                                                    ...currentFilters.filter(({ id }) => id !== columnId),
+                                                                    { id: columnId, value: e.target.value }
+                                                                ];
+                                                            })}
+                                                        />
+                                                    )
+                                                }
+                                            </th>
+                                        ))
+                                    }
+                                </tr>
+                            </React.Fragment>
                         ))}
                 </thead>
                 <tbody>

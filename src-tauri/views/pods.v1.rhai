@@ -51,6 +51,7 @@ fn evaluateContainer(status) {
         },
         #{
             title: "Containers",
+            filterable: false,
             accessor: |obj| {
                 let initContainers = obj.status?.initContainerStatuses ?? [];
                 let containers = obj.status?.containerStatuses ?? [];

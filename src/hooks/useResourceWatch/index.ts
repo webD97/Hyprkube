@@ -57,6 +57,11 @@ export type DisplayableResource = {
     columns: ResourceField[]
 }
 
+export type ColumnDefinition = {
+    title: string,
+    filterable: boolean
+}
+
 export type WatchEvent =
     | {
         event: 'applied';
@@ -71,7 +76,7 @@ export type WatchEvent =
     | {
         event: 'announceColumns';
         data: {
-            titles: string[]
+            columns: ColumnDefinition[]
         }
     }
 
@@ -107,8 +112,8 @@ function resourceToDisplayableResource(resource: Resource): DisplayableResource 
     });
 }
 
-export default function useKubernetesResourceWatch(kubernetesClientId: string | undefined, gvk: Gvk | undefined, viewName: string, namespace: string): [string[], ResourceViewData] {
-    const [columnTitles, setColumnTitles] = useState<string[]>([]);
+export default function useKubernetesResourceWatch(kubernetesClientId: string | undefined, gvk: Gvk | undefined, viewName: string, namespace: string): [ColumnDefinition[], ResourceViewData] {
+    const [columnDefinitions, setColumnDefinitions] = useState<ColumnDefinition[]>([]);
     const [resources, setResources] = useState<ResourceViewData>({});
 
     useEffect(() => {
@@ -120,7 +125,7 @@ export default function useKubernetesResourceWatch(kubernetesClientId: string | 
 
         channel.onmessage = (message) => {
             if (message.event === 'announceColumns') {
-                setColumnTitles(message.data.titles);
+                setColumnDefinitions(message.data.columns);
             }
             else if (message.event === 'applied') {
                 const { uid } = message.data;
@@ -144,7 +149,7 @@ export default function useKubernetesResourceWatch(kubernetesClientId: string | 
         };
 
         setResources({});
-        setColumnTitles([]);
+        setColumnDefinitions([]);
 
         invoke('watch_gvk_with_view', { clientId: kubernetesClientId, gvk, channel, viewName, namespace })
             .catch(e => {
@@ -157,5 +162,5 @@ export default function useKubernetesResourceWatch(kubernetesClientId: string | 
         };
     }, [gvk, kubernetesClientId, viewName, namespace]);
 
-    return [columnTitles, resources];
+    return [columnDefinitions, resources];
 }

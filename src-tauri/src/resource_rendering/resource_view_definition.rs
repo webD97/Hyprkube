@@ -59,6 +59,7 @@ impl TryFrom<rhai::Map> for ResourceViewDefinition {
 #[derive(Clone, rhai::CustomType, Debug)]
 pub struct ColumnDefinion {
     pub title: String,
+    pub filterable: bool,
     pub accessor: rhai::FnPtr,
 }
 
@@ -79,6 +80,14 @@ impl TryFrom<rhai::Map> for ColumnDefinion {
                 .clone()
                 .try_cast::<rhai::FnPtr>()
                 .ok_or(InvalidViewDefinition::TypeMismatch(".accessor", "FnPtr"))?,
+            filterable: value
+                .get("filterable")
+                .map(|v| {
+                    v.clone()
+                        .try_cast::<bool>()
+                        .ok_or(InvalidViewDefinition::TypeMismatch(".filterable", "bool"))
+                })
+                .unwrap_or(Ok(true))?,
         })
     }
 }

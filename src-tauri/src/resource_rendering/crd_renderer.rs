@@ -13,29 +13,41 @@ impl ResourceRenderer for CrdRenderer {
         "Custom resource default view"
     }
 
-    fn titles(
+    fn column_definitions(
         &self,
         _gvk: &GroupVersionKind,
         crd: Option<&CustomResourceDefinition>,
-    ) -> Result<Vec<String>, BackendError> {
+    ) -> Result<Vec<super::ResourceColumnDefinition>, BackendError> {
         let crd = crd.expect("must pass a CustomResourceDefinition");
 
         let crd_version = crd.spec.versions.first().ok_or("CRD version not found")?;
 
-        let mut columns = vec!["Name".to_owned()];
+        let mut columns = vec![super::ResourceColumnDefinition {
+            title: "Name".into(),
+            filterable: true,
+        }];
 
         if crd.spec.scope == "Namespaced" {
-            columns.push("Namespace".to_owned());
+            columns.push(super::ResourceColumnDefinition {
+                title: "Namespace".into(),
+                filterable: true,
+            });
         }
 
         if let Some(apts) = crd_version.additional_printer_columns.as_ref() {
-            apts.iter()
-                .map(|c| c.clone().name)
-                .for_each(|name| columns.push(name));
+            apts.iter().map(|c| c.clone().name).for_each(|name| {
+                columns.push(super::ResourceColumnDefinition {
+                    title: name,
+                    filterable: true,
+                })
+            });
         }
 
-        if !columns.contains(&"Age".to_owned()) {
-            columns.push("Age".to_owned());
+        if !columns.iter().any(|c| c.title == "Age") {
+            columns.push(super::ResourceColumnDefinition {
+                title: "Age".into(),
+                filterable: true,
+            });
         }
 
         Ok(columns)

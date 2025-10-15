@@ -56,11 +56,14 @@ impl ScriptedResourceView {
         self.definition.name.as_str()
     }
 
-    pub fn render_titles(&self) -> Vec<String> {
+    pub fn column_definitions(&self) -> Vec<super::ResourceColumnDefinition> {
         self.definition
             .columns
             .iter()
-            .map(|column| column.title.clone())
+            .map(|column| super::ResourceColumnDefinition {
+                title: column.title.clone(),
+                filterable: column.filterable,
+            })
             .collect()
     }
 
@@ -136,12 +139,12 @@ impl ResourceRenderer for ScriptedResourceView {
         self.display_name()
     }
 
-    fn titles(
+    fn column_definitions(
         &self,
         _gvk: &GroupVersionKind,
         _crd: Option<&CustomResourceDefinition>,
-    ) -> Result<Vec<String>, BackendError> {
-        Ok(self.render_titles())
+    ) -> Result<Vec<super::ResourceColumnDefinition>, BackendError> {
+        Ok(self.column_definitions())
     }
 
     fn render(

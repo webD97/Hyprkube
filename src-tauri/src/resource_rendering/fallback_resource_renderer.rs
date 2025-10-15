@@ -12,12 +12,25 @@ impl ResourceRenderer for FallbackRenderer {
         "Simple list"
     }
 
-    fn titles(
+    fn column_definitions(
         &self,
         _gvk: &GroupVersionKind,
         _crd: Option<&CustomResourceDefinition>,
-    ) -> Result<Vec<String>, BackendError> {
-        Ok(vec!["Namespace".into(), "Name".into(), "Age".into()])
+    ) -> Result<Vec<super::ResourceColumnDefinition>, BackendError> {
+        Ok(vec![
+            super::ResourceColumnDefinition {
+                title: "Namespace".into(),
+                filterable: true,
+            },
+            super::ResourceColumnDefinition {
+                title: "Name".into(),
+                filterable: true,
+            },
+            super::ResourceColumnDefinition {
+                title: "Age".into(),
+                filterable: true,
+            },
+        ])
     }
 
     fn render(

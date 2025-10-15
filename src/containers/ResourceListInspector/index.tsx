@@ -45,7 +45,7 @@ const ResourceListInspector: React.FC<ResourceListInspectorProps> = (props) => {
     const [selectedNamespace, setSelectedNamespace] = useState(preSelectedNamespace);
     const [resourceDefaultNamespace, setResourceDefaultNamespace] = useState('default');
     const [selectedResources, setSelectedResources] = useState<[string, DisplayableResource][]>([]);
-    const [columnTitles, resources] = useResourceWatch(clientId, gvk, selectedView, selectedNamespace);
+    const [columnDefinitions, resources] = useResourceWatch(clientId, gvk, selectedView, selectedNamespace);
 
     const searchbarRef = useRef<HTMLDivElement>(null);
 
@@ -186,7 +186,7 @@ const ResourceListInspector: React.FC<ResourceListInspectorProps> = (props) => {
                     resourceNamePlural={resourceNamePlural}
                     gvk={gvk}
                     namespace={selectedNamespace}
-                    columnTitles={columnTitles || []}
+                    columnDefinitions={columnDefinitions || []}
                     resourceData={resources}
                     onResourceClicked={yamlViewerFactory()}
                     searchbarPortal={searchbarRef}
