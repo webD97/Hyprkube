@@ -9,6 +9,12 @@
     border-radius: 20%;
     flex-grow: 0;
     flex-shrink: 0;
+    transition: transform .2s;
+}
+
+.boxGroup>*:hover {
+    transform: scale(1.2);
+    transition: transform .2s;
 }
 
 .boxGroup:not(:last-child) {
