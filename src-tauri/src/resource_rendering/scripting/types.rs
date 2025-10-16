@@ -37,6 +37,7 @@ pub struct Properties {
 
 /// A serializable generic representation of any component that the frontend can display in a resource view.
 #[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ViewComponent {
     pub kind: &'static str,
     pub args: serde_json::Value,

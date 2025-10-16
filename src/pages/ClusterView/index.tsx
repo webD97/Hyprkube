@@ -1,6 +1,7 @@
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { ErrorBoundary } from 'react-error-boundary';
 import listClusterProfiles, { ClusterProfile } from '../../api/listClusterProfiles';
 import EmojiHint from '../../components/EmojiHint';
 import GvkList from '../../components/GvkList';
@@ -219,20 +220,28 @@ const ClusterView: React.FC<ClusterViewProps> = ({ contextSource, preSelectedGvk
                 </TabView>
             </section>
             <section className={classes.mainArea}>
-                {
-                    !activeGvk
-                        ? <EmojiHint emoji="👈">Select a resource to get started.</EmojiHint>
-                        : (
-                            <ResourceListInspector
-                                gvk={activeGvk}
-                                preSelectedNamespace={preSelectedNamespace || 'default'}
-                                onNamespaceChanged={onNamespaceChanged}
-                                contextSource={contextSource}
-                                clusterProfile={clusterProfiles[0][0]}
-                                pushBottomTab={pushBottomTab}
-                            />
-                        )
-                }
+                <ErrorBoundary
+                    fallbackRender={(context) => (
+                        <div role="alert">
+                            <p>Something went wrong:</p>
+                            <pre style={{ color: "red" }}>{JSON.stringify(context, undefined, 2)}</pre>
+                        </div>
+                    )}
+                >
+                    {
+                        !activeGvk
+                            ? <EmojiHint emoji="👈">Select a resource to get started.</EmojiHint>
+                            : (
+                                <ResourceListInspector
+                                    gvk={activeGvk}
+                                    preSelectedNamespace={preSelectedNamespace || 'default'}
+                                    onNamespaceChanged={onNamespaceChanged}
+                                    contextSource={contextSource}
+                                    clusterProfile={clusterProfiles[0][0]}
+                                    pushBottomTab={pushBottomTab}
+                                />
+                            )
+                    }</ErrorBoundary>
             </section>
         </div>
     )
