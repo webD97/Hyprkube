@@ -102,10 +102,13 @@ function resourceToDisplayableResource(resource: Resource): DisplayableResource 
                 return ({
                     component: component,
                     sortableValue: (() => {
+                        // This whole closure is a bit hacky, it's probably better to prepare this in the backend
                         if ("RelativeTime" in component) {
                             return dayjs(component.RelativeTime.timestamp).unix().toString();
                         }
-                        return component[Object.keys(component)[0] as keyof ResourceFieldComponent];
+                        const inner = component[Object.keys(component)[0] as keyof ResourceFieldComponent];
+                        const value = inner[Object.keys(inner)[0]];
+                        return value;
                     })()
                 });
             }
@@ -152,6 +155,8 @@ export default function useKubernetesResourceWatch(kubernetesClientId: string | 
             }
         };
 
+        // We really want to reset the state at this point:
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setResources({});
         setColumnDefinitions([]);
 
