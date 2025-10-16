@@ -5,7 +5,7 @@ use serde::Serialize;
 
 use crate::resource_rendering::scripting::{
     components::ColoredBox,
-    types::{ViewComponent, Properties},
+    types::{Properties, ViewComponent},
 };
 
 /// Displays one or more groups of colored boxes.
@@ -22,7 +22,7 @@ impl From<ColoredBoxes> for ViewComponent {
             kind: "ColoredBoxes",
             args: serde_json::to_value(HashMap::from([("boxes", value.boxes.clone())])).unwrap(),
             properties: value.properties,
-            sortable_value: value.boxes.len().to_string(),
+            sortable_value: value.boxes.iter().flatten().count().to_string(),
         }
     }
 }
