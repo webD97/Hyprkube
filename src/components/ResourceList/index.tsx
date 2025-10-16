@@ -165,7 +165,7 @@ const ResourceList: React.FC<ResourceViewProps> = (props) => {
                 Object.keys(resourceData).length == 0
                     ? (
                         <EmojiHint emoji="⏳">
-                            <p>No {resourceNamePlural} {namespace ? `in namespace "${namespace}" yet` : 'in this cluster yet'}.</p>
+                            No {resourceNamePlural} {namespace ? `in namespace "${namespace}" yet` : 'in this cluster yet'}.
                         </EmojiHint>
                     )
                     : (
