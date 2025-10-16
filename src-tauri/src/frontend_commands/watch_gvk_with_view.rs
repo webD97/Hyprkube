@@ -10,7 +10,7 @@ use crate::{
     app_state::{ClientId, JoinHandleStoreState, KubernetesClientRegistryState, RendererRegistry},
     frontend_types::BackendError,
     internal::resources::ResourceWatchStreamEvent,
-    resource_rendering::{scripting::types::DisplayValue, ResourceColumnDefinition},
+    resource_rendering::{scripting::types::ViewComponent, ResourceColumnDefinition},
 };
 
 #[derive(Clone, Serialize)]
@@ -24,7 +24,7 @@ pub enum ResourceEvent {
         uid: String,
         namespace: String,
         name: String,
-        columns: Vec<Result<DisplayValue, String>>,
+        columns: Vec<Result<ViewComponent, String>>,
     },
     Deleted {
         uid: String,

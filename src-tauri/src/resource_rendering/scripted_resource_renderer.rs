@@ -4,8 +4,9 @@ use thiserror::Error;
 
 use crate::{
     frontend_types::BackendError,
-    resource_rendering::scripting::types::{
-        ColoredBox, ColoredBoxes, Hyperlink, RelativeTime, ResourceViewField, Text,
+    resource_rendering::scripting::{
+        components::{ColoredBox, ColoredBoxes, Hyperlink, RelativeTime, Text},
+        types::ResourceViewField,
     },
 };
 
