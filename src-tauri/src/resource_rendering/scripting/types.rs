@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use rhai::{CustomType, Dynamic, EvalAltResult, Position, TypeBuilder};
 use serde::Serialize;
 use tracing::warn;
@@ -7,7 +9,20 @@ pub enum ResourceViewField {
     Text(Text),
     RelativeTime(RelativeTime),
     Hyperlink(Hyperlink),
+    ColoredBox(ColoredBox),
     ColoredBoxes(ColoredBoxes),
+}
+
+impl From<ResourceViewField> for DisplayValue {
+    fn from(value: ResourceViewField) -> Self {
+        match value {
+            ResourceViewField::Text(value) => value.into(),
+            ResourceViewField::RelativeTime(value) => value.into(),
+            ResourceViewField::Hyperlink(value) => value.into(),
+            ResourceViewField::ColoredBox(value) => value.into(),
+            ResourceViewField::ColoredBoxes(value) => value.into(),
+        }
+    }
 }
 
 #[derive(Default, Clone, Serialize)]
@@ -16,6 +31,79 @@ pub struct Properties {
     pub color: Option<String>,
     /// Additional info to show in a tooltip
     pub title: Option<String>,
+}
+
+#[derive(Clone, Serialize)]
+pub struct DisplayValue {
+    pub kind: &'static str,
+    pub args: serde_json::Value,
+    pub properties: Option<Properties>,
+    pub sortable_value: String,
+}
+
+impl From<Text> for DisplayValue {
+    fn from(value: Text) -> Self {
+        Self {
+            kind: "Text",
+            properties: value.properties,
+            sortable_value: value.content.clone(),
+            args: serde_json::to_value(HashMap::from([("content", value.content)])).unwrap(),
+        }
+    }
+}
+
+impl From<RelativeTime> for DisplayValue {
+    fn from(value: RelativeTime) -> Self {
+        Self {
+            kind: "RelativeTime",
+            args: serde_json::to_value(HashMap::from([("timestamp", value.timestamp.clone())]))
+                .unwrap(),
+            properties: value.properties,
+            sortable_value: value
+                .timestamp
+                .parse::<chrono::DateTime<chrono::Utc>>()
+                .expect("invalid iso timestamp")
+                .timestamp()
+                .to_string(),
+        }
+    }
+}
+
+impl From<Hyperlink> for DisplayValue {
+    fn from(value: Hyperlink) -> Self {
+        Self {
+            kind: "Hyperlink",
+            args: serde_json::to_value(HashMap::from([
+                ("url", value.url.clone()),
+                ("content", value.content.clone()),
+            ]))
+            .unwrap(),
+            properties: value.properties,
+            sortable_value: value.content,
+        }
+    }
+}
+
+impl From<ColoredBox> for DisplayValue {
+    fn from(value: ColoredBox) -> Self {
+        Self {
+            kind: "ColoredBox",
+            args: serde_json::to_value(HashMap::from([("color", value.color.clone())])).unwrap(),
+            properties: value.properties,
+            sortable_value: value.color,
+        }
+    }
+}
+
+impl From<ColoredBoxes> for DisplayValue {
+    fn from(value: ColoredBoxes) -> Self {
+        Self {
+            kind: "ColoredBoxes",
+            args: serde_json::to_value(HashMap::from([("boxes", value.boxes.clone())])).unwrap(),
+            properties: value.properties,
+            sortable_value: value.boxes.len().to_string(),
+        }
+    }
 }
 
 impl From<rhai::Map> for Properties {

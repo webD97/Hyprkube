@@ -1,5 +1,4 @@
 import { Channel, invoke } from "@tauri-apps/api/core";
-import dayjs from "dayjs";
 import { useEffect, useState } from "react";
 import { Gvk } from "../../model/k8s";
 
@@ -8,42 +7,49 @@ type Properties = {
     title?: string,
 }
 
-type ResourceFieldComponent =
-    {
-        Text: {
-            content: string,
-            properties: Properties | null
-        },
-    }
-    |
-    {
-        Hyperlink: {
-            url: string,
-            display: string,
-            properties: Properties | null
-        }
-    }
-    |
-    {
-        RelativeTime: {
-            timestamp: string,
-            properties: Properties | null
-        }
-    }
-    |
-    {
-        ColoredBoxes: {
-            boxes: { color: string, properties: Properties | null }[][],
-            properties: Properties | null
-        }
-    };
-
-export type ResourceField = {
-    component: ResourceFieldComponent,
+type CommonFields = {
+    properties: Properties | null,
     sortableValue: string
-};
+}
 
-export type OkData = { "Ok": ResourceFieldComponent };
+export type ViewComponent =
+    {
+        kind: "Text",
+        args: {
+            content: string
+        }
+    } & CommonFields
+    |
+    {
+        kind: "Hyperlink",
+        args: {
+            url: string,
+            display: string
+        }
+    } & CommonFields
+    |
+    {
+        kind: "RelativeTime",
+        args: {
+            timestamp: string
+        }
+    } & CommonFields
+    |
+    {
+        kind: "ColoredBoxes",
+        args: {
+            boxes: { color: string, properties: Properties | null }[][]
+        }
+    } & CommonFields
+    |
+    {
+        kind: "ColoredBox",
+        args: {
+            color: string
+        }
+    } & CommonFields;
+
+export type OkData = { "Ok": ViewComponent };
 export type ErrData = { "Err": string };
 export type ColumnData = (OkData | ErrData)[];
 
@@ -58,7 +64,7 @@ export type DisplayableResource = {
     uid: string,
     namespace: string,
     name: string,
-    columns: ResourceField[]
+    columns: ViewComponent[]
 }
 
 export type ColumnDefinition = {
@@ -95,26 +101,14 @@ function resourceToDisplayableResource(resource: Resource): DisplayableResource 
         uid: resource.uid,
         columns: resource.columns.map((column) => {
             if ("Err" in column) {
-                return ({ component: { Text: { content: column.Err, properties: null } }, sortableValue: column.Err });
+                return ({ kind: "Text", args: { content: column.Err }, properties: null, sortableValue: column.Err });
             }
             if ("Ok" in column) {
-                const component = column.Ok;
-                return ({
-                    component: component,
-                    sortableValue: (() => {
-                        // This whole closure is a bit hacky, it's probably better to prepare this in the backend
-                        if ("RelativeTime" in component) {
-                            return dayjs(component.RelativeTime.timestamp).unix().toString();
-                        }
-                        const inner = component[Object.keys(component)[0] as keyof ResourceFieldComponent];
-                        const value = inner[Object.keys(inner)[0]];
-                        return value;
-                    })()
-                });
+                return column.Ok;
             }
 
-            // We cannot reach this
-            return ({ component: { Text: { content: "Unreachable", properties: null } }, sortableValue: "" });
+            // This should be unreachable
+            return ({ kind: "Text", args: { content: "(Unreachable)" }, properties: null, sortableValue: "(Unreachable)" });
         })
     });
 }

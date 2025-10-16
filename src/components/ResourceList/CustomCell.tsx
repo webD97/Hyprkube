@@ -2,8 +2,8 @@ import { CellContext } from "@tanstack/react-table";
 import dayjs from "dayjs";
 import LocalizedFormat from "dayjs/plugin/localizedFormat";
 import RelativeTimePlugin from "dayjs/plugin/relativeTime";
-import React, { CSSProperties } from "react";
-import { DisplayableResource, ResourceField } from "../../hooks/useResourceWatch";
+import React from "react";
+import { DisplayableResource, ViewComponent } from "../../hooks/useResourceWatch";
 import RelativeTime from "../RelativeTime";
 import styles from './CustomCell.module.css';
 
@@ -11,45 +11,45 @@ dayjs.extend(RelativeTimePlugin);
 dayjs.extend(LocalizedFormat);
 
 export const CustomCell: React.FC<CellContext<[string, DisplayableResource], unknown>> = (props) => {
-    const component = (props.getValue() as ResourceField)?.component;
-    let style: CSSProperties = {};
-    let title: string | undefined = undefined;
+    const component = (props.getValue() as ViewComponent);
+    const style = { color: component.properties?.color };
+    const title = component.properties?.title;
     let inner = <>(Unhandled)</>;
 
-    if ("Text" in component) {
-        inner = <>{component.Text.content}</>;
-        style = { ...style, ...component.Text.properties };
-        title = component.Text.properties?.title;
+    const { kind } = component;
+
+    if (kind === "Text") {
+        inner = <>{component.args.content}</>;
     }
 
-    if ("Hyperlink" in component) {
-        const { url, display } = component.Hyperlink;
+    if (kind === "Hyperlink") {
+        const { url, display } = component.args;
         inner = <a style={{ cursor: "pointer" }} onClick={() => open(url)} title={url}>🔗&nbsp;{display}</a>;
-        style = { ...style, ...component.Hyperlink.properties };
-        title = component.Hyperlink.properties?.title;
     }
 
-    if ("RelativeTime" in component) {
-        const { timestamp } = component.RelativeTime;
-        const date = dayjs(timestamp);
-        inner = <span title={date.toDate().toLocaleString()}><RelativeTime timestamp={timestamp} /></span>;
-        style = { ...style, ...component.RelativeTime.properties };
-        title = component.RelativeTime.properties?.title;
+    if (kind === "RelativeTime") {
+        const date = dayjs(component.args.timestamp);
+        inner = <span title={date.toDate().toLocaleString()}><RelativeTime timestamp={component.args.timestamp} /></span>;
     }
 
-    if ("ColoredBoxes" in component) {
-        style = { ...style, ...component.ColoredBoxes.properties };
-        title = component.ColoredBoxes.properties?.title;
+    if (kind === "ColoredBox") {
+        inner = <>
+            <span className={styles.boxGroup}>
+                <span style={{ backgroundColor: component.args.color }} title={component.properties?.title}>&nbsp;</span>
+            </span>
+        </>;
+    }
 
+    if (kind === "ColoredBoxes") {
         inner = <>{
-            component.ColoredBoxes.boxes.map((group, idx) =>
+            component.args.boxes.map((group, idx) =>
                 <span key={idx} className={styles.boxGroup}>
                     {
                         group.map((item, idx) =>
                             <span key={idx} style={{ backgroundColor: item.color }} title={item.properties?.title}>&nbsp;</span>
                         )
                     }
-                    {idx < component.ColoredBoxes.boxes.length - 1 && <>&nbsp;</>}
+                    {idx < component.args.boxes.length - 1 && <>&nbsp;</>}
                 </span>
             )
         }</>;

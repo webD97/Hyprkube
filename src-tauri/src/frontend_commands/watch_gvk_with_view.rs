@@ -10,7 +10,7 @@ use crate::{
     app_state::{ClientId, JoinHandleStoreState, KubernetesClientRegistryState, RendererRegistry},
     frontend_types::BackendError,
     internal::resources::ResourceWatchStreamEvent,
-    resource_rendering::{scripting::types::ResourceViewField, ResourceColumnDefinition},
+    resource_rendering::{scripting::types::DisplayValue, ResourceColumnDefinition},
 };
 
 #[derive(Clone, Serialize)]
@@ -24,7 +24,7 @@ pub enum ResourceEvent {
         uid: String,
         namespace: String,
         name: String,
-        columns: Vec<Result<ResourceViewField, String>>,
+        columns: Vec<Result<DisplayValue, String>>,
     },
     Deleted {
         uid: String,
@@ -88,7 +88,12 @@ pub async fn watch_gvk_with_view(
                     uid: resource.metadata.uid.clone().expect("no uid"),
                     namespace: resource.metadata.namespace.clone().unwrap_or_default(),
                     name: resource.metadata.name.clone().unwrap_or_default(),
-                    columns: view.render(&gvk, crd, &resource).unwrap(),
+                    columns: view
+                        .render(&gvk, crd, &resource)
+                        .unwrap()
+                        .into_iter()
+                        .map(|value| value.map(|inner| inner.into()))
+                        .collect(),
                 },
                 ResourceWatchStreamEvent::Deleted { resource } => ResourceEvent::Deleted {
                     uid: resource.metadata.uid.expect("no uid"),

@@ -98,6 +98,10 @@ impl ScriptedResourceView {
                             return ResourceViewField::RelativeTime(value.cast::<RelativeTime>());
                         }
 
+                        if value.is::<ColoredBox>() {
+                            return ResourceViewField::ColoredBox(value.cast::<ColoredBox>());
+                        }
+
                         if value.is::<ColoredBoxes>() {
                             return ResourceViewField::ColoredBoxes(value.cast::<ColoredBoxes>());
                         }

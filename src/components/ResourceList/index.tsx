@@ -1,4 +1,4 @@
-import { ColumnDefinition, DisplayableResource, ResourceField, ResourceViewData } from "../../hooks/useResourceWatch";
+import { ColumnDefinition, DisplayableResource, ResourceViewData, ViewComponent } from "../../hooks/useResourceWatch";
 import EmojiHint from "../EmojiHint";
 
 import { useEffect, useMemo, useState } from "react";
@@ -46,13 +46,13 @@ function createColumns(columnDefinitions: ColumnDefinition[]) {
             id: `${idx}_${title}`,
             header: () => title,
             sortingFn: (rowA, rowB, columnId) => {
-                const valueA = rowA.getValue<ResourceField>(columnId).sortableValue;
-                const valueB = rowB.getValue<ResourceField>(columnId).sortableValue;
+                const valueA = rowA.getValue<ViewComponent>(columnId).sortableValue;
+                const valueB = rowB.getValue<ViewComponent>(columnId).sortableValue;
 
                 return valueA.localeCompare(valueB, undefined, { numeric: true });
             },
             filterFn: (row, columnId, filterValue) => {
-                return row.getValue<ResourceField>(columnId).sortableValue.includes(filterValue as string);
+                return row.getValue<ViewComponent>(columnId).sortableValue.includes(filterValue as string);
             },
             enableColumnFilter: filterable,
             enableSorting: true, // TODO: View in backend should decide this
