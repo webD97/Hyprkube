@@ -21,7 +21,7 @@ tauri-build = { version = "2.5.0", features = [] }
 [dependencies]
 serde_json = "1.0.145"
 serde = { version = "1.0.228", features = ["derive"] }
-tauri = { version = "2.9.0", features = [] }
+tauri = { version = "2.9.1", features = [] }
 kube = { version = "2.0.1", features = ["runtime", "client", "ws"] }
 k8s-openapi = { version = "0.26.0", features = ["v1_30"] }
 futures = { version = "0.3.31" }
@@ -39,10 +39,10 @@ rhai = { version = "1.23.4", features = [
 dirs = "6.0.0"
 scan_dir = "0.3.3"
 rust-embed = "8.8.0"
-tauri-plugin-shell = "2.3.1"
+tauri-plugin-shell = "2.3.3"
 serde_json_path = "0.7.2"
-tauri-plugin-dialog = "2.4.0"
-tauri-plugin-store = "2.4.0"
+tauri-plugin-dialog = "2.4.2"
+tauri-plugin-store = "2.4.1"
 serde_yaml = "0.9.34-deprecated"
 semver = "1.0.27"
 tracing = "0.1.41"
