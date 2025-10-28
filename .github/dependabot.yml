@@ -18,6 +18,7 @@ updates:
       tauri:
         patterns:
           - "tauri"
+          - "tauri-build"
           - "tauri-plugin-*"
   - package-ecosystem: "npm"
     directory: "/"
