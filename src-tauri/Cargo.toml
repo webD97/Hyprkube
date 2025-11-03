@@ -38,7 +38,7 @@ rhai = { version = "1.23.4", features = [
 ] }
 dirs = "6.0.0"
 scan_dir = "0.3.3"
-rust-embed = "8.8.0"
+rust-embed = "8.9.0"
 tauri-plugin-shell = "2.3.3"
 serde_json_path = "0.7.2"
 tauri-plugin-dialog = "2.4.2"
