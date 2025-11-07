@@ -1,5 +1,4 @@
-import React from "react";
-import { ReactElement, ReactNode } from "react";
+import React, { Activity, ReactElement, ReactNode } from "react";
 
 import classes from './component.module.css';
 
@@ -25,7 +24,7 @@ const TabView: React.FC<TabViewProps> = (props) => {
         eager = false,
         activeTab,
         setActiveTab = () => undefined,
-        onCloseClicked = () => undefined
+        onCloseClicked = () => undefined,
     } = props;
 
     const titles = React.Children.map(props.children, (child) => {
@@ -60,9 +59,9 @@ const TabView: React.FC<TabViewProps> = (props) => {
                             if (!eager && activeTab !== idx) return;
 
                             return (
-                                <div key={idx} style={{ display: activeTab === idx ? 'initial' : 'none' }}>
+                                <Activity mode={activeTab === idx ? 'visible' : 'hidden'}>
                                     {child.props.children()}
-                                </div>
+                                </Activity>
                             );
                         })
                 }

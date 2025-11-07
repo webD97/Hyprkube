@@ -2,6 +2,7 @@ import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
+import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import listClusterProfiles, { ClusterProfile } from '../../api/listClusterProfiles';
 import EmojiHint from '../../components/EmojiHint';
 import GvkList from '../../components/GvkList';
@@ -87,162 +88,182 @@ const ClusterView: React.FC<ClusterViewProps> = ({ contextSource, preSelectedGvk
 
     return (
         <div className={classes.container}>
-            <nav>
-                <h2 className={classes.resourceSectionTitle}>Pinned resources</h2>
-                {
-                    sortedPinnedGvks.length == 0
-                        ? null
-                        : (
-                            <GvkList flat withGroupNames
-                                gvks={sortedPinnedGvks}
-                                onResourceClicked={(gvk) => {
-                                    setActiveGvk(gvk);
-                                }}
-                                onResourceAuxClicked={(gvk) => {
-                                    pushApplicationTab(
-                                        { title: capitalizeFirstLetter(contextSource.context), icon: '🌍', keepAlive: true },
-                                        () => <ClusterView preSelectedNamespace={currentNamespace} contextSource={contextSource} preSelectedGvk={gvk} />
+            <PanelGroup direction='horizontal'>
+                <Panel minSize={12.5} maxSize={30} defaultSize={15}>
+                    <nav>
+                        <h2 className={classes.resourceSectionTitle}>Pinned resources</h2>
+                        {
+                            sortedPinnedGvks.length == 0
+                                ? null
+                                : (
+                                    <GvkList flat withGroupNames
+                                        gvks={sortedPinnedGvks}
+                                        onResourceClicked={(gvk) => {
+                                            setActiveGvk(gvk);
+                                        }}
+                                        onResourceAuxClicked={(gvk) => {
+                                            pushApplicationTab(
+                                                { title: capitalizeFirstLetter(contextSource.context), icon: '🌍', keepAlive: true },
+                                                () => <ClusterView preSelectedNamespace={currentNamespace} contextSource={contextSource} preSelectedGvk={gvk} />
+                                            );
+                                        }}
+                                        onGvkContextMenu={(gvk) => createMenuForPinnedGvks({
+                                            clusterProfile: clusterProfiles[0][0],
+                                            openInNewTab: (gvk) => {
+                                                pushApplicationTab(
+                                                    { title: capitalizeFirstLetter(contextSource.context), icon: '🌍', keepAlive: true },
+                                                    () => <ClusterView contextSource={contextSource} preSelectedGvk={gvk} />
+                                                )
+                                            },
+                                            gvk
+                                        })}
+                                    />
+                                )
+                        }
+
+                        <h2 className={classes.resourceSectionTitle}>Builtin resources</h2>
+                        {
+                            Object.values(discovery?.gvks || [])
+                                .filter((group) => !group.isCrd)
+                                .sort((groupA, groupB) => groupA.name.localeCompare(groupB.name))
+                                .map(({ name: groupName, kinds }, idx) => {
+                                    const gvks = kinds
+                                        .map(({ kind, version }) => ({ group: groupName, version, kind }))
+                                        .filter(gvk => (
+                                            !hiddenGvks.some(current => (
+                                                current.group === gvk.group &&
+                                                current.version === gvk.version &&
+                                                current.kind === gvk.kind
+                                            ))
+                                        ));
+
+                                    // Don't show groups where everything is hidden
+                                    if (gvks.length === 0) return;
+
+                                    return (
+                                        <GvkList key={idx}
+                                            gvks={gvks}
+                                            onResourceClicked={(gvk) => {
+                                                setActiveGvk(gvk);
+                                            }}
+                                            onResourceAuxClicked={(gvk) => {
+                                                pushApplicationTab(
+                                                    { title: capitalizeFirstLetter(contextSource.context), icon: '🌍', keepAlive: true },
+                                                    () => <ClusterView contextSource={contextSource} preSelectedGvk={gvk} />
+                                                );
+                                            }}
+                                            onGvkContextMenu={(gvk) => createMenuForNormalGvks({
+                                                clusterProfile: clusterProfiles[0][0],
+                                                openInNewTab: (gvk) => {
+                                                    pushApplicationTab(
+                                                        { title: capitalizeFirstLetter(contextSource.context), icon: '🌍', keepAlive: true },
+                                                        () => <ClusterView contextSource={contextSource} preSelectedGvk={gvk} />
+                                                    )
+                                                },
+                                                gvk
+                                            })}
+                                        />
                                     );
-                                }}
-                                onGvkContextMenu={(gvk) => createMenuForPinnedGvks({
-                                    clusterProfile: clusterProfiles[0][0],
-                                    openInNewTab: (gvk) => {
-                                        pushApplicationTab(
-                                            { title: capitalizeFirstLetter(contextSource.context), icon: '🌍', keepAlive: true },
-                                            () => <ClusterView contextSource={contextSource} preSelectedGvk={gvk} />
-                                        )
-                                    },
-                                    gvk
-                                })}
-                            />
-                        )
-                }
+                                })
+                        }
 
-                <h2 className={classes.resourceSectionTitle}>Builtin resources</h2>
-                {
-                    Object.values(discovery?.gvks || [])
-                        .filter((group) => !group.isCrd)
-                        .sort((groupA, groupB) => groupA.name.localeCompare(groupB.name))
-                        .map(({ name: groupName, kinds }, idx) => {
-                            const gvks = kinds
-                                .map(({ kind, version }) => ({ group: groupName, version, kind }))
-                                .filter(gvk => (
-                                    !hiddenGvks.some(current => (
-                                        current.group === gvk.group &&
-                                        current.version === gvk.version &&
-                                        current.kind === gvk.kind
-                                    ))
-                                ));
+                        <h2 className={classes.resourceSectionTitle}>Custom resources</h2>
+                        {
+                            Object.values(discovery?.gvks || [])
+                                .filter((group) => group.isCrd)
+                                .sort((groupA, groupB) => groupA.name.localeCompare(groupB.name))
+                                .map(({ name: groupName, kinds }, idx) => {
+                                    const gvks = kinds
+                                        .map(({ kind, version }) => ({ group: groupName, version, kind }))
+                                        .filter(gvk => (
+                                            !hiddenGvks.some(current => (
+                                                current.group === gvk.group &&
+                                                current.version === gvk.version &&
+                                                current.kind === gvk.kind
+                                            ))
+                                        ));
 
-                            // Don't show groups where everything is hidden
-                            if (gvks.length === 0) return;
+                                    // Don't show groups where everything is hidden
+                                    if (gvks.length === 0) return;
 
-                            return (
-                                <GvkList key={idx}
-                                    gvks={gvks}
-                                    onResourceClicked={(gvk) => {
-                                        setActiveGvk(gvk);
-                                    }}
-                                    onResourceAuxClicked={(gvk) => {
-                                        pushApplicationTab(
-                                            { title: capitalizeFirstLetter(contextSource.context), icon: '🌍', keepAlive: true },
-                                            () => <ClusterView contextSource={contextSource} preSelectedGvk={gvk} />
-                                        );
-                                    }}
-                                    onGvkContextMenu={(gvk) => createMenuForNormalGvks({
-                                        clusterProfile: clusterProfiles[0][0],
-                                        openInNewTab: (gvk) => {
-                                            pushApplicationTab(
-                                                { title: capitalizeFirstLetter(contextSource.context), icon: '🌍', keepAlive: true },
-                                                () => <ClusterView contextSource={contextSource} preSelectedGvk={gvk} />
+                                    return (
+                                        <GvkList key={idx}
+                                            gvks={gvks}
+                                            onResourceClicked={(gvk) => {
+                                                setActiveGvk(gvk);
+                                            }}
+                                            onResourceAuxClicked={(gvk) => {
+                                                pushApplicationTab(
+                                                    { title: capitalizeFirstLetter(contextSource.context), icon: '🌍', keepAlive: true },
+                                                    () => <ClusterView contextSource={contextSource} preSelectedGvk={gvk} />
+                                                );
+                                            }}
+                                            onGvkContextMenu={(gvk) => createMenuForNormalGvks({
+                                                clusterProfile: clusterProfiles[0][0],
+                                                openInNewTab: (gvk) => {
+                                                    pushApplicationTab(
+                                                        { title: capitalizeFirstLetter(contextSource.context), icon: '🌍', keepAlive: true },
+                                                        () => <ClusterView contextSource={contextSource} preSelectedGvk={gvk} />
+                                                    )
+                                                },
+                                                gvk
+                                            })}
+                                        />
+                                    );
+                                })
+                        }
+                    </nav>
+                </Panel>
+                <PanelResizeHandle />
+                <Panel>
+                    <PanelGroup direction='vertical'>
+                        <Panel id="mainArea" minSize={20} maxSize={80}>
+                            <section className={classes.mainArea}>
+                                <ErrorBoundary
+                                    fallbackRender={(context) => (
+                                        <div role="alert">
+                                            <p>Something went wrong:</p>
+                                            <pre style={{ color: "red" }}>{JSON.stringify(context, undefined, 2)}</pre>
+                                        </div>
+                                    )}
+                                >
+                                    {
+                                        !activeGvk
+                                            ? <EmojiHint emoji="👈">Select a resource to get started.</EmojiHint>
+                                            : (
+                                                <ResourceListInspector
+                                                    gvk={activeGvk}
+                                                    preSelectedNamespace={preSelectedNamespace || 'default'}
+                                                    onNamespaceChanged={onNamespaceChanged}
+                                                    contextSource={contextSource}
+                                                    clusterProfile={clusterProfiles[0][0]}
+                                                    pushBottomTab={pushBottomTab}
+                                                />
                                             )
-                                        },
-                                        gvk
-                                    })}
-                                />
-                            );
-                        })
-                }
-
-                <h2 className={classes.resourceSectionTitle}>Custom resources</h2>
-                {
-                    Object.values(discovery?.gvks || [])
-                        .filter((group) => group.isCrd)
-                        .sort((groupA, groupB) => groupA.name.localeCompare(groupB.name))
-                        .map(({ name: groupName, kinds }, idx) => {
-                            const gvks = kinds
-                                .map(({ kind, version }) => ({ group: groupName, version, kind }))
-                                .filter(gvk => (
-                                    !hiddenGvks.some(current => (
-                                        current.group === gvk.group &&
-                                        current.version === gvk.version &&
-                                        current.kind === gvk.kind
-                                    ))
-                                ));
-
-                            // Don't show groups where everything is hidden
-                            if (gvks.length === 0) return;
-
-                            return (
-                                <GvkList key={idx}
-                                    gvks={gvks}
-                                    onResourceClicked={(gvk) => {
-                                        setActiveGvk(gvk);
-                                    }}
-                                    onResourceAuxClicked={(gvk) => {
-                                        pushApplicationTab(
-                                            { title: capitalizeFirstLetter(contextSource.context), icon: '🌍', keepAlive: true },
-                                            () => <ClusterView contextSource={contextSource} preSelectedGvk={gvk} />
-                                        );
-                                    }}
-                                    onGvkContextMenu={(gvk) => createMenuForNormalGvks({
-                                        clusterProfile: clusterProfiles[0][0],
-                                        openInNewTab: (gvk) => {
-                                            pushApplicationTab(
-                                                { title: capitalizeFirstLetter(contextSource.context), icon: '🌍', keepAlive: true },
-                                                () => <ClusterView contextSource={contextSource} preSelectedGvk={gvk} />
-                                            )
-                                        },
-                                        gvk
-                                    })}
-                                />
-                            );
-                        })
-                }
-            </nav>
-            <section className={classes.bottomPanel}>
-                <TabView
-                    activeTab={activeBottomTab}
-                    onCloseClicked={(idx) => removeBottomTab(idx)}
-                    setActiveTab={setActiveBottomTab}
-                >
-                    {bottomTabs}
-                </TabView>
-            </section>
-            <section className={classes.mainArea}>
-                <ErrorBoundary
-                    fallbackRender={(context) => (
-                        <div role="alert">
-                            <p>Something went wrong:</p>
-                            <pre style={{ color: "red" }}>{JSON.stringify(context, undefined, 2)}</pre>
-                        </div>
-                    )}
-                >
-                    {
-                        !activeGvk
-                            ? <EmojiHint emoji="👈">Select a resource to get started.</EmojiHint>
-                            : (
-                                <ResourceListInspector
-                                    gvk={activeGvk}
-                                    preSelectedNamespace={preSelectedNamespace || 'default'}
-                                    onNamespaceChanged={onNamespaceChanged}
-                                    contextSource={contextSource}
-                                    clusterProfile={clusterProfiles[0][0]}
-                                    pushBottomTab={pushBottomTab}
-                                />
+                                    }</ErrorBoundary>
+                            </section>
+                        </Panel>
+                        {
+                            (bottomTabs.length > 0) && (
+                                <>
+                                    <PanelResizeHandle />
+                                    <Panel id="bottomTabs" defaultSize={65}>
+                                        <section className={classes.bottomPanel}>
+                                            <TabView
+                                                activeTab={activeBottomTab}
+                                                onCloseClicked={(idx) => removeBottomTab(idx)}
+                                                setActiveTab={setActiveBottomTab}
+                                            >
+                                                {bottomTabs}
+                                            </TabView>
+                                        </section>
+                                    </Panel>
+                                </>
                             )
-                    }</ErrorBoundary>
-            </section>
+                        }
+                    </PanelGroup>
+                </Panel>
+            </PanelGroup>
         </div>
     )
 }

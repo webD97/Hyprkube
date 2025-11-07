@@ -1,10 +1,10 @@
+import { FitAddon } from "@xterm/addon-fit";
+import { WebglAddon } from "@xterm/addon-webgl";
 import { Terminal } from "@xterm/xterm";
 import { useLayoutEffect, useRef } from "react";
 import AttachHyprkubeAddon from "../../xterm-addons/attach-hyprkube";
-import { WebglAddon } from "@xterm/addon-webgl";
-import { FitAddon } from "@xterm/addon-fit";
-import { ClipboardAddon } from "@xterm/addon-clipboard";
 
+import { ClipboardAddon } from "@xterm/addon-clipboard";
 import styles from './styles.module.css';
 
 export interface HyprkubeTerminalProps {
@@ -19,6 +19,14 @@ const HyprkubeTerminal: React.FC<HyprkubeTerminalProps> = (props) => {
     const fitAddon = useRef<FitAddon | null>(null);
 
     useLayoutEffect(() => {
+        if (!xtermRef.current) return;
+
+        new ResizeObserver(() => {
+            fitAddon.current?.fit();
+        }).observe(xtermRef.current);
+    });
+
+    useLayoutEffect(() => {
         const terminal = new Terminal({
             theme: {
                 background: '#00000000',
@@ -28,13 +36,11 @@ const HyprkubeTerminal: React.FC<HyprkubeTerminalProps> = (props) => {
 
         fitAddon.current = new FitAddon();
 
-        terminal.loadAddon(new AttachHyprkubeAddon(props.clientId!, props.podNamespace, props.podName, props.container));
+        terminal.loadAddon(new AttachHyprkubeAddon(props.clientId, props.podNamespace, props.podName, props.container));
         terminal.loadAddon(new WebglAddon());
         terminal.loadAddon(fitAddon.current);
         terminal.loadAddon(new ClipboardAddon());
         terminal.open(xtermRef.current!);
-
-        fitAddon.current.fit();
 
         return () => terminal.dispose();
     });

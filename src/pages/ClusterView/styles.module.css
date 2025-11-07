@@ -1,10 +1,4 @@
 .container {
-    display: grid;
-    grid-template-columns: 15fr minmax(0, 85fr);
-    grid-template-rows: 4fr minmax(0, auto);
-    grid-template-areas:
-        "nav main"
-        "nav bottom";
     padding: 0;
 
     width: 100%;
@@ -20,8 +14,7 @@
 }
 
 nav {
-    grid-area: nav;
-    max-height: 100%;
+    height: 100%;
     overflow: scroll;
     border-right: 1px #333333 solid;
     padding-left: 0.5rem;
@@ -60,12 +53,11 @@ nav details summary:hover {
 }
 
 .mainArea {
-    grid-area: main;
-    max-height: 100%;
+    height: 100%;
     overflow: scroll;
     padding-left: 0.5rem;
 }
 
 .bottomPanel {
-    grid-area: bottom;
+    height: 100%;
 }
