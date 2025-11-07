@@ -4,7 +4,6 @@ import { Terminal } from "@xterm/xterm";
 import { useLayoutEffect, useRef } from "react";
 import AttachHyprkubeAddon from "../../xterm-addons/attach-hyprkube";
 
-import { ClipboardAddon } from "@xterm/addon-clipboard";
 import styles from './styles.module.css';
 
 export interface HyprkubeTerminalProps {
@@ -39,7 +38,6 @@ const HyprkubeTerminal: React.FC<HyprkubeTerminalProps> = (props) => {
         terminal.loadAddon(new AttachHyprkubeAddon(props.clientId, props.podNamespace, props.podName, props.container));
         terminal.loadAddon(new WebglAddon());
         terminal.loadAddon(fitAddon.current);
-        terminal.loadAddon(new ClipboardAddon());
         terminal.open(xtermRef.current!);
 
         return () => terminal.dispose();
