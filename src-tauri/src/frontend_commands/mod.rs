@@ -1,11 +1,13 @@
 mod apply_resource_yaml;
 mod cleanup_channel;
+mod decode_secret_key;
 mod delete_resource;
 mod discover_contexts;
 mod get_resource_yaml;
 mod kube_stream_podlogs;
 mod list_pod_container_names;
 mod list_resource_views;
+mod list_secret_keys;
 mod logging;
 mod pod_exec;
 mod restart;
@@ -14,12 +16,14 @@ mod watch_namespaces;
 
 pub use apply_resource_yaml::*;
 pub use cleanup_channel::*;
+pub use decode_secret_key::*;
 pub use delete_resource::*;
 pub use discover_contexts::*;
 pub use get_resource_yaml::*;
 pub use kube_stream_podlogs::*;
 pub use list_pod_container_names::*;
 pub use list_resource_views::*;
+pub use list_secret_keys::*;
 pub use logging::*;
 pub use pod_exec::*;
 pub use restart::*;
