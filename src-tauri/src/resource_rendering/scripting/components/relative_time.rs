@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use rhai::{CustomType, Dynamic, EvalAltResult, Position, TypeBuilder};
 use serde::Serialize;
 
-use crate::resource_rendering::scripting::types::{ViewComponent, Properties};
+use crate::resource_rendering::scripting::types::{Properties, ViewComponent};
 
 /// Displays a relative time from a timestamp, e.g. "1h15m".
 #[derive(Clone, Serialize, CustomType)]
