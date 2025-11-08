@@ -7,7 +7,7 @@ license = "MIT"
 repository = "https://github.com/webD97/hyprkube"
 default-run = "hyprkube"
 edition = "2021"
-rust-version = "1.70"
+rust-version = "1.83"
 
 [lib]
 name = "hyprkube_lib"
@@ -50,6 +50,8 @@ tracing-subscriber = { version = "0.3.20", features = ["env-filter"] }
 tracing-futures = "0.2.5"
 rand = "0.9.2"
 chrono = "0.4.42"
+tauri-plugin-clipboard-manager = "2"
+async-trait = "0.1.89"
 
 [features]
 # this feature is used for production builds or when `devPath` points to the filesystem and the built-in dev server is disabled.

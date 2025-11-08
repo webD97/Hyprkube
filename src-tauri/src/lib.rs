@@ -6,7 +6,9 @@ mod cluster_profiles;
 mod frontend_commands;
 mod frontend_types;
 mod internal;
+mod menu_handler;
 mod persistence;
+mod resource_menu;
 mod resource_rendering;
 
 use std::sync::Arc;
@@ -19,7 +21,10 @@ use tauri::{async_runtime::spawn, Emitter as _, Listener, Manager};
 use tracing::{info, warn};
 use tracing_subscriber::{fmt, layer::SubscriberExt as _, util::SubscriberInitExt as _, EnvFilter};
 
-use crate::{frontend_types::BackendPanic, persistence::repository::Repository};
+use crate::{
+    frontend_types::BackendPanic, persistence::repository::Repository,
+    resource_menu::ResourceMenuContext,
+};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -28,6 +33,7 @@ pub fn run() {
     info!("Hyprkube is starting.");
 
     tauri::Builder::default()
+        .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_store::Builder::default().build())
@@ -40,6 +46,7 @@ pub fn run() {
             app.manage(KubernetesClientRegistry::new_state());
             app.manage(ChannelTasks::new_state(app_handle.clone()));
             app.manage(ExecSessions::new_state());
+            app.manage(ResourceMenuContext::new_state());
 
             let mut cluster_profile_registry =
                 cluster_profiles::ClusterProfileRegistry::new(app_handle.clone());
@@ -61,6 +68,8 @@ pub fn run() {
                     reset_state(app_handle).await;
                 });
             });
+
+            app.on_menu_event(menu_handler::on_menu_event);
 
             Ok(())
         })
@@ -91,7 +100,10 @@ pub fn run() {
             cluster_profiles::cluster_profile_list_hidden_gvks,
             cluster_profiles::get_default_namespace,
             cluster_profiles::set_default_namespace,
-            frontend_commands::log_stdout
+            frontend_commands::log_stdout,
+            frontend_commands::decode_secret_key,
+            frontend_commands::list_secret_keys,
+            frontend_commands::context_menu::kubernetes_resource::popup_kubernetes_resource_menu
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
