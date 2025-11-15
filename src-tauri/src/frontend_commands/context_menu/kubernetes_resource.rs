@@ -12,7 +12,8 @@ use tauri::{State, Window, Wry};
 use crate::app_state::{ClientId, KubernetesClientRegistryState};
 use crate::resource_menu::api::{HyprkubeMenuItem, MenuAction};
 use crate::resource_menu::{
-    BasicResourceMenu, DynamicResourceMenuProvider, PodResourceMenu, ResourceMenuContext,
+    BasicResourceMenu, DataKeysResourceMenu, DynamicResourceMenuProvider, PodResourceMenu,
+    ResourceMenuContext,
 };
 
 pub type KubernetesResourceMenuState<C> =
@@ -47,8 +48,11 @@ pub async fn popup_kubernetes_resource_menu(
 
     let resource = api.get(&name).await.unwrap();
 
-    let menu_providers: Vec<Box<dyn DynamicResourceMenuProvider<ResourceMenuContext>>> =
-        vec![Box::new(BasicResourceMenu), Box::new(PodResourceMenu)];
+    let menu_providers: Vec<Box<dyn DynamicResourceMenuProvider<ResourceMenuContext>>> = vec![
+        Box::new(BasicResourceMenu),
+        Box::new(PodResourceMenu),
+        Box::new(DataKeysResourceMenu),
+    ];
 
     let menu_items: Vec<HyprkubeMenuItem<ResourceMenuContext>> = menu_providers
         .into_iter()
