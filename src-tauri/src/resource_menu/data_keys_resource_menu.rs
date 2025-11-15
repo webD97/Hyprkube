@@ -4,9 +4,9 @@ use async_trait::async_trait;
 use k8s_openapi::api::core::v1::{ConfigMap, Secret};
 use kube::api::{DynamicObject, GroupVersionKind};
 
-use crate::resource_menu::{
-    api::{HyprkubeActionMenuItem, HyprkubeActionSubMenuItem, HyprkubeMenuItem},
-    DynamicResourceMenuProvider,
+use crate::{
+    menus::{HyprkubeActionMenuItem, HyprkubeActionSubMenuItem, HyprkubeMenuItem, MenuAction},
+    resource_menu::DynamicResourceMenuProvider,
 };
 
 /// A menu that can copy the data of Secrets and ConfigMaps to clipboard
@@ -74,7 +74,7 @@ struct CopySecretData {
 }
 
 #[async_trait]
-impl super::api::MenuAction for CopySecretData {
+impl MenuAction for CopySecretData {
     async fn run(&self, app: &tauri::AppHandle, _client: kube::Client) {
         use tauri_plugin_clipboard_manager::ClipboardExt;
 

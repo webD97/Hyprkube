@@ -9,7 +9,7 @@ use tauri::menu::{
 use tauri::{State, Window, Wry};
 
 use crate::app_state::{ClientId, KubernetesClientRegistryState};
-use crate::resource_menu::api::{HyprkubeMenuItem, MenuAction};
+use crate::menus::{HyprkubeMenuItem, MenuAction};
 use crate::resource_menu::{
     BasicResourceMenu, DataKeysResourceMenu, DynamicResourceMenuProvider,
     KubernetesResourceMenuState, PodResourceMenu, ResourceMenuContext,

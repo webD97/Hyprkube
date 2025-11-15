@@ -1,6 +1,5 @@
 mod apply_resource_yaml;
 mod cleanup_channel;
-pub mod context_menu;
 mod decode_secret_key;
 mod delete_resource;
 mod discover_contexts;

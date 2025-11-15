@@ -2,9 +2,9 @@ use async_trait::async_trait;
 use kube::api::{DeleteParams, DynamicObject, GroupVersionKind};
 use serde::Serialize;
 
-use crate::resource_menu::{
-    api::{HyprkubeActionMenuItem, HyprkubeMenuItem},
-    DynamicResourceMenuProvider,
+use crate::{
+    menus::{HyprkubeActionMenuItem, HyprkubeMenuItem, MenuAction},
+    resource_menu::DynamicResourceMenuProvider,
 };
 
 pub struct BasicResourceMenu;
@@ -60,7 +60,7 @@ struct EditAction {
 }
 
 #[async_trait]
-impl super::api::MenuAction for EditAction {
+impl MenuAction for EditAction {
     async fn run(&self, app: &tauri::AppHandle, _client: kube::Client) {
         use tauri::Emitter as _;
 
@@ -83,7 +83,7 @@ struct DeleteAction {
 }
 
 #[async_trait]
-impl super::api::MenuAction for DeleteAction {
+impl MenuAction for DeleteAction {
     async fn run(&self, _app: &tauri::AppHandle, client: kube::Client) {
         use kube::discovery::oneshot::pinned_kind;
         use kube::Api;
@@ -117,7 +117,7 @@ struct PickNamespaceAction {
 }
 
 #[async_trait]
-impl super::api::MenuAction for PickNamespaceAction {
+impl MenuAction for PickNamespaceAction {
     async fn run(&self, app: &tauri::AppHandle, _client: kube::Client) {
         use tauri::Emitter as _;
 
