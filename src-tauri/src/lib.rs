@@ -6,6 +6,7 @@ mod cluster_profiles;
 mod frontend_commands;
 mod frontend_types;
 mod internal;
+mod menus;
 mod persistence;
 mod resource_menu;
 mod resource_rendering;
@@ -102,7 +103,7 @@ pub fn run() {
             frontend_commands::log_stdout,
             frontend_commands::decode_secret_key,
             frontend_commands::list_secret_keys,
-            frontend_commands::context_menu::kubernetes_resource::popup_kubernetes_resource_menu
+            resource_menu::popup_kubernetes_resource_menu
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

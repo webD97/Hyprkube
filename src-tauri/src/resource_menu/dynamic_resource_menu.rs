@@ -1,6 +1,6 @@
 use kube::api::{DynamicObject, GroupVersionKind};
 
-use crate::resource_menu::api::HyprkubeMenuItem;
+use crate::menus::HyprkubeMenuItem;
 
 pub trait DynamicResourceMenuProvider {
     /// Whether or a not a menu provider should be called for a given GVK

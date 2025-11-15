@@ -4,7 +4,7 @@ use kube::api::GroupVersionKind;
 use tauri::{menu::MenuEvent, AppHandle, Manager};
 use tracing::{debug, warn};
 
-use crate::resource_menu::api::MenuAction;
+use crate::menus::MenuAction;
 
 pub struct ResourceMenuContext {
     pub client: kube::Client,

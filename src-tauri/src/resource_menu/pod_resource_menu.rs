@@ -3,9 +3,9 @@ use k8s_openapi::api::core::v1::Pod;
 use kube::api::{DynamicObject, GroupVersionKind};
 use serde::Serialize;
 
-use crate::resource_menu::{
-    api::{HyprkubeActionMenuItem, HyprkubeActionSubMenuItem, HyprkubeMenuItem},
-    DynamicResourceMenuProvider,
+use crate::{
+    menus::{HyprkubeActionMenuItem, HyprkubeActionSubMenuItem, HyprkubeMenuItem, MenuAction},
+    resource_menu::DynamicResourceMenuProvider,
 };
 
 pub struct PodResourceMenu;
@@ -116,7 +116,7 @@ struct LogsAction {
 }
 
 #[async_trait]
-impl super::api::MenuAction for LogsAction {
+impl MenuAction for LogsAction {
     async fn run(&self, app: &tauri::AppHandle, _client: kube::Client) {
         use tauri::Emitter as _;
 
@@ -146,7 +146,7 @@ struct ExecAction {
 }
 
 #[async_trait]
-impl super::api::MenuAction for ExecAction {
+impl MenuAction for ExecAction {
     async fn run(&self, app: &tauri::AppHandle, _client: kube::Client) {
         use tauri::Emitter as _;
 
