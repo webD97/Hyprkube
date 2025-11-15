@@ -6,7 +6,6 @@ mod cluster_profiles;
 mod frontend_commands;
 mod frontend_types;
 mod internal;
-mod menu_handler;
 mod persistence;
 mod resource_menu;
 mod resource_rendering;
@@ -69,7 +68,7 @@ pub fn run() {
                 });
             });
 
-            app.on_menu_event(menu_handler::on_menu_event);
+            app.on_menu_event(resource_menu::on_menu_event);
 
             Ok(())
         })

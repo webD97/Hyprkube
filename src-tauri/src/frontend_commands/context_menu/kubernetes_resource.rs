@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::sync::Mutex;
 
 use kube::api::{DynamicObject, GroupVersionKind};
 use kube::discovery::pinned_kind;
@@ -12,23 +11,14 @@ use tauri::{State, Window, Wry};
 use crate::app_state::{ClientId, KubernetesClientRegistryState};
 use crate::resource_menu::api::{HyprkubeMenuItem, MenuAction};
 use crate::resource_menu::{
-    BasicResourceMenu, DataKeysResourceMenu, DynamicResourceMenuProvider, PodResourceMenu,
-    ResourceMenuContext,
+    BasicResourceMenu, DataKeysResourceMenu, DynamicResourceMenuProvider,
+    KubernetesResourceMenuState, PodResourceMenu, ResourceMenuContext,
 };
-
-pub type KubernetesResourceMenuState<C> =
-    Mutex<Option<(ResourceMenuContext, HashMap<String, Box<dyn MenuAction<C>>>)>>;
-
-impl ResourceMenuContext {
-    pub fn new_state() -> KubernetesResourceMenuState<ResourceMenuContext> {
-        Mutex::new(None)
-    }
-}
 
 #[tauri::command]
 pub async fn popup_kubernetes_resource_menu(
     window: Window,
-    resource_menu_state: State<'_, KubernetesResourceMenuState<ResourceMenuContext>>,
+    resource_menu_state: State<'_, KubernetesResourceMenuState>,
     client_registry: State<'_, KubernetesClientRegistryState>,
     client_id: ClientId,
     gvk: GroupVersionKind,
@@ -48,13 +38,13 @@ pub async fn popup_kubernetes_resource_menu(
 
     let resource = api.get(&name).await.unwrap();
 
-    let menu_providers: Vec<Box<dyn DynamicResourceMenuProvider<ResourceMenuContext>>> = vec![
+    let menu_providers: Vec<Box<dyn DynamicResourceMenuProvider>> = vec![
         Box::new(BasicResourceMenu),
         Box::new(PodResourceMenu),
         Box::new(DataKeysResourceMenu),
     ];
 
-    let menu_items: Vec<HyprkubeMenuItem<ResourceMenuContext>> = menu_providers
+    let menu_items: Vec<HyprkubeMenuItem> = menu_providers
         .into_iter()
         .filter(|provider| provider.matches(&gvk))
         .flat_map(|provider| provider.build(&gvk, &resource))
@@ -86,7 +76,7 @@ pub async fn popup_kubernetes_resource_menu(
 
 fn make_tauri_menu<T: tauri::Manager<Wry>>(
     manager: &T,
-    items: &[HyprkubeMenuItem<ResourceMenuContext>],
+    items: &[HyprkubeMenuItem],
 ) -> Vec<MenuItemKind<Wry>> {
     items
         .iter()
@@ -116,9 +106,7 @@ fn make_tauri_menu<T: tauri::Manager<Wry>>(
         .collect()
 }
 
-fn create_action_map<C>(
-    items: Vec<HyprkubeMenuItem<C>>,
-) -> HashMap<String, Box<dyn MenuAction<C>>> {
+fn create_action_map(items: Vec<HyprkubeMenuItem>) -> HashMap<String, Box<dyn MenuAction>> {
     let mut actions = HashMap::new();
 
     for item in items {

@@ -9,38 +9,37 @@ use crate::resource_menu::{
 
 pub struct BasicResourceMenu;
 
-pub struct ResourceMenuContext {
-    pub client: kube::Client,
-    pub gvk: GroupVersionKind,
-    pub namespace: String,
-    pub name: String,
-}
-
-impl DynamicResourceMenuProvider<ResourceMenuContext> for BasicResourceMenu {
+impl DynamicResourceMenuProvider for BasicResourceMenu {
     fn matches(&self, _gvk: &GroupVersionKind) -> bool {
         true
     }
 
-    fn build(
-        &self,
-        _gvk: &GroupVersionKind,
-        _resource: &DynamicObject,
-    ) -> Vec<HyprkubeMenuItem<ResourceMenuContext>> {
+    fn build(&self, gvk: &GroupVersionKind, resource: &DynamicObject) -> Vec<HyprkubeMenuItem> {
         vec![
             HyprkubeMenuItem::Action(HyprkubeActionMenuItem {
                 id: "builtin:edit".into(),
                 text: "Edit YAML".into(),
-                action: Box::new(EditAction),
+                action: Box::new(EditAction {
+                    gvk: gvk.clone(),
+                    namespace: resource.metadata.namespace.clone().unwrap_or_default(),
+                    name: resource.metadata.name.clone().unwrap_or_default(),
+                }),
             }),
             HyprkubeMenuItem::Action(HyprkubeActionMenuItem {
                 id: "builtin:delete".into(),
                 text: "Delete".into(),
-                action: Box::new(DeleteAction),
+                action: Box::new(DeleteAction {
+                    gvk: gvk.clone(),
+                    namespace: resource.metadata.namespace.clone().unwrap_or_default(),
+                    name: resource.metadata.name.clone().unwrap_or_default(),
+                }),
             }),
             HyprkubeMenuItem::Action(HyprkubeActionMenuItem {
                 id: "builtin:pick-namespace".into(),
                 text: "Select namespace".into(),
-                action: Box::new(PickNamespaceAction),
+                action: Box::new(PickNamespaceAction {
+                    namespace: resource.metadata.namespace.clone().unwrap_or_default(),
+                }),
             }),
             HyprkubeMenuItem::Separator,
         ]
@@ -54,42 +53,44 @@ struct FrontendTriggerResourceEdit {
     pub name: String,
 }
 
-struct EditAction;
+struct EditAction {
+    pub gvk: GroupVersionKind,
+    pub namespace: String,
+    pub name: String,
+}
 
 #[async_trait]
-impl super::api::MenuAction<ResourceMenuContext> for EditAction {
-    async fn run(&self, app: &tauri::AppHandle, ctx: ResourceMenuContext) {
+impl super::api::MenuAction for EditAction {
+    async fn run(&self, app: &tauri::AppHandle, _client: kube::Client) {
         use tauri::Emitter as _;
-
-        println!(
-            "Edit was pressed for {:?}, {}/{}",
-            ctx.gvk, ctx.namespace, ctx.name
-        );
 
         app.emit(
             "hyprkube:menu:resource:trigger_edit",
             FrontendTriggerResourceEdit {
-                gvk: ctx.gvk,
-                namespace: ctx.namespace,
-                name: ctx.name,
+                gvk: self.gvk.clone(),
+                namespace: self.namespace.clone(),
+                name: self.name.clone(),
             },
         )
         .unwrap();
     }
 }
 
-struct DeleteAction;
+struct DeleteAction {
+    pub gvk: GroupVersionKind,
+    pub namespace: String,
+    pub name: String,
+}
 
 #[async_trait]
-impl super::api::MenuAction<ResourceMenuContext> for DeleteAction {
-    async fn run(&self, _app: &tauri::AppHandle, ctx: ResourceMenuContext) {
+impl super::api::MenuAction for DeleteAction {
+    async fn run(&self, _app: &tauri::AppHandle, client: kube::Client) {
         use kube::discovery::oneshot::pinned_kind;
         use kube::Api;
 
-        let gvk = &ctx.gvk;
-        let namespace = &ctx.namespace;
-        let name = &ctx.name;
-        let client = ctx.client;
+        let gvk = &self.gvk;
+        let namespace = &self.namespace;
+        let name = &self.name;
 
         println!("Delete was pressed for {gvk:?}, {namespace}/{name}");
 
@@ -111,17 +112,19 @@ struct FrontendTriggerPickNamespace {
     pub namespace: String,
 }
 
-struct PickNamespaceAction;
+struct PickNamespaceAction {
+    namespace: String,
+}
 
 #[async_trait]
-impl super::api::MenuAction<ResourceMenuContext> for PickNamespaceAction {
-    async fn run(&self, app: &tauri::AppHandle, ctx: ResourceMenuContext) {
+impl super::api::MenuAction for PickNamespaceAction {
+    async fn run(&self, app: &tauri::AppHandle, _client: kube::Client) {
         use tauri::Emitter as _;
 
         app.emit(
             "hyprkube:menu:resource:pick_namespace",
             FrontendTriggerPickNamespace {
-                namespace: ctx.namespace,
+                namespace: self.namespace.clone(),
             },
         )
         .unwrap();

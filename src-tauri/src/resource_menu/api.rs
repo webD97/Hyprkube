@@ -1,23 +1,23 @@
 use async_trait::async_trait;
 
-pub enum HyprkubeMenuItem<C> {
-    Action(HyprkubeActionMenuItem<C>),
+pub enum HyprkubeMenuItem {
+    Action(HyprkubeActionMenuItem),
     Separator,
-    Submenu(HyprkubeActionSubMenuItem<C>),
+    Submenu(HyprkubeActionSubMenuItem),
 }
 
 #[async_trait]
-pub trait MenuAction<C>: Send + Sync {
-    async fn run(&self, app: &tauri::AppHandle, ctx: C);
+pub trait MenuAction: Send + Sync {
+    async fn run(&self, app: &tauri::AppHandle, client: kube::Client);
 }
 
-pub struct HyprkubeActionMenuItem<C> {
+pub struct HyprkubeActionMenuItem {
     pub id: String,
     pub text: String,
-    pub action: Box<dyn MenuAction<C>>,
+    pub action: Box<dyn MenuAction>,
 }
 
-pub struct HyprkubeActionSubMenuItem<C> {
+pub struct HyprkubeActionSubMenuItem {
     pub text: String,
-    pub items: Vec<HyprkubeMenuItem<C>>,
+    pub items: Vec<HyprkubeMenuItem>,
 }
