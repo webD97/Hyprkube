@@ -6,22 +6,18 @@ use kube::api::{DynamicObject, GroupVersionKind};
 
 use crate::resource_menu::{
     api::{HyprkubeActionMenuItem, HyprkubeActionSubMenuItem, HyprkubeMenuItem},
-    DynamicResourceMenuProvider, ResourceMenuContext,
+    DynamicResourceMenuProvider,
 };
 
 /// A menu that can copy the data of Secrets and ConfigMaps to clipboard
 pub struct DataKeysResourceMenu;
 
-impl DynamicResourceMenuProvider<ResourceMenuContext> for DataKeysResourceMenu {
+impl DynamicResourceMenuProvider for DataKeysResourceMenu {
     fn matches(&self, gvk: &GroupVersionKind) -> bool {
         gvk.api_version() == "v1" && (gvk.kind == "Secret" || gvk.kind == "ConfigMap")
     }
 
-    fn build(
-        &self,
-        gvk: &GroupVersionKind,
-        resource: &DynamicObject,
-    ) -> Vec<HyprkubeMenuItem<ResourceMenuContext>> {
+    fn build(&self, gvk: &GroupVersionKind, resource: &DynamicObject) -> Vec<HyprkubeMenuItem> {
         let data = {
             match gvk.kind.as_str() {
                 "Secret" => {
@@ -78,8 +74,8 @@ struct CopySecretData {
 }
 
 #[async_trait]
-impl super::api::MenuAction<ResourceMenuContext> for CopySecretData {
-    async fn run(&self, app: &tauri::AppHandle, _ctx: ResourceMenuContext) {
+impl super::api::MenuAction for CopySecretData {
+    async fn run(&self, app: &tauri::AppHandle, _client: kube::Client) {
         use tauri_plugin_clipboard_manager::ClipboardExt;
 
         app.clipboard().write_text(self.data.clone()).unwrap();
