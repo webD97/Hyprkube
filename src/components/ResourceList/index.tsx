@@ -17,6 +17,7 @@ import {
     useReactTable,
     VisibilityState
 } from '@tanstack/react-table';
+import { LogicalPosition } from "@tauri-apps/api/dpi";
 import React from "react";
 import { createPortal } from "react-dom";
 import { Gvk } from "../../model/k8s";
@@ -31,7 +32,7 @@ export interface ResourceViewProps {
     columnDefinitions: ColumnDefinition[],
     resourceData: ResourceViewData,
     gvk: Gvk,
-    onResourceContextMenu: (gvk: Gvk, uid: string) => void,
+    onResourceContextMenu: (gvk: Gvk, uid: string, position: LogicalPosition | null) => void,
     onResourceClicked?: (gvk: Gvk, uid: string) => void,
     onSelectionChanged?: (rows: _TData[]) => void,
     searchbarPortal: React.RefObject<HTMLDivElement | null>
@@ -219,7 +220,7 @@ const ResourceList: React.FC<ResourceViewProps> = (props) => {
                                                 onClick={() => onResourceClicked(gvk, row.original[0])}
                                                 onContextMenu={(e) => {
                                                     e.preventDefault();
-                                                    onResourceContextMenu(gvk, row.original[0]);
+                                                    onResourceContextMenu(gvk, row.original[0], new LogicalPosition(e.clientX, e.clientY));
                                                 }}
                                             >
                                                 {

@@ -6,7 +6,7 @@ use kube::Api;
 use tauri::menu::{
     ContextMenu, Menu, MenuItemBuilder, MenuItemKind, PredefinedMenuItem, SubmenuBuilder,
 };
-use tauri::{State, Window, Wry};
+use tauri::{LogicalPosition, Position, State, Window, Wry};
 
 use crate::app_state::{ClientId, KubernetesClientRegistryState};
 use crate::menus::{HyprkubeMenuItem, MenuAction};
@@ -15,6 +15,7 @@ use crate::resource_menu::{
     KubernetesResourceMenuState, PodResourceMenu, ResourceMenuContext,
 };
 
+#[allow(clippy::too_many_arguments)]
 #[tauri::command]
 pub async fn popup_kubernetes_resource_menu(
     window: Window,
@@ -24,7 +25,8 @@ pub async fn popup_kubernetes_resource_menu(
     gvk: GroupVersionKind,
     namespace: String,
     name: String,
-) -> Result<(), ()> {
+    position: LogicalPosition<f64>,
+) -> Result<(), tauri::Error> {
     let client = client_registry.try_clone(&client_id).unwrap();
 
     let (api_resource, capabilities) = pinned_kind(&client, &gvk).await.unwrap();
@@ -69,7 +71,7 @@ pub async fn popup_kubernetes_resource_menu(
         action_map,
     ));
 
-    context_menu.popup(window).unwrap();
+    context_menu.popup_at(window, Position::Logical(position))?;
 
     Ok(())
 }
