@@ -276,10 +276,11 @@ const ResourceListInspector: React.FC<ResourceListInspectorProps> = (props) => {
                     resourceData={resources}
                     onResourceClicked={yamlViewerFactory()}
                     searchbarPortal={searchbarRef}
-                    onResourceContextMenu={(gvk, resourceUID) => {
+                    onResourceContextMenu={(gvk, resourceUID, position) => {
                         const { namespace, name } = resources[resourceUID];
 
-                        void invoke("popup_kubernetes_resource_menu", { clientId, namespace, name, gvk });
+                        invoke("popup_kubernetes_resource_menu", { clientId, namespace, name, gvk, position })
+                            .catch(e => console.log(e))
                     }}
                     onSelectionChanged={setSelectedResources}
                 />
