@@ -48,6 +48,7 @@ impl DynamicResourceMenuProvider for RolloutRestartResourceMenu {
                 vec![HyprkubeMenuItem::Action(HyprkubeActionMenuItem {
                     id: "builtin:rollout_restart".into(),
                     text: "Rollout restart".into(),
+                    enabled: true,
                     action: Box::new(RolloutRestart {
                         gvk: gvk.clone(),
                         namespace: resource.metadata.namespace.clone().unwrap_or_default(),
@@ -59,6 +60,7 @@ impl DynamicResourceMenuProvider for RolloutRestartResourceMenu {
                 vec![HyprkubeMenuItem::Action(HyprkubeActionMenuItem {
                     id: "builtin:rollout_restart".into(),
                     text: "Rollout restart".into(),
+                    enabled: true,
                     action: Box::new(RolloutRestart {
                         gvk: gvk.clone(),
                         namespace: resource.metadata.namespace.clone().unwrap_or_default(),

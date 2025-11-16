@@ -55,6 +55,7 @@ impl DynamicResourceMenuProvider for DataKeysResourceMenu {
         for (key, data) in data {
             data_submenu.push(HyprkubeMenuItem::Action(HyprkubeActionMenuItem {
                 id: format!("bultin:copy_data-{key}"),
+                enabled: true,
                 text: key.clone(),
                 action: Box::new(CopySecretData { data }),
             }));
