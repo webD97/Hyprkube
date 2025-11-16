@@ -8,7 +8,7 @@ pub enum HyprkubeMenuItem {
 
 #[async_trait]
 pub trait MenuAction: Send + Sync {
-    async fn run(&self, app: &tauri::AppHandle, client: kube::Client);
+    async fn run(&self, app: &tauri::AppHandle, client: kube::Client) -> anyhow::Result<()>;
 }
 
 pub struct HyprkubeActionMenuItem {

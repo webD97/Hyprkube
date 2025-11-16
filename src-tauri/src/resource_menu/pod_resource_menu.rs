@@ -17,9 +17,13 @@ impl DynamicResourceMenuProvider for PodResourceMenu {
         gvk.api_version() == "v1" && gvk.kind == "Pod"
     }
 
-    fn build(&self, _gvk: &GroupVersionKind, resource: &DynamicObject) -> Vec<HyprkubeMenuItem> {
+    fn build(
+        &self,
+        _gvk: &GroupVersionKind,
+        resource: &DynamicObject,
+    ) -> anyhow::Result<Vec<HyprkubeMenuItem>> {
         // Kinda hacky and ugly but idc for now
-        let pod: Pod = serde_json::from_value(serde_json::to_value(resource).unwrap()).unwrap();
+        let pod: Pod = serde_json::from_value(serde_json::to_value(resource)?)?;
 
         let init_container_names: Vec<String> = pod
             .spec
@@ -140,7 +144,7 @@ impl DynamicResourceMenuProvider for PodResourceMenu {
             items: exec_submenu,
         }));
 
-        menu
+        Ok(menu)
     }
 }
 
@@ -159,7 +163,7 @@ struct LogsAction {
 
 #[async_trait]
 impl MenuAction for LogsAction {
-    async fn run(&self, app: &tauri::AppHandle, _client: kube::Client) {
+    async fn run(&self, app: &tauri::AppHandle, _client: kube::Client) -> anyhow::Result<()> {
         use tauri::Emitter as _;
 
         app.emit(
@@ -169,8 +173,9 @@ impl MenuAction for LogsAction {
                 name: self.name.clone(),
                 container: self.container_name.clone(),
             },
-        )
-        .unwrap();
+        )?;
+
+        Ok(())
     }
 }
 
@@ -189,7 +194,8 @@ struct ExecAction {
 
 #[async_trait]
 impl MenuAction for ExecAction {
-    async fn run(&self, app: &tauri::AppHandle, _client: kube::Client) {
+    async fn run(&self, app: &tauri::AppHandle, _client: kube::Client) -> anyhow::Result<()> {
+        use anyhow::Context;
         use tauri::Emitter as _;
 
         app.emit(
@@ -200,6 +206,8 @@ impl MenuAction for ExecAction {
                 container: self.container_name.clone(),
             },
         )
-        .unwrap();
+        .context("Failed to notify frontend")?;
+
+        Ok(())
     }
 }

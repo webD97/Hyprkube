@@ -1,8 +1,10 @@
 use std::collections::BTreeMap;
 
+use anyhow::anyhow;
 use async_trait::async_trait;
 use k8s_openapi::api::core::v1::{ConfigMap, Secret};
 use kube::api::{DynamicObject, GroupVersionKind};
+use tracing::warn;
 
 use crate::{
     menus::{HyprkubeActionMenuItem, HyprkubeActionSubMenuItem, HyprkubeMenuItem, MenuAction},
@@ -14,38 +16,45 @@ pub struct DataKeysResourceMenu;
 
 impl DynamicResourceMenuProvider for DataKeysResourceMenu {
     fn matches(&self, gvk: &GroupVersionKind) -> bool {
-        gvk.api_version() == "v1" && (gvk.kind == "Secret" || gvk.kind == "ConfigMap")
+        gvk.api_version() == "v1" && matches!(gvk.kind.as_str(), "Secret" | "ConfigMap")
     }
 
-    fn build(&self, gvk: &GroupVersionKind, resource: &DynamicObject) -> Vec<HyprkubeMenuItem> {
+    fn build(
+        &self,
+        gvk: &GroupVersionKind,
+        resource: &DynamicObject,
+    ) -> anyhow::Result<Vec<HyprkubeMenuItem>> {
         let data = {
             match gvk.kind.as_str() {
                 "Secret" => {
                     // Kinda hacky and ugly but idc for now
-                    let secret: Secret =
-                        serde_json::from_value(serde_json::to_value(resource).unwrap()).unwrap();
+                    let secret: Secret = serde_json::from_value(serde_json::to_value(resource)?)?;
 
                     secret
                         .data
                         .unwrap_or_default()
                         .into_iter()
-                        .map(|(key, value)| {
-                            (
-                                key,
-                                String::from_utf8(value.0)
-                                    .expect("Non UTF-8 secret content is not yet supported"),
-                            )
+                        .filter_map(|(key, value)| {
+                            let data = String::from_utf8(value.0);
+
+                            match data {
+                                Ok(data) => Some((key, data)),
+                                Err(_) => {
+                                    warn!("Non UTF-8 secret content is not yet supported");
+                                    None
+                                }
+                            }
                         })
                         .collect::<BTreeMap<String, String>>()
                 }
                 "ConfigMap" => {
                     // Kinda hacky and ugly but idc for now
                     let configmap: ConfigMap =
-                        serde_json::from_value(serde_json::to_value(resource).unwrap()).unwrap();
+                        serde_json::from_value(serde_json::to_value(resource)?)?;
 
                     configmap.data.unwrap_or_default()
                 }
-                _ => unreachable!(),
+                _ => Err(anyhow!("Unsupported kind: {}", gvk.kind))?,
             }
         };
 
@@ -66,7 +75,7 @@ impl DynamicResourceMenuProvider for DataKeysResourceMenu {
             items: data_submenu,
         }));
 
-        menu
+        Ok(menu)
     }
 }
 
@@ -76,9 +85,14 @@ struct CopySecretData {
 
 #[async_trait]
 impl MenuAction for CopySecretData {
-    async fn run(&self, app: &tauri::AppHandle, _client: kube::Client) {
+    async fn run(&self, app: &tauri::AppHandle, _client: kube::Client) -> anyhow::Result<()> {
+        use anyhow::Context;
         use tauri_plugin_clipboard_manager::ClipboardExt;
 
-        app.clipboard().write_text(self.data.clone()).unwrap();
+        app.clipboard()
+            .write_text(self.data.clone())
+            .context("Failed to write data to clipboard")?;
+
+        Ok(())
     }
 }

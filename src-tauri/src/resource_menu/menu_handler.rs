@@ -2,7 +2,7 @@ use std::{collections::HashMap, sync::Mutex};
 
 use kube::api::GroupVersionKind;
 use tauri::{menu::MenuEvent, AppHandle, Manager};
-use tracing::{debug, warn};
+use tracing::{debug, error, warn};
 
 use crate::menus::MenuAction;
 
@@ -43,7 +43,10 @@ pub fn on_menu_event(app: &AppHandle, event: MenuEvent) {
 
     tauri::async_runtime::spawn(async move {
         if let Some(handler) = handlers.get(&event_id) {
-            handler.run(&app, client.clone()).await;
+            match handler.run(&app, client.clone()).await {
+                Ok(_) => {}
+                Err(e) => error!("MenuItem action returned an Err: {e}"),
+            }
         } else {
             warn!("No handler found for event id {event_id}");
         }

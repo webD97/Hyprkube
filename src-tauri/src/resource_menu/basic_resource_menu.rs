@@ -1,3 +1,4 @@
+use anyhow::Context as _;
 use async_trait::async_trait;
 use kube::api::{DeleteParams, DynamicObject, GroupVersionKind};
 use serde::Serialize;
@@ -14,8 +15,12 @@ impl DynamicResourceMenuProvider for BasicResourceMenu {
         true
     }
 
-    fn build(&self, gvk: &GroupVersionKind, resource: &DynamicObject) -> Vec<HyprkubeMenuItem> {
-        vec![
+    fn build(
+        &self,
+        gvk: &GroupVersionKind,
+        resource: &DynamicObject,
+    ) -> anyhow::Result<Vec<HyprkubeMenuItem>> {
+        Ok(vec![
             HyprkubeMenuItem::Action(HyprkubeActionMenuItem {
                 id: "builtin:edit".into(),
                 text: "Edit YAML".into(),
@@ -23,7 +28,11 @@ impl DynamicResourceMenuProvider for BasicResourceMenu {
                 action: Box::new(EditAction {
                     gvk: gvk.clone(),
                     namespace: resource.metadata.namespace.clone().unwrap_or_default(),
-                    name: resource.metadata.name.clone().unwrap_or_default(),
+                    name: resource
+                        .metadata
+                        .name
+                        .clone()
+                        .context(".metadata.name not set")?,
                 }),
             }),
             HyprkubeMenuItem::Action(HyprkubeActionMenuItem {
@@ -33,7 +42,11 @@ impl DynamicResourceMenuProvider for BasicResourceMenu {
                 action: Box::new(DeleteAction {
                     gvk: gvk.clone(),
                     namespace: resource.metadata.namespace.clone().unwrap_or_default(),
-                    name: resource.metadata.name.clone().unwrap_or_default(),
+                    name: resource
+                        .metadata
+                        .name
+                        .clone()
+                        .context(".metadata.name not set")?,
                 }),
             }),
             HyprkubeMenuItem::Action(HyprkubeActionMenuItem {
@@ -41,10 +54,14 @@ impl DynamicResourceMenuProvider for BasicResourceMenu {
                 enabled: true,
                 text: "Select namespace".into(),
                 action: Box::new(PickNamespaceAction {
-                    namespace: resource.metadata.namespace.clone().unwrap_or_default(),
+                    namespace: resource
+                        .metadata
+                        .namespace
+                        .clone()
+                        .context(".metadata.namespace not set")?,
                 }),
             }),
-        ]
+        ])
     }
 }
 
@@ -63,7 +80,7 @@ struct EditAction {
 
 #[async_trait]
 impl MenuAction for EditAction {
-    async fn run(&self, app: &tauri::AppHandle, _client: kube::Client) {
+    async fn run(&self, app: &tauri::AppHandle, _client: kube::Client) -> anyhow::Result<()> {
         use tauri::Emitter as _;
 
         app.emit(
@@ -73,8 +90,9 @@ impl MenuAction for EditAction {
                 namespace: self.namespace.clone(),
                 name: self.name.clone(),
             },
-        )
-        .unwrap();
+        )?;
+
+        Ok(())
     }
 }
 
@@ -86,7 +104,7 @@ struct DeleteAction {
 
 #[async_trait]
 impl MenuAction for DeleteAction {
-    async fn run(&self, _app: &tauri::AppHandle, client: kube::Client) {
+    async fn run(&self, _app: &tauri::AppHandle, client: kube::Client) -> anyhow::Result<()> {
         use kube::discovery::oneshot::pinned_kind;
         use kube::Api;
 
@@ -96,7 +114,7 @@ impl MenuAction for DeleteAction {
 
         println!("Delete was pressed for {gvk:?}, {namespace}/{name}");
 
-        let (api_resource, capabilities) = pinned_kind(&client, gvk).await.unwrap();
+        let (api_resource, capabilities) = pinned_kind(&client, gvk).await?;
 
         let api: Api<DynamicObject> = match capabilities.scope {
             kube::discovery::Scope::Cluster => kube::Api::all_with(client, &api_resource),
@@ -105,7 +123,9 @@ impl MenuAction for DeleteAction {
             }
         };
 
-        api.delete(name, &DeleteParams::default()).await.unwrap();
+        api.delete(name, &DeleteParams::default()).await?;
+
+        Ok(())
     }
 }
 
@@ -120,7 +140,7 @@ struct PickNamespaceAction {
 
 #[async_trait]
 impl MenuAction for PickNamespaceAction {
-    async fn run(&self, app: &tauri::AppHandle, _client: kube::Client) {
+    async fn run(&self, app: &tauri::AppHandle, _client: kube::Client) -> anyhow::Result<()> {
         use tauri::Emitter as _;
 
         app.emit(
@@ -129,6 +149,8 @@ impl MenuAction for PickNamespaceAction {
                 namespace: self.namespace.clone(),
             },
         )
-        .unwrap();
+        .context("Failed to notify frontend")?;
+
+        Ok(())
     }
 }
