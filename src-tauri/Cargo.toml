@@ -7,7 +7,7 @@ license = "MIT"
 repository = "https://github.com/webD97/hyprkube"
 default-run = "hyprkube"
 edition = "2021"
-rust-version = "1.83"
+rust-version = "1.86"
 
 [lib]
 name = "hyprkube_lib"
