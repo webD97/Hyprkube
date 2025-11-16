@@ -6,6 +6,8 @@ mod menu_handler;
 mod pod_resource_menu;
 mod rollout_restart_resource_menu;
 
+pub(crate) mod scripting;
+
 pub use basic_resource_menu::*;
 pub use commands::*;
 pub use data_keys_resource_menu::*;

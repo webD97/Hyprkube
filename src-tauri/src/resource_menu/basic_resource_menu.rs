@@ -5,8 +5,21 @@ use serde::Serialize;
 
 use crate::{
     menus::{HyprkubeActionMenuItem, HyprkubeMenuItem, MenuAction},
-    resource_menu::DynamicResourceMenuProvider,
+    resource_menu::{
+        scripting::rhai_scripted_menu_action::RhaiScriptedMenuAction, DynamicResourceMenuProvider,
+    },
 };
+
+const SCRIPT: &str = r#"
+fn run(gitrepo) {
+    let forceSyncGeneration = gitrepo.spec?.forceSyncGeneration ?? 0;
+
+    let api = ApiResource(gitrepo);
+    let patch = JsonPatch("replace", "/spec/forceSyncGeneration", forceSyncGeneration + 1);
+
+    kpatch(api, [patch]);
+}
+"#;
 
 pub struct BasicResourceMenu;
 
@@ -60,6 +73,12 @@ impl DynamicResourceMenuProvider for BasicResourceMenu {
                         .clone()
                         .context(".metadata.namespace not set")?,
                 }),
+            }),
+            HyprkubeMenuItem::Action(HyprkubeActionMenuItem {
+                id: "builtin:force-sync-generation".into(),
+                enabled: true,
+                text: "Force Git sync".into(),
+                action: Box::new(RhaiScriptedMenuAction::new(SCRIPT, resource.clone()).unwrap()),
             }),
         ])
     }
