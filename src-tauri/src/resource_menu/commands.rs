@@ -95,6 +95,7 @@ fn make_tauri_menu<T: tauri::Manager<Wry>>(
             HyprkubeMenuItem::Action(item) => MenuItemKind::MenuItem(
                 MenuItemBuilder::new(item.text.clone())
                     .id(item.id.clone())
+                    .enabled(item.enabled)
                     .build(manager)
                     .unwrap(),
             ),

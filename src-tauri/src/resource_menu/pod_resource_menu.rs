@@ -1,5 +1,7 @@
+use std::collections::HashMap;
+
 use async_trait::async_trait;
-use k8s_openapi::api::core::v1::Pod;
+use k8s_openapi::api::core::v1::{ContainerStatus, Pod};
 use kube::api::{DynamicObject, GroupVersionKind};
 use serde::Serialize;
 
@@ -33,14 +35,43 @@ impl DynamicResourceMenuProvider for PodResourceMenu {
             .map(|containers| containers.iter().map(|c| c.name.clone()).collect())
             .unwrap_or_default();
 
+        let container_status: HashMap<String, ContainerStatus> = pod
+            .status
+            .as_ref()
+            .and_then(|status| status.container_statuses.clone())
+            .unwrap_or_default()
+            .into_iter()
+            .map(|c| (c.name.clone(), c))
+            .collect();
+
+        let init_container_status: HashMap<String, ContainerStatus> = pod
+            .status
+            .as_ref()
+            .and_then(|status| status.init_container_statuses.clone())
+            .unwrap_or_default()
+            .into_iter()
+            .map(|c| (c.name.clone(), c))
+            .collect();
+
         let mut menu = Vec::new();
         let mut logs_submenu = Vec::new();
         let mut exec_submenu = Vec::new();
 
         for name in container_names {
+            let is_running = container_status
+                .get(&name)
+                .map(|status| {
+                    status
+                        .state
+                        .clone()
+                        .is_some_and(|state| state.waiting.is_none())
+                })
+                .unwrap_or(false);
+
             logs_submenu.push(HyprkubeMenuItem::Action(HyprkubeActionMenuItem {
                 id: format!("builtin:container_logs-{name}"),
                 text: name.clone(),
+                enabled: is_running,
                 action: Box::new(LogsAction {
                     container_name: name.clone(),
                     namespace: resource.metadata.namespace.clone().unwrap_or_default(),
@@ -51,6 +82,7 @@ impl DynamicResourceMenuProvider for PodResourceMenu {
             exec_submenu.push(HyprkubeMenuItem::Action(HyprkubeActionMenuItem {
                 id: format!("builtin:container_exec-{name}"),
                 text: name.clone(),
+                enabled: is_running,
                 action: Box::new(ExecAction {
                     container_name: name,
                     namespace: resource.metadata.namespace.clone().unwrap_or_default(),
@@ -65,9 +97,20 @@ impl DynamicResourceMenuProvider for PodResourceMenu {
         }
 
         for name in init_container_names {
+            let is_running = init_container_status
+                .get(&name)
+                .map(|status| {
+                    status
+                        .state
+                        .clone()
+                        .is_some_and(|state| state.waiting.is_none())
+                })
+                .unwrap_or(false);
+
             logs_submenu.push(HyprkubeMenuItem::Action(HyprkubeActionMenuItem {
                 id: format!("builtin:container_logs-{name}"),
                 text: name.clone(),
+                enabled: is_running,
                 action: Box::new(LogsAction {
                     namespace: resource.metadata.namespace.clone().unwrap_or_default(),
                     name: resource.metadata.name.clone().unwrap_or_default(),
@@ -78,6 +121,7 @@ impl DynamicResourceMenuProvider for PodResourceMenu {
             exec_submenu.push(HyprkubeMenuItem::Action(HyprkubeActionMenuItem {
                 id: format!("builtin:container_exec-{name}"),
                 text: name.clone(),
+                enabled: is_running,
                 action: Box::new(ExecAction {
                     namespace: resource.metadata.namespace.clone().unwrap_or_default(),
                     name: resource.metadata.name.clone().unwrap_or_default(),

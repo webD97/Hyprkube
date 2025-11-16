@@ -14,6 +14,7 @@ pub trait MenuAction: Send + Sync {
 pub struct HyprkubeActionMenuItem {
     pub id: String,
     pub text: String,
+    pub enabled: bool,
     pub action: Box<dyn MenuAction>,
 }
 

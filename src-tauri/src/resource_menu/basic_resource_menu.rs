@@ -19,6 +19,7 @@ impl DynamicResourceMenuProvider for BasicResourceMenu {
             HyprkubeMenuItem::Action(HyprkubeActionMenuItem {
                 id: "builtin:edit".into(),
                 text: "Edit YAML".into(),
+                enabled: true,
                 action: Box::new(EditAction {
                     gvk: gvk.clone(),
                     namespace: resource.metadata.namespace.clone().unwrap_or_default(),
@@ -27,6 +28,7 @@ impl DynamicResourceMenuProvider for BasicResourceMenu {
             }),
             HyprkubeMenuItem::Action(HyprkubeActionMenuItem {
                 id: "builtin:delete".into(),
+                enabled: true,
                 text: "Delete".into(),
                 action: Box::new(DeleteAction {
                     gvk: gvk.clone(),
@@ -36,6 +38,7 @@ impl DynamicResourceMenuProvider for BasicResourceMenu {
             }),
             HyprkubeMenuItem::Action(HyprkubeActionMenuItem {
                 id: "builtin:pick-namespace".into(),
+                enabled: true,
                 text: "Select namespace".into(),
                 action: Box::new(PickNamespaceAction {
                     namespace: resource.metadata.namespace.clone().unwrap_or_default(),
