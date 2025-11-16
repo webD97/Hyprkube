@@ -8,6 +8,7 @@ use tauri::menu::{
     ContextMenu, Menu, MenuItemBuilder, MenuItemKind, PredefinedMenuItem, SubmenuBuilder,
 };
 use tauri::{LogicalPosition, Position, State, Window, Wry};
+use tracing::error;
 
 use crate::app_state::{ClientId, KubernetesClientRegistryState};
 use crate::menus::{HyprkubeMenuItem, MenuAction};
@@ -51,12 +52,17 @@ pub async fn popup_kubernetes_resource_menu(
     let mut menu_items: Vec<HyprkubeMenuItem> = menu_providers
         .into_iter()
         .filter(|provider| provider.matches(&gvk))
-        .flat_map(|provider| {
-            provider
-                .build(&gvk, &resource)
-                .into_iter()
-                .chain(iter::once(HyprkubeMenuItem::Separator))
+        .flat_map(|provider| match provider.build(&gvk, &resource) {
+            Err(e) => {
+                error!("MenuProvider failed: {e}");
+                None
+            }
+            Ok(menu) => Some(
+                menu.into_iter()
+                    .chain(iter::once(HyprkubeMenuItem::Separator)),
+            ),
         })
+        .flatten()
         .collect();
 
     menu_items.pop_if(|item| matches!(item, HyprkubeMenuItem::Separator));

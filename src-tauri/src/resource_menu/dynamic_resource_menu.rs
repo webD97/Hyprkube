@@ -7,5 +7,9 @@ pub trait DynamicResourceMenuProvider {
     fn matches(&self, gvk: &GroupVersionKind) -> bool;
 
     /// Build a menu for a specific resource
-    fn build(&self, gvk: &GroupVersionKind, resource: &DynamicObject) -> Vec<HyprkubeMenuItem>;
+    fn build(
+        &self,
+        gvk: &GroupVersionKind,
+        resource: &DynamicObject,
+    ) -> anyhow::Result<Vec<HyprkubeMenuItem>>;
 }

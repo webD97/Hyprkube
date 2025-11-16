@@ -1,3 +1,4 @@
+use anyhow::anyhow;
 use async_trait::async_trait;
 use k8s_openapi::api::core::v1::Pod;
 use kube::{
@@ -25,12 +26,15 @@ impl DynamicResourceMenuProvider for RolloutRestartResourceMenu {
         }
     }
 
-    fn build(&self, gvk: &GroupVersionKind, resource: &DynamicObject) -> Vec<HyprkubeMenuItem> {
+    fn build(
+        &self,
+        gvk: &GroupVersionKind,
+        resource: &DynamicObject,
+    ) -> anyhow::Result<Vec<HyprkubeMenuItem>> {
         match gvk.kind.as_str() {
             "Pod" => {
                 // Kinda hacky and ugly but idc for now
-                let pod: Pod =
-                    serde_json::from_value(serde_json::to_value(resource).unwrap()).unwrap();
+                let pod: Pod = serde_json::from_value(serde_json::to_value(resource)?)?;
 
                 let owner = pod
                     .metadata
@@ -38,14 +42,22 @@ impl DynamicResourceMenuProvider for RolloutRestartResourceMenu {
                     .and_then(|owners| owners.first().cloned());
 
                 if owner.is_none() {
-                    return Vec::new();
+                    return Ok(Vec::new());
                 }
 
                 let owner = owner.unwrap();
-                let gv: GroupVersion = owner.api_version.parse().unwrap();
+
+                if !matches!(
+                    owner.kind.as_ref(),
+                    "Deployment" | "StatefuleSet" | "DaemonSet"
+                ) {
+                    return Ok(Vec::new());
+                }
+
+                let gv: GroupVersion = owner.api_version.parse()?;
                 let gvk = GroupVersionKind::gvk(&gvk.group, &gv.version, &owner.kind);
 
-                vec![HyprkubeMenuItem::Action(HyprkubeActionMenuItem {
+                Ok(vec![HyprkubeMenuItem::Action(HyprkubeActionMenuItem {
                     id: "builtin:rollout_restart".into(),
                     text: "Rollout restart".into(),
                     enabled: true,
@@ -54,10 +66,10 @@ impl DynamicResourceMenuProvider for RolloutRestartResourceMenu {
                         namespace: resource.metadata.namespace.clone().unwrap_or_default(),
                         name: owner.name,
                     }),
-                })]
+                })])
             }
             "Deployment" | "StatefulSet" | "DaemonSet" => {
-                vec![HyprkubeMenuItem::Action(HyprkubeActionMenuItem {
+                Ok(vec![HyprkubeMenuItem::Action(HyprkubeActionMenuItem {
                     id: "builtin:rollout_restart".into(),
                     text: "Rollout restart".into(),
                     enabled: true,
@@ -66,12 +78,9 @@ impl DynamicResourceMenuProvider for RolloutRestartResourceMenu {
                         namespace: resource.metadata.namespace.clone().unwrap_or_default(),
                         name: resource.metadata.name.clone().unwrap_or_default(),
                     }),
-                })]
+                })])
             }
-            _ => {
-                warn!("Unhandled kind: {}", gvk.kind);
-                Vec::new()
-            }
+            _ => Err(anyhow!("Unhandled kind: {}", gvk.kind)),
         }
     }
 }
@@ -84,37 +93,51 @@ struct RolloutRestart {
 
 #[async_trait]
 impl MenuAction for RolloutRestart {
-    async fn run(&self, _app: &tauri::AppHandle, client: kube::Client) {
+    async fn run(&self, _app: &tauri::AppHandle, client: kube::Client) -> anyhow::Result<()> {
+        use anyhow::Context;
         use k8s_openapi::api::apps::v1::{DaemonSet, Deployment, ReplicaSet, StatefulSet};
         use kube::Api;
 
         match self.gvk.kind.as_str() {
             "ReplicaSet" => {
                 let api: Api<ReplicaSet> = Api::namespaced(client.clone(), &self.namespace);
-                let replicaset = api.get(&self.name).await.unwrap();
+                let replicaset = api
+                    .get(&self.name)
+                    .await
+                    .context("Failed to read ReplicaSet")?;
 
                 let owner = replicaset
                     .metadata
                     .owner_references
                     .and_then(|owners| owners.first().cloned())
-                    .expect("RepliaSet should have an owner reference");
+                    .context("ReplicaSet has no owner")?;
 
                 let api: Api<Deployment> = Api::namespaced(client, &self.namespace);
-                api.restart(&owner.name).await.unwrap();
+                api.restart(&owner.name)
+                    .await
+                    .context("Failed to restart Deployment")?;
             }
             "Deployment" => {
                 let api: Api<Deployment> = Api::namespaced(client, &self.namespace);
-                api.restart(&self.name).await.unwrap();
+                api.restart(&self.name)
+                    .await
+                    .context("Failed to restart Deployment")?;
             }
             "StatefulSet" => {
                 let api: Api<StatefulSet> = Api::namespaced(client, &self.namespace);
-                api.restart(&self.name).await.unwrap();
+                api.restart(&self.name)
+                    .await
+                    .context("Failed to restart StatefulSet")?;
             }
             "DaemonSet" => {
                 let api: Api<DaemonSet> = Api::namespaced(client, &self.namespace);
-                api.restart(&self.name).await.unwrap();
+                api.restart(&self.name)
+                    .await
+                    .context("Failed to restart DaemonSet")?;
             }
             _ => warn!("Unhandled kind: {}", self.gvk.kind),
         }
+
+        Ok(())
     }
 }
