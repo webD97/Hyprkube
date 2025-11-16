@@ -12,7 +12,7 @@ use crate::app_state::{ClientId, KubernetesClientRegistryState};
 use crate::menus::{HyprkubeMenuItem, MenuAction};
 use crate::resource_menu::{
     BasicResourceMenu, DataKeysResourceMenu, DynamicResourceMenuProvider,
-    KubernetesResourceMenuState, PodResourceMenu, ResourceMenuContext,
+    KubernetesResourceMenuState, PodResourceMenu, ResourceMenuContext, RolloutRestartResourceMenu,
 };
 
 #[allow(clippy::too_many_arguments)]
@@ -43,6 +43,7 @@ pub async fn popup_kubernetes_resource_menu(
     let menu_providers: Vec<Box<dyn DynamicResourceMenuProvider>> = vec![
         Box::new(BasicResourceMenu),
         Box::new(PodResourceMenu),
+        Box::new(RolloutRestartResourceMenu),
         Box::new(DataKeysResourceMenu),
     ];
 
