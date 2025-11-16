@@ -96,8 +96,6 @@ impl DynamicResourceMenuProvider for PodResourceMenu {
             items: exec_submenu,
         }));
 
-        menu.push(HyprkubeMenuItem::Separator);
-
         menu
     }
 }

@@ -41,7 +41,6 @@ impl DynamicResourceMenuProvider for BasicResourceMenu {
                     namespace: resource.metadata.namespace.clone().unwrap_or_default(),
                 }),
             }),
-            HyprkubeMenuItem::Separator,
         ]
     }
 }

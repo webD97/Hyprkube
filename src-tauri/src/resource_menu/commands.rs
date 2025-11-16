@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::iter;
 
 use kube::api::{DynamicObject, GroupVersionKind};
 use kube::discovery::pinned_kind;
@@ -42,16 +43,23 @@ pub async fn popup_kubernetes_resource_menu(
 
     let menu_providers: Vec<Box<dyn DynamicResourceMenuProvider>> = vec![
         Box::new(BasicResourceMenu),
-        Box::new(PodResourceMenu),
         Box::new(RolloutRestartResourceMenu),
+        Box::new(PodResourceMenu),
         Box::new(DataKeysResourceMenu),
     ];
 
-    let menu_items: Vec<HyprkubeMenuItem> = menu_providers
+    let mut menu_items: Vec<HyprkubeMenuItem> = menu_providers
         .into_iter()
         .filter(|provider| provider.matches(&gvk))
-        .flat_map(|provider| provider.build(&gvk, &resource))
+        .flat_map(|provider| {
+            provider
+                .build(&gvk, &resource)
+                .into_iter()
+                .chain(iter::once(HyprkubeMenuItem::Separator))
+        })
         .collect();
+
+    menu_items.pop_if(|item| matches!(item, HyprkubeMenuItem::Separator));
 
     let context_menu = Menu::new(&window).unwrap();
 
