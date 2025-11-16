@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Gvk } from "../../model/k8s";
 
-import { invoke } from "@tauri-apps/api/core";
 import { EventCallback } from "@tauri-apps/api/event";
 import { confirm } from '@tauri-apps/plugin-dialog';
 import { deleteResource } from "../../api/deleteResource";
 import getDefaultNamespace from "../../api/getDefaultNamespace";
 import getResourceYaml from "../../api/getResourceYaml";
 import listResourceViews, { ResourceViewDef } from "../../api/listResourceViews";
+import { popupKubernetesResourceMenu } from "../../api/popupKubernetesResourceMenu";
 import setDefaultNamespace from "../../api/setDefaultNamespace";
 import EmojiHint from "../../components/EmojiHint";
 import LogPanel from "../../components/LogPanel";
@@ -279,7 +279,7 @@ const ResourceListInspector: React.FC<ResourceListInspectorProps> = (props) => {
                     onResourceContextMenu={(gvk, resourceUID, position) => {
                         const { namespace, name } = resources[resourceUID];
 
-                        invoke("popup_kubernetes_resource_menu", { clientId, namespace, name, gvk, position })
+                        popupKubernetesResourceMenu(clientId!, namespace, name, gvk, position)
                             .catch(e => console.log(e))
                     }}
                     onSelectionChanged={setSelectedResources}

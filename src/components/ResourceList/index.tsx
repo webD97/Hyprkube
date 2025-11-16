@@ -32,7 +32,7 @@ export interface ResourceViewProps {
     columnDefinitions: ColumnDefinition[],
     resourceData: ResourceViewData,
     gvk: Gvk,
-    onResourceContextMenu: (gvk: Gvk, uid: string, position: LogicalPosition | null) => void,
+    onResourceContextMenu: (gvk: Gvk, uid: string, position: LogicalPosition) => void,
     onResourceClicked?: (gvk: Gvk, uid: string) => void,
     onSelectionChanged?: (rows: _TData[]) => void,
     searchbarPortal: React.RefObject<HTMLDivElement | null>
