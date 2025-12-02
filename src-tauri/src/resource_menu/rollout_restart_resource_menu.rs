@@ -30,6 +30,7 @@ impl DynamicResourceMenuProvider for RolloutRestartResourceMenu {
         &self,
         gvk: &GroupVersionKind,
         resource: &DynamicObject,
+        _tab_id: String,
     ) -> anyhow::Result<Vec<HyprkubeMenuItem>> {
         match gvk.kind.as_str() {
             "Pod" => {
@@ -49,7 +50,7 @@ impl DynamicResourceMenuProvider for RolloutRestartResourceMenu {
 
                 if !matches!(
                     owner.kind.as_ref(),
-                    "Deployment" | "StatefuleSet" | "DaemonSet"
+                    "Deployment" | "StatefulSet" | "DaemonSet"
                 ) {
                     return Ok(Vec::new());
                 }

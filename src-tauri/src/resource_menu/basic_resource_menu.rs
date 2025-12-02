@@ -19,6 +19,7 @@ impl DynamicResourceMenuProvider for BasicResourceMenu {
         &self,
         gvk: &GroupVersionKind,
         resource: &DynamicObject,
+        tab_id: String,
     ) -> anyhow::Result<Vec<HyprkubeMenuItem>> {
         Ok(vec![
             HyprkubeMenuItem::Action(HyprkubeActionMenuItem {
@@ -26,6 +27,7 @@ impl DynamicResourceMenuProvider for BasicResourceMenu {
                 text: "Edit YAML".into(),
                 enabled: true,
                 action: Box::new(EditAction {
+                    tab_id: tab_id.clone(),
                     gvk: gvk.clone(),
                     namespace: resource.metadata.namespace.clone().unwrap_or_default(),
                     name: resource
@@ -54,6 +56,7 @@ impl DynamicResourceMenuProvider for BasicResourceMenu {
                 enabled: true,
                 text: "Select namespace".into(),
                 action: Box::new(PickNamespaceAction {
+                    tab_id,
                     namespace: resource
                         .metadata
                         .namespace
@@ -66,16 +69,19 @@ impl DynamicResourceMenuProvider for BasicResourceMenu {
 }
 
 #[derive(Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
 struct FrontendTriggerResourceEdit {
     pub gvk: GroupVersionKind,
     pub namespace: String,
     pub name: String,
+    pub tab_id: String,
 }
 
 struct EditAction {
     pub gvk: GroupVersionKind,
     pub namespace: String,
     pub name: String,
+    pub tab_id: String,
 }
 
 #[async_trait]
@@ -89,6 +95,7 @@ impl MenuAction for EditAction {
                 gvk: self.gvk.clone(),
                 namespace: self.namespace.clone(),
                 name: self.name.clone(),
+                tab_id: self.tab_id.clone(),
             },
         )?;
 
@@ -130,12 +137,15 @@ impl MenuAction for DeleteAction {
 }
 
 #[derive(Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
 struct FrontendTriggerPickNamespace {
     pub namespace: String,
+    pub tab_id: String,
 }
 
 struct PickNamespaceAction {
     namespace: String,
+    tab_id: String,
 }
 
 #[async_trait]
@@ -147,6 +157,7 @@ impl MenuAction for PickNamespaceAction {
             "hyprkube:menu:resource:pick_namespace",
             FrontendTriggerPickNamespace {
                 namespace: self.namespace.clone(),
+                tab_id: self.tab_id.clone(),
             },
         )
         .context("Failed to notify frontend")?;

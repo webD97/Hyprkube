@@ -11,5 +11,6 @@ pub trait DynamicResourceMenuProvider {
         &self,
         gvk: &GroupVersionKind,
         resource: &DynamicObject,
+        tab_id: String,
     ) -> anyhow::Result<Vec<HyprkubeMenuItem>>;
 }

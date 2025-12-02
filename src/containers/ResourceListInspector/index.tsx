@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useContext, useEffect, useRef, useState } from "react";
 import { Gvk } from "../../model/k8s";
 
 import { EventCallback } from "@tauri-apps/api/event";
@@ -11,6 +11,7 @@ import { popupKubernetesResourceMenu } from "../../api/popupKubernetesResourceMe
 import setDefaultNamespace from "../../api/setDefaultNamespace";
 import EmojiHint from "../../components/EmojiHint";
 import LogPanel from "../../components/LogPanel";
+import { MegaTabContext } from "../../components/MegaTabs/context";
 import ResourceList from "../../components/ResourceList";
 import { Tab } from "../../components/TabView";
 import { TabElement } from "../../components/TabView/hooks";
@@ -32,10 +33,10 @@ export interface ResourceListInspectorProps {
     onNamespaceChanged?: (namespace: string) => void,
 }
 
-type FrontendTriggerResourceEdit = { gvk: Gvk, namespace: string, name: string };
-type FrontendTriggerLogView = { namespace: string, name: string, container: string };
-type FrontendTriggerExecSession = { namespace: string, name: string, container: string };
-type FrontendTriggerPickNamespace = { namespace: string };
+type FrontendTriggerResourceEdit = { tabId: string, gvk: Gvk, namespace: string, name: string };
+type FrontendTriggerLogView = { tabId: string, namespace: string, name: string, container: string };
+type FrontendTriggerExecSession = { tabId: string, namespace: string, name: string, container: string };
+type FrontendTriggerPickNamespace = { tabId: string, namespace: string };
 
 const ResourceListInspector: React.FC<ResourceListInspectorProps> = (props) => {
     const {
@@ -55,6 +56,7 @@ const ResourceListInspector: React.FC<ResourceListInspectorProps> = (props) => {
     const [resourceDefaultNamespace, setResourceDefaultNamespace] = useState('default');
     const [selectedResources, setSelectedResources] = useState<[string, DisplayableResource][]>([]);
     const [columnDefinitions, resources] = useResourceWatch(clientId, gvk, selectedView, selectedNamespace);
+    const { tabIdentifier } = useContext(MegaTabContext)!;
 
     const searchbarRef = useRef<HTMLDivElement>(null);
 
@@ -176,10 +178,10 @@ const ResourceListInspector: React.FC<ResourceListInspectorProps> = (props) => {
         setSelectedNamespace(event.payload.namespace);
     }, []);
 
-    useTauriEventListener<FrontendTriggerLogView>('hyprkube:menu:resource:trigger_logs', onTriggerLogview);
-    useTauriEventListener<FrontendTriggerResourceEdit>('hyprkube:menu:resource:trigger_edit', onTriggerEdit);
-    useTauriEventListener<FrontendTriggerExecSession>('hyprkube:menu:resource:trigger_exec', onTriggerExec);
-    useTauriEventListener<FrontendTriggerPickNamespace>('hyprkube:menu:resource:pick_namespace', onTriggerPickNamespace);
+    useTauriEventListener<FrontendTriggerLogView>('hyprkube:menu:resource:trigger_logs', tabIdentifier.toString(), onTriggerLogview);
+    useTauriEventListener<FrontendTriggerResourceEdit>('hyprkube:menu:resource:trigger_edit', tabIdentifier.toString(), onTriggerEdit);
+    useTauriEventListener<FrontendTriggerExecSession>('hyprkube:menu:resource:trigger_exec', tabIdentifier.toString(), onTriggerExec);
+    useTauriEventListener<FrontendTriggerPickNamespace>('hyprkube:menu:resource:pick_namespace', tabIdentifier.toString(), onTriggerPickNamespace);
 
     const yamlViewerFactory = useCallback(() => {
         if (clientId === undefined) {
@@ -279,7 +281,7 @@ const ResourceListInspector: React.FC<ResourceListInspectorProps> = (props) => {
                     onResourceContextMenu={(gvk, resourceUID, position) => {
                         const { namespace, name } = resources[resourceUID];
 
-                        popupKubernetesResourceMenu(clientId!, namespace, name, gvk, position)
+                        popupKubernetesResourceMenu(clientId!, tabIdentifier.toString(), namespace, name, gvk, position)
                             .catch(e => console.log(e))
                     }}
                     onSelectionChanged={setSelectedResources}

@@ -21,6 +21,7 @@ impl DynamicResourceMenuProvider for PodResourceMenu {
         &self,
         _gvk: &GroupVersionKind,
         resource: &DynamicObject,
+        tab_id: String,
     ) -> anyhow::Result<Vec<HyprkubeMenuItem>> {
         // Kinda hacky and ugly but idc for now
         let pod: Pod = serde_json::from_value(serde_json::to_value(resource)?)?;
@@ -80,6 +81,7 @@ impl DynamicResourceMenuProvider for PodResourceMenu {
                     container_name: name.clone(),
                     namespace: resource.metadata.namespace.clone().unwrap_or_default(),
                     name: resource.metadata.name.clone().unwrap_or_default(),
+                    tab_id: tab_id.clone(),
                 }),
             }));
 
@@ -91,6 +93,7 @@ impl DynamicResourceMenuProvider for PodResourceMenu {
                     container_name: name,
                     namespace: resource.metadata.namespace.clone().unwrap_or_default(),
                     name: resource.metadata.name.clone().unwrap_or_default(),
+                    tab_id: tab_id.clone(),
                 }),
             }));
         }
@@ -119,6 +122,7 @@ impl DynamicResourceMenuProvider for PodResourceMenu {
                     namespace: resource.metadata.namespace.clone().unwrap_or_default(),
                     name: resource.metadata.name.clone().unwrap_or_default(),
                     container_name: name.clone(),
+                    tab_id: tab_id.clone(),
                 }),
             }));
 
@@ -130,6 +134,7 @@ impl DynamicResourceMenuProvider for PodResourceMenu {
                     namespace: resource.metadata.namespace.clone().unwrap_or_default(),
                     name: resource.metadata.name.clone().unwrap_or_default(),
                     container_name: name,
+                    tab_id: tab_id.clone(),
                 }),
             }));
         }
@@ -149,16 +154,19 @@ impl DynamicResourceMenuProvider for PodResourceMenu {
 }
 
 #[derive(Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
 struct FrontendTriggerLogView {
     pub namespace: String,
     pub name: String,
     pub container: String,
+    pub tab_id: String,
 }
 
 struct LogsAction {
     pub namespace: String,
     pub name: String,
     pub container_name: String,
+    pub tab_id: String,
 }
 
 #[async_trait]
@@ -172,6 +180,7 @@ impl MenuAction for LogsAction {
                 namespace: self.namespace.clone(),
                 name: self.name.clone(),
                 container: self.container_name.clone(),
+                tab_id: self.tab_id.clone(),
             },
         )?;
 
@@ -180,16 +189,19 @@ impl MenuAction for LogsAction {
 }
 
 #[derive(Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
 struct FrontendTriggerExec {
     pub namespace: String,
     pub name: String,
     pub container: String,
+    pub tab_id: String,
 }
 
 struct ExecAction {
     pub namespace: String,
     pub name: String,
     pub container_name: String,
+    pub tab_id: String,
 }
 
 #[async_trait]
@@ -204,6 +216,7 @@ impl MenuAction for ExecAction {
                 namespace: self.namespace.clone(),
                 name: self.name.clone(),
                 container: self.container_name.clone(),
+                tab_id: self.tab_id.clone(),
             },
         )
         .context("Failed to notify frontend")?;

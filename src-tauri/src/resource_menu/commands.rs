@@ -28,6 +28,7 @@ pub async fn popup_kubernetes_resource_menu(
     namespace: String,
     name: String,
     position: LogicalPosition<f64>,
+    tab_id: String,
 ) -> Result<(), tauri::Error> {
     let client = client_registry.try_clone(&client_id).unwrap();
 
@@ -52,16 +53,18 @@ pub async fn popup_kubernetes_resource_menu(
     let mut menu_items: Vec<HyprkubeMenuItem> = menu_providers
         .into_iter()
         .filter(|provider| provider.matches(&gvk))
-        .flat_map(|provider| match provider.build(&gvk, &resource) {
-            Err(e) => {
-                error!("MenuProvider failed: {e}");
-                None
-            }
-            Ok(menu) => Some(
-                menu.into_iter()
-                    .chain(iter::once(HyprkubeMenuItem::Separator)),
-            ),
-        })
+        .flat_map(
+            |provider| match provider.build(&gvk, &resource, tab_id.clone()) {
+                Err(e) => {
+                    error!("MenuProvider failed: {e}");
+                    None
+                }
+                Ok(menu) => Some(
+                    menu.into_iter()
+                        .chain(iter::once(HyprkubeMenuItem::Separator)),
+                ),
+            },
+        )
         .flatten()
         .collect();
 

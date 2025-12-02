@@ -23,6 +23,7 @@ impl DynamicResourceMenuProvider for DataKeysResourceMenu {
         &self,
         gvk: &GroupVersionKind,
         resource: &DynamicObject,
+        _tab_id: String,
     ) -> anyhow::Result<Vec<HyprkubeMenuItem>> {
         let data = {
             match gvk.kind.as_str() {
