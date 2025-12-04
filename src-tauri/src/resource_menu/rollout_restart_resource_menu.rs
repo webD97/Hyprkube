@@ -50,7 +50,7 @@ impl DynamicResourceMenuProvider for RolloutRestartResourceMenu {
 
                 if !matches!(
                     owner.kind.as_ref(),
-                    "Deployment" | "StatefulSet" | "DaemonSet"
+                    "ReplicaSet" | "StatefulSet" | "DaemonSet"
                 ) {
                     return Ok(Vec::new());
                 }
