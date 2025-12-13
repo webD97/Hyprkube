@@ -1,13 +1,16 @@
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
 use futures::StreamExt as _;
-use kube::api::DynamicObject;
+use k8s_openapi::apiextensions_apiserver::pkg::apis::apiextensions::v1::CustomResourceDefinition;
+use kube::api::{DynamicObject, GroupVersionKind};
 use serde::Serialize;
 use tauri::State;
 use tracing::{error, info};
 
 use crate::{
-    app_state::{ClientId, JoinHandleStoreState, KubernetesClientRegistryState, RendererRegistry},
+    app_state::{JoinHandleStoreState, RendererRegistry},
+    cluster_discovery::{ClusterDiscovery, ClusterRegistryState},
+    frontend_commands::KubeContextSource,
     frontend_types::BackendError,
     internal::resources::ResourceWatchStreamEvent,
     resource_rendering::{scripting::types::ViewComponent, ResourceColumnDefinition},
@@ -37,10 +40,10 @@ pub enum ResourceEvent {
 #[tauri::command]
 #[tracing::instrument(skip_all, fields(request_id = tracing::field::Empty))]
 pub async fn watch_gvk_with_view(
-    client_registry_arc: State<'_, KubernetesClientRegistryState>,
+    clusters: State<'_, ClusterRegistryState>,
     join_handle_store: State<'_, JoinHandleStoreState>,
     views: State<'_, Arc<RendererRegistry>>,
-    client_id: ClientId,
+    context_source: KubeContextSource,
     gvk: kube::api::GroupVersionKind,
     view_name: String,
     channel: tauri::ipc::Channel<ResourceEvent>,
@@ -51,7 +54,8 @@ pub async fn watch_gvk_with_view(
     let channel_id = channel.id();
     info!("Streaming {gvk:?} in namespace {namespace} to channel {channel_id}");
 
-    let client = client_registry_arc.try_clone(&client_id)?;
+    let context = clusters.get(&context_source).ok_or("not found")?;
+    let client = context.client;
 
     let (api_resource, resource_capabilities) =
         kube::discovery::oneshot::pinned_kind(&client, &gvk).await?;
@@ -67,12 +71,16 @@ pub async fn watch_gvk_with_view(
     };
 
     let views = Arc::clone(&views);
-    let client_registry_arc = Arc::clone(&client_registry_arc);
 
     let stream = async move {
         let view = views.get_renderer(&gvk, view_name.as_str()).await;
-        let (_, _, discovery) = client_registry_arc.get_cluster(&client_id).unwrap();
-        let crd = discovery.crds.get(&gvk);
+
+        let crds: HashMap<GroupVersionKind, CustomResourceDefinition> = match context.discovery {
+            ClusterDiscovery::Inflight(inflight) => inflight.block_until_done().await.unwrap().crds,
+            ClusterDiscovery::Completed(resources) => resources.crds,
+        };
+
+        let crd = crds.get(&gvk);
         let column_definitions = view.column_definitions(&gvk, crd).unwrap();
 
         channel

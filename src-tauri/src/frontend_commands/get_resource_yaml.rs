@@ -2,19 +2,19 @@ use kube::api::DynamicObject;
 use tauri::State;
 
 use crate::{
-    app_state::{ClientId, KubernetesClientRegistryState},
+    cluster_discovery::ClusterRegistryState, frontend_commands::KubeContextSource,
     frontend_types::BackendError,
 };
 
 #[tauri::command]
 pub async fn get_resource_yaml(
-    client_registry_arc: State<'_, KubernetesClientRegistryState>,
-    client_id: ClientId,
+    clusters: State<'_, ClusterRegistryState>,
+    context_source: KubeContextSource,
     gvk: kube::api::GroupVersionKind,
     namespace: &str,
     name: &str,
 ) -> Result<String, BackendError> {
-    let client = client_registry_arc.try_clone(&client_id)?;
+    let client = clusters.get(&context_source).ok_or("not found")?.client;
 
     let (api_resource, resource_capabilities) =
         kube::discovery::oneshot::pinned_kind(&client, &gvk).await?;

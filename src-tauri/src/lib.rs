@@ -2,6 +2,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod app_state;
+mod cluster_discovery;
 mod cluster_profiles;
 mod frontend_commands;
 mod frontend_types;
@@ -11,15 +12,16 @@ mod resource_rendering;
 
 use std::sync::Arc;
 
-use app_state::{
-    ChannelTasks, ExecSessions, JoinHandleStoreState, KubernetesClientRegistry, RendererRegistry,
-};
+use app_state::{ChannelTasks, ExecSessions, JoinHandleStoreState, RendererRegistry};
 use persistence::cluster_profile_service::ClusterProfileService;
 use tauri::{async_runtime::spawn, Emitter as _, Listener, Manager};
 use tracing::{info, warn};
 use tracing_subscriber::{fmt, layer::SubscriberExt as _, util::SubscriberInitExt as _, EnvFilter};
 
-use crate::{frontend_types::BackendPanic, persistence::repository::Repository};
+use crate::{
+    cluster_discovery::ClusterRegistry, frontend_types::BackendPanic,
+    persistence::repository::Repository,
+};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -37,9 +39,9 @@ pub fn run() {
             setup_panic_handler(app_handle.clone());
 
             app.manage(RendererRegistry::new_state(app_handle.clone()));
-            app.manage(KubernetesClientRegistry::new_state());
             app.manage(ChannelTasks::new_state(app_handle.clone()));
             app.manage(ExecSessions::new_state());
+            app.manage(Arc::new(ClusterRegistry::new()));
 
             let mut cluster_profile_registry =
                 cluster_profiles::ClusterProfileRegistry::new(app_handle.clone());
@@ -65,7 +67,7 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
-            frontend_commands::discover_kubernetes_cluster,
+            // frontend_commands::discover_kubernetes_cluster,
             frontend_commands::kube_stream_podlogs,
             frontend_commands::watch_gvk_with_view,
             frontend_commands::watch_namespaces,
@@ -91,7 +93,8 @@ pub fn run() {
             cluster_profiles::cluster_profile_list_hidden_gvks,
             cluster_profiles::get_default_namespace,
             cluster_profiles::set_default_namespace,
-            frontend_commands::log_stdout
+            frontend_commands::log_stdout,
+            crate::cluster_discovery::connect_cluster
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

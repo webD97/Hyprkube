@@ -4,13 +4,14 @@ import { Terminal } from "@xterm/xterm";
 import { useLayoutEffect, useRef } from "react";
 import AttachHyprkubeAddon from "../../xterm-addons/attach-hyprkube";
 
+import { KubeContextSource } from "../../hooks/useContextDiscovery";
 import styles from './styles.module.css';
 
 export interface HyprkubeTerminalProps {
     podNamespace: string,
     podName: string,
     container: string,
-    clientId: string,
+    contextSource: KubeContextSource,
 }
 
 const HyprkubeTerminal: React.FC<HyprkubeTerminalProps> = (props) => {
@@ -35,7 +36,7 @@ const HyprkubeTerminal: React.FC<HyprkubeTerminalProps> = (props) => {
 
         fitAddon.current = new FitAddon();
 
-        terminal.loadAddon(new AttachHyprkubeAddon(props.clientId, props.podNamespace, props.podName, props.container));
+        terminal.loadAddon(new AttachHyprkubeAddon(props.contextSource, props.podNamespace, props.podName, props.container));
         terminal.loadAddon(new WebglAddon());
         terminal.loadAddon(fitAddon.current);
         terminal.open(xtermRef.current!);

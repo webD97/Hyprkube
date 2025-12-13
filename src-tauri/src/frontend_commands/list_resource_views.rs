@@ -4,14 +4,13 @@ use kube::api::GroupVersionKind;
 use tracing::info;
 
 use crate::{
-    app_state::{ClientId, RendererRegistry},
-    frontend_types::BackendError,
+    app_state::RendererRegistry, frontend_commands::KubeContextSource, frontend_types::BackendError,
 };
 
 #[tauri::command]
 pub async fn list_resource_views(
     view_registry: tauri::State<'_, Arc<RendererRegistry>>,
-    client_id: ClientId,
+    context_source: KubeContextSource,
     group: &str,
     version: &str,
     kind: &str,
@@ -19,5 +18,5 @@ pub async fn list_resource_views(
     let gvk = GroupVersionKind::gvk(group, version, kind);
     info!("list_resource_views: {:?}", &gvk);
 
-    Ok(view_registry.get_renderers(&client_id, &gvk).await)
+    Ok(view_registry.get_renderers(&context_source, &gvk).await)
 }

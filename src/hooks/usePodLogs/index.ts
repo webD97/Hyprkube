@@ -1,5 +1,6 @@
 import { Channel, invoke } from "@tauri-apps/api/core";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+import { KubeContextSource } from "../useContextDiscovery";
 
 export type LogStreamEvent =
     | {
@@ -18,12 +19,12 @@ export type LogStreamEvent =
         }
     };
 
-export const usePodLogs = (kubernetesClientId: string | undefined, namespace: string, name: string, container: string) => {
+export const usePodLogs = (contextSource: KubeContextSource, namespace: string, name: string, container: string) => {
     const [text, setText] = useState('');
 
     useEffect(() => {
-        if (!kubernetesClientId) return;
-
+        // We really want to reset the state at this point:
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setText('');
 
         const channel = new Channel<LogStreamEvent>();
@@ -40,13 +41,13 @@ export const usePodLogs = (kubernetesClientId: string | undefined, namespace: st
             }
         };
 
-        invoke('kube_stream_podlogs', { namespace, name, channel, container, clientId: kubernetesClientId })
-            .catch(e => setText(e));
+        invoke('kube_stream_podlogs', { namespace, name, channel, container, contextSource })
+            .catch(e => setText(e as string));
 
         return () => {
-            invoke('cleanup_channel', { channel });
+            void invoke('cleanup_channel', { channel });
         };
-    }, [namespace, name, kubernetesClientId, container]);
+    }, [namespace, name, contextSource, container]);
 
     return text;
 };

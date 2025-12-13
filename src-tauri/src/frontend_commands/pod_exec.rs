@@ -2,10 +2,9 @@ use core::str;
 use std::io::Read;
 
 use crate::{
-    app_state::{
-        ClientId, ExecSessionError, ExecSessionId, ExecSessionsState, JoinHandleStoreState,
-        KubernetesClientRegistryState,
-    },
+    app_state::{ExecSessionError, ExecSessionId, ExecSessionsState, JoinHandleStoreState},
+    cluster_discovery::ClusterRegistryState,
+    frontend_commands::KubeContextSource,
     frontend_types::BackendError,
 };
 use futures::TryStreamExt as _;
@@ -66,16 +65,17 @@ pub async fn pod_exec_resize_terminal(
 #[allow(clippy::too_many_arguments)]
 #[tauri::command]
 pub async fn pod_exec_start_session(
-    client_registry_arc: State<'_, KubernetesClientRegistryState>,
+    clusters: State<'_, ClusterRegistryState>,
+    context_source: KubeContextSource,
     join_handle_store: State<'_, JoinHandleStoreState>,
     consoles_state: State<'_, ExecSessionsState>,
-    client_id: ClientId,
     pod_namespace: &str,
     pod_name: &str,
     container: &str,
     session_event_channel: Channel<ExecSessionEvent>,
 ) -> Result<ExecSessionId, BackendError> {
-    let client = client_registry_arc.try_clone(&client_id)?;
+    let client = clusters.get(&context_source).ok_or("not found")?.client;
+
     let pods: kube::Api<Pod> = kube::Api::namespaced(client, pod_namespace);
 
     let channel_id = session_event_channel.id();

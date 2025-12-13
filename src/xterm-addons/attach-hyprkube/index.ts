@@ -1,5 +1,6 @@
 import { IDisposable, ITerminalAddon, Terminal } from '@xterm/xterm';
 import { abortExecSession, resizeTerminal, startExecSession, writeBytes } from '../../api/podExec';
+import { KubeContextSource } from '../../hooks/useContextDiscovery';
 
 /**
  * Attach an xterm Terminal to a Hyprkube ExecSession
@@ -9,7 +10,7 @@ export default class AttachHyprkubeAddon implements ITerminalAddon {
     private disposables: IDisposable[] = [];
     private execSessionId: Promise<string> | null = null;
 
-    constructor(private clientId: string, private podNamespace: string, private podName: string, private container: string) {
+    constructor(private contextSource: KubeContextSource, private podNamespace: string, private podName: string, private container: string) {
     }
 
     activate(terminal: Terminal): void {
@@ -30,7 +31,7 @@ export default class AttachHyprkubeAddon implements ITerminalAddon {
             })
         );
 
-        const [sessionIdPromise, sessionEventChannel] = startExecSession(this.clientId, this.podNamespace, this.podName, this.container);
+        const [sessionIdPromise, sessionEventChannel] = startExecSession(this.contextSource, this.podNamespace, this.podName, this.container);
 
         this.execSessionId = sessionIdPromise;
 

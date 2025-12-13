@@ -3,12 +3,13 @@ import { type editor } from "monaco-editor";
 import { useRef } from "react";
 import applyResourceYaml from "../../api/applyResourceYaml";
 import getResourceYaml from "../../api/getResourceYaml";
+import { KubeContextSource } from "../../hooks/useContextDiscovery";
 import { Gvk } from "../../model/k8s";
 import styles from './component.module.css';
 
 export interface ResourceEditorProps {
     fileContent: string,
-    clientId: string,
+    contextSource: KubeContextSource,
     currentGvk: Gvk,
     namespace: string,
     name: string
@@ -17,7 +18,7 @@ export interface ResourceEditorProps {
 const ResourceEditor: React.FC<ResourceEditorProps> = (props) => {
     const {
         fileContent,
-        clientId,
+        contextSource,
         currentGvk,
         namespace,
         name
@@ -35,7 +36,7 @@ const ResourceEditor: React.FC<ResourceEditorProps> = (props) => {
 
                         if (!data) return;
 
-                        applyResourceYaml(clientId, currentGvk, namespace, name, data)
+                        applyResourceYaml(contextSource, currentGvk, namespace, name, data)
                             .then(newYaml => {
                                 editor.setValue(newYaml);
                             })
@@ -58,7 +59,7 @@ const ResourceEditor: React.FC<ResourceEditorProps> = (props) => {
                     onClick={() => {
                         const editor = editorRef.current!;
 
-                        getResourceYaml(clientId, currentGvk, namespace, name)
+                        getResourceYaml(contextSource, currentGvk, namespace, name)
                             .then(yaml => editor.setValue(yaml))
                             .catch(e => alert(JSON.stringify(e)));
                     }}

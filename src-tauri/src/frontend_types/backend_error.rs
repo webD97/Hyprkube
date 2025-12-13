@@ -20,9 +20,6 @@ pub enum BackendError {
     #[error("BackgroundTaskRejected")]
     BackgroundTaskRejected,
 
-    #[error("UnsupportedKubeconfigProvider")]
-    UnsupportedKubeconfigProvider,
-
     #[error(transparent)]
     DiscoveryCacheServiceError(#[from] discovery_cache_service::Error),
 
