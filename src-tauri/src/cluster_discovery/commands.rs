@@ -56,30 +56,26 @@ pub async fn connect_cluster(
 
                     let mut stream = std::pin::pin!(discovery.subscribe());
                     while let Some(event) = stream.next().await {
-                        channel.send(event.clone()).unwrap();
+                        channel.send(event.clone())?;
                     }
                 }
                 ClusterDiscovery::Completed(discovery) => {
                     tracing::info!("Skipping discovery, serving in-memory results");
 
                     for resource in discovery.resources.values() {
-                        channel
-                            .send(DiscoveryResult::DiscoveredResource(resource.clone()))
-                            .unwrap();
+                        channel.send(DiscoveryResult::DiscoveredResource(resource.clone()))?;
                     }
                 }
             }
 
-            channel
-                .send(DiscoveryResult::DiscoveryComplete(()))
-                .unwrap();
+            channel.send(DiscoveryResult::DiscoveryComplete(()))?;
 
-            return;
+            return Ok(());
         }
 
         tracing::info!("Starting discovery for cluster {}", context_source);
 
-        let client = make_client(&context_source).await.unwrap();
+        let client = make_client(&context_source).await?;
 
         // Attachable stuff
         let inflight = Arc::new(InflightDiscovery::new());
@@ -95,14 +91,14 @@ pub async fn connect_cluster(
         let discovery_cache =
             DiscoveryCacheService::new(&context_source.context, Arc::clone(&repository));
 
-        let previously_cached = discovery_cache.read_cache().unwrap();
+        let previously_cached = discovery_cache.read_cache().unwrap_or_else(|e| {
+            tracing::error!("Failed to read on-disk discovery cache: {e}");
+            HashSet::new()
+        });
 
         for cached in &previously_cached {
             inflight.send(DiscoveryResult::DiscoveredResource(cached.clone()));
-
-            channel
-                .send(DiscoveryResult::DiscoveredResource(cached.clone()))
-                .unwrap();
+            channel.send(DiscoveryResult::DiscoveredResource(cached.clone()))?;
         }
 
         // Online part
@@ -116,11 +112,13 @@ pub async fn connect_cluster(
         let mut discovery_stream = std::pin::pin!(online_discovery(client.clone()));
 
         while let Some(msg) = discovery_stream.next().await {
+            let msg = msg?;
+
             // Forward to inflight cache
             inflight.send(msg.clone());
 
             // Forward to frontend
-            channel.send(msg.clone()).unwrap();
+            channel.send(msg.clone())?;
 
             // Save
             match msg {
@@ -150,7 +148,7 @@ pub async fn connect_cluster(
             let msg = DiscoveryResult::RemovedResource(removed_resource.to_owned());
 
             inflight.send(msg.clone());
-            channel.send(msg).unwrap();
+            channel.send(msg)?;
         }
 
         if let Err(e) = discovery_cache.set_cache(confirmed_resources) {
@@ -165,9 +163,9 @@ pub async fn connect_cluster(
             discovery: ClusterDiscovery::Completed(result),
         });
 
-        channel
-            .send(DiscoveryResult::DiscoveryComplete(()))
-            .unwrap();
+        channel.send(DiscoveryResult::DiscoveryComplete(()))?;
+
+        Ok(())
     });
 
     Ok(())
@@ -198,10 +196,10 @@ async fn make_client(context_source: &KubeContextSource) -> anyhow::Result<kube:
 ///
 /// The discovery will first try to discover builtin (i.e. non-crd) resources to optimize
 /// the user experience. CRD-based resources will be yielded after that.
-fn online_discovery(client: kube::Client) -> impl Stream<Item = DiscoveryResult> {
+fn online_discovery(client: kube::Client) -> impl Stream<Item = anyhow::Result<DiscoveryResult>> {
     async_stream::stream! {
         tracing::info!("Discovering builtins");
-        let apigroups = &client.list_api_groups().await.unwrap();
+        let apigroups = &client.list_api_groups().await?;
         let builtins: Vec<&str> = apigroups
             .groups
             .iter()
@@ -217,8 +215,7 @@ fn online_discovery(client: kube::Client) -> impl Stream<Item = DiscoveryResult>
             let discovery_builtins = kube::Discovery::new(client.clone())
                 .filter(&builtins)
                 .run()
-                .await
-                .unwrap();
+                .await?;
 
             for group in discovery_builtins.groups() {
                 for (ar, capabilities) in group.resources_by_stability() {
@@ -235,7 +232,7 @@ fn online_discovery(client: kube::Client) -> impl Stream<Item = DiscoveryResult>
                         scope: capabilities.scope.into(),
                     };
 
-                    yield DiscoveryResult::DiscoveredResource(resource.clone());
+                    yield Ok(DiscoveryResult::DiscoveredResource(resource.clone()));
                 }
             }
         }
@@ -247,8 +244,7 @@ fn online_discovery(client: kube::Client) -> impl Stream<Item = DiscoveryResult>
             let discovery_builtins = kube::Discovery::new(client.clone())
                 .exclude(&builtins)
                 .run()
-                .await
-                .unwrap();
+                .await?;
 
             for group in discovery_builtins.groups() {
                 for (ar, capabilities) in group.resources_by_stability() {
@@ -265,7 +261,7 @@ fn online_discovery(client: kube::Client) -> impl Stream<Item = DiscoveryResult>
                         scope: capabilities.scope.into(),
                     };
 
-                    yield DiscoveryResult::DiscoveredResource(resource.clone());
+                    yield Ok(DiscoveryResult::DiscoveredResource(resource.clone()));
                 }
             }
         }
@@ -275,19 +271,19 @@ fn online_discovery(client: kube::Client) -> impl Stream<Item = DiscoveryResult>
         tracing::info!("Starting caching of custom resource definitions");
         {
             let api: kube::Api<CustomResourceDefinition> = kube::Api::all(client.clone());
-            let crd_list = api.list(&ListParams::default()).await.unwrap();
+            let crd_list = api.list(&ListParams::default()).await?;
 
             // Handle groups for custom resources
             for crd in crd_list.items {
-                let latest = crd
-                .spec
-                .versions
-                .first()
-                .expect("there should always be a version");
+                let latest = crd.spec.versions.first();
 
-                let gvk = GroupVersionKind::gvk(&crd.spec.group, &latest.name, &crd.spec.names.kind);
-
-                yield DiscoveryResult::CustomResourceDefinition((gvk, Box::new(crd)))
+                if let Some(latest) = latest {
+                    let gvk = GroupVersionKind::gvk(&crd.spec.group, &latest.name, &crd.spec.names.kind);
+                    yield Ok(DiscoveryResult::CustomResourceDefinition((gvk, Box::new(crd))));
+                } else {
+                    tracing::error!("CustomResourceDefinition {}.{} has no versions.", crd.spec.names.kind, crd.spec.group);
+                    continue;
+                }
             }
         }
         tracing::debug!("Finished caching of custom resource definitions");
