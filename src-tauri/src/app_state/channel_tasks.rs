@@ -7,7 +7,7 @@ use std::{
 use futures::future::{AbortHandle, Abortable};
 use serde::Serialize;
 use tauri::{async_runtime::spawn, Emitter};
-use tracing::{error, info};
+use tracing::{debug, error};
 use tracing_futures::Instrument;
 
 pub type JoinHandleStoreState = Arc<ChannelTasks>;
@@ -41,6 +41,22 @@ impl From<RwLockReadGuard<'_, HashMap<u32, AbortHandle>>> for Stats {
     }
 }
 
+pub trait BackgroundTaskOutput {
+    fn handle(self);
+}
+
+impl BackgroundTaskOutput for anyhow::Result<()> {
+    fn handle(self) {
+        if let Err(err) = self {
+            tracing::error!("Task failed: {err}");
+        }
+    }
+}
+
+impl BackgroundTaskOutput for () {
+    fn handle(self) {}
+}
+
 impl ChannelTasks {
     pub fn new_state(app_handle: tauri::AppHandle) -> JoinHandleStoreState {
         Arc::new(ChannelTasks::new(app_handle))
@@ -56,11 +72,11 @@ impl ChannelTasks {
 
     pub fn submit<F>(&self, channel_id: u32, future: F) -> Result<(), Rejected>
     where
-        F: Future<Output = ()> + Send + 'static,
+        F: Future<Output: BackgroundTaskOutput + Send + 'static> + Send + 'static,
     {
         // Check if we can already kill this task
         if self.to_kill.try_read().unwrap().contains(&channel_id) {
-            info!("Ignoring future of channel {}", &channel_id);
+            debug!("Ignoring future of channel {}", &channel_id);
             self.to_kill.write().unwrap().retain(|&el| el != channel_id);
             return Err(Rejected);
         }
@@ -87,8 +103,11 @@ impl ChannelTasks {
         spawn(
             async move {
                 match join_handle.await {
-                    Ok(Ok(_)) => info!("Task for channel {channel_id} ended naturally"),
-                    Ok(Err(_)) => info!("Task for channel {channel_id} was aborted"),
+                    Ok(Ok(output)) => {
+                        debug!("Task for channel {channel_id} ended naturally");
+                        output.handle();
+                    }
+                    Ok(Err(_)) => debug!("Task for channel {channel_id} was aborted"),
                     Err(e) => error!("Task for channel {channel_id} panicked: {e}"),
                 }
 
@@ -121,10 +140,10 @@ impl ChannelTasks {
         let handles = self.handles.read().unwrap();
 
         if let Some(abort_handle) = handles.get(channel_id) {
-            info!("Trying to kill channel {}", channel_id);
+            debug!("Trying to kill channel {}", channel_id);
             abort_handle.abort();
         } else {
-            info!("Channel {} now on kill list", &channel_id);
+            debug!("Channel {} now on kill list", &channel_id);
             self.to_kill.write().unwrap().push(channel_id.to_owned());
         }
     }

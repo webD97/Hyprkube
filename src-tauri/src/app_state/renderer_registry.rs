@@ -8,11 +8,10 @@ use tauri::{AppHandle, Manager as _};
 use tracing::{debug, error};
 
 use crate::{
-    app_state::KubernetesClientRegistryState,
+    cluster_discovery::{ClusterDiscovery, ClusterRegistryState},
+    frontend_commands::KubeContextSource,
     resource_rendering::{CrdRenderer, FallbackRenderer, ResourceRenderer, ScriptedResourceView},
 };
-
-use super::ClientId;
 
 #[derive(Embed)]
 #[folder = "views/"]
@@ -90,23 +89,30 @@ impl RendererRegistry {
     /// Returns the names of all available renderers for the given GVK
     pub async fn get_renderers(
         &self,
-        kube_client_id: &ClientId,
+        context_source: &KubeContextSource,
         gvk: &GroupVersionKind,
     ) -> Vec<String> {
         let renderers = self.mappings.get(gvk).unwrap_or(Self::EMPTY_VEC);
 
-        let kubernetes_client_registry = self.app_handle.state::<KubernetesClientRegistryState>();
+        let clusters = self.app_handle.state::<ClusterRegistryState>();
+        let context = clusters.get(context_source).ok_or("not found").unwrap();
 
-        let registered = kubernetes_client_registry
-            .get_cluster(kube_client_id)
-            .unwrap();
-
-        let crds: Vec<&GroupVersionKind> = registered.2.crds.keys().collect();
+        let crds: Vec<GroupVersionKind> = match context.discovery {
+            ClusterDiscovery::Inflight(inflight) => inflight
+                .block_until_done()
+                .await
+                .unwrap()
+                .crds
+                .keys()
+                .cloned()
+                .collect(),
+            ClusterDiscovery::Completed(resources) => resources.crds.keys().cloned().collect(),
+        };
 
         renderers
             .iter()
             .map(|v| v.display_name().to_owned())
-            .chain(match crds.contains(&gvk) {
+            .chain(match crds.contains(gvk) {
                 true => Some(self.crd_renderer.display_name().to_owned()),
                 false => None,
             })

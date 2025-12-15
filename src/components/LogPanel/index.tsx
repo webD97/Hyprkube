@@ -1,13 +1,14 @@
 import React, { useLayoutEffect, useMemo, useRef, useState } from 'react';
 
 import { useVirtualizer } from '@tanstack/react-virtual';
+import { KubeContextSource } from '../../hooks/useContextDiscovery';
 import { usePodLogs } from '../../hooks/usePodLogs';
 import Ansi from '../Ansi';
 import Checkbox from '../Checkbox';
 import classes from './component.module.css';
 
 export interface LogPanelProps {
-    kubernetesClientId: string | undefined,
+    contextSource: KubeContextSource,
     namespace: string,
     name: string
     container: string,
@@ -15,7 +16,7 @@ export interface LogPanelProps {
 
 const LogPanel: React.FC<LogPanelProps> = (props) => {
     const {
-        kubernetesClientId, namespace, name, container
+        contextSource, namespace, name, container
     } = props;
 
     const parentRef = useRef(null);
@@ -23,7 +24,7 @@ const LogPanel: React.FC<LogPanelProps> = (props) => {
     const [search, setSearch] = useState('');
     const [follow, setFollow] = useState(true);
 
-    const text = usePodLogs(kubernetesClientId, namespace, name, container);
+    const text = usePodLogs(contextSource, namespace, name, container);
     const lines = useMemo(() => text.split('\n').filter(line => line.includes(search)), [search, text]);
 
     const rowVirtualizer = useVirtualizer({

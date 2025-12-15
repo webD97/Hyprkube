@@ -1,6 +1,7 @@
 import { Channel, invoke } from "@tauri-apps/api/core";
 import { useEffect, useState } from "react";
 import { Gvk } from "../../model/k8s";
+import { KubeContextSource } from "../useContextDiscovery";
 
 type Properties = {
     color?: string,
@@ -113,13 +114,12 @@ function resourceToDisplayableResource(resource: Resource): DisplayableResource 
     });
 }
 
-export default function useKubernetesResourceWatch(kubernetesClientId: string | undefined, gvk: Gvk | undefined, viewName: string, namespace: string): [ColumnDefinition[], ResourceViewData] {
+export default function useKubernetesResourceWatch(contextSource: KubeContextSource, gvk: Gvk | undefined, viewName: string, namespace: string): [ColumnDefinition[], ResourceViewData] {
     const [columnDefinitions, setColumnDefinitions] = useState<ColumnDefinition[]>([]);
     const [resources, setResources] = useState<ResourceViewData>({});
 
     useEffect(() => {
         if (gvk === undefined) return;
-        if (kubernetesClientId === undefined) return;
         if (viewName === '') return;
 
         const channel = new Channel<WatchEvent>();
@@ -154,7 +154,7 @@ export default function useKubernetesResourceWatch(kubernetesClientId: string | 
         setResources({});
         setColumnDefinitions([]);
 
-        invoke('watch_gvk_with_view', { clientId: kubernetesClientId, gvk, channel, viewName, namespace })
+        invoke('watch_gvk_with_view', { contextSource, gvk, channel, viewName, namespace })
             .catch(e => {
                 if (e === 'BackgroundTaskRejected') return;
                 alert("blubb" + e);
@@ -163,7 +163,7 @@ export default function useKubernetesResourceWatch(kubernetesClientId: string | 
         return () => {
             void invoke('cleanup_channel', { channel });
         };
-    }, [gvk, kubernetesClientId, viewName, namespace]);
+    }, [gvk, contextSource, viewName, namespace]);
 
     return [columnDefinitions, resources];
 }

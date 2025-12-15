@@ -1,14 +1,15 @@
 import { invoke } from "@tauri-apps/api/core";
+import { KubeContextSource } from "../../hooks/useContextDiscovery";
 import { Gvk } from "../../model/k8s";
 
 export default function applyResourceYaml(
-    clientId: string,
+    contextSource: KubeContextSource,
     gvk: Gvk,
     namespace: string,
     name: string,
     newYaml: string
 ) {
     return invoke<string>('apply_resource_yaml', {
-        clientId, gvk, namespace, name, newYaml
+        contextSource, gvk, namespace, name, newYaml
     })
 }

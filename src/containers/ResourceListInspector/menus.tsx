@@ -7,20 +7,21 @@ import LogPanel from "../../components/LogPanel";
 import { Tab } from "../../components/TabView";
 import { TabElement } from "../../components/TabView/hooks";
 import HyprkubeTerminal from "../../components/Terminal";
+import { KubeContextSource } from "../../hooks/useContextDiscovery";
 import { Gvk } from "../../model/k8s";
 
 export async function createMenuForResource(options: {
     namespace: string,
     name: string,
     gvk: Gvk,
-    clientId: string,
+    contextSource: KubeContextSource,
     pushTab: (tab: TabElement) => void,
     onShowYaml: () => void,
     onSelectNamespace: (namespace: string) => void
 }): Promise<Menu> {
     const {
         namespace, name,
-        gvk, clientId,
+        gvk, contextSource,
         pushTab,
         onShowYaml,
         onSelectNamespace
@@ -38,7 +39,7 @@ export async function createMenuForResource(options: {
                 confirm(`This action cannot be reverted. Are you sure?`, { kind: 'warning', title: `Permanently delete resource?` })
                     .then(confirmed => {
                         if (confirmed) {
-                            return deleteResource(clientId, gvk, namespace, name);
+                            return deleteResource(contextSource, gvk, namespace, name);
                         }
                     })
                     .catch(e => alert(JSON.stringify(e)));
@@ -53,7 +54,7 @@ export async function createMenuForResource(options: {
             MenuItem.new({
                 text: 'Restart',
                 action() {
-                    void restartDeployment(clientId, namespace, name);
+                    void restartDeployment(contextSource, namespace, name);
                 }
             })
         )
@@ -62,7 +63,7 @@ export async function createMenuForResource(options: {
             MenuItem.new({
                 text: 'Restart',
                 action() {
-                    void restartDeployment(clientId, namespace, name);
+                    void restartDeployment(contextSource, namespace, name);
                 }
             })
         )
@@ -83,7 +84,7 @@ export async function createMenuForResource(options: {
         const logItems: Promise<MenuItem>[] = [];
         const attachItems: Promise<MenuItem>[] = [];
 
-        const containerNames = await listPodContainerNames(clientId, namespace, name);
+        const containerNames = await listPodContainerNames(contextSource, namespace, name);
 
         logItems.push(
             ...containerNames.map(containerName => (
@@ -95,7 +96,7 @@ export async function createMenuForResource(options: {
                                 {
                                     () => (
                                         <LogPanel
-                                            kubernetesClientId={clientId}
+                                            contextSource={contextSource}
                                             namespace={namespace}
                                             name={name}
                                             container={containerName}
@@ -119,7 +120,7 @@ export async function createMenuForResource(options: {
                                 {
                                     () => (
                                         <HyprkubeTerminal
-                                            clientId={clientId}
+                                            contextSource={contextSource}
                                             podName={name}
                                             podNamespace={namespace}
                                             container={containerName}

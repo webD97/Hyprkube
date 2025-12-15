@@ -6,14 +6,14 @@ use tauri::State;
 use tracing::info;
 
 use crate::{
-    app_state::{ClientId, KubernetesClientRegistryState},
+    cluster_discovery::ClusterRegistryState, frontend_commands::KubeContextSource,
     frontend_types::BackendError,
 };
 
 #[tauri::command]
 pub async fn delete_resource(
-    client_registry_arc: State<'_, KubernetesClientRegistryState>,
-    client_id: ClientId,
+    clusters: State<'_, ClusterRegistryState>,
+    context_source: KubeContextSource,
     gvk: kube::api::GroupVersionKind,
     namespace: &str,
     name: &str,
@@ -21,7 +21,7 @@ pub async fn delete_resource(
 ) -> Result<(), BackendError> {
     info!("Deleting {:?} in namespace {}", gvk, namespace);
 
-    let client = client_registry_arc.try_clone(&client_id)?;
+    let client = clusters.get(&context_source).ok_or("not found")?.client;
 
     // todo: Avoid discovery and use what we already have in cache
     let (api_resource, resource_capabilities) =

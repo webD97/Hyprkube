@@ -1,12 +1,13 @@
 import { Channel, invoke } from "@tauri-apps/api/core";
+import { KubeContextSource } from "../../hooks/useContextDiscovery";
 
 export type UpstreamTerminalMessage = string | { Bytes: number[] };
 
-export function startExecSession(clientId: string, podNamespace: string, podName: string, container: string): [Promise<string>, Channel<UpstreamTerminalMessage>] {
+export function startExecSession(contextSource: KubeContextSource, podNamespace: string, podName: string, container: string): [Promise<string>, Channel<UpstreamTerminalMessage>] {
     const sessionEventChannel = new Channel<UpstreamTerminalMessage>();
 
     const sessionIdPromise: Promise<string> = invoke('pod_exec_start_session', {
-        clientId, podNamespace, podName, container, sessionEventChannel
+        contextSource, podNamespace, podName, container, sessionEventChannel
     });
 
     return [sessionIdPromise, sessionEventChannel];

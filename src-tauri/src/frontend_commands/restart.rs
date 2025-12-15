@@ -2,18 +2,19 @@ use k8s_openapi::api::apps::v1::{Deployment, StatefulSet};
 use tauri::State;
 
 use crate::{
-    app_state::{ClientId, KubernetesClientRegistryState},
+    cluster_discovery::ClusterRegistryState, frontend_commands::KubeContextSource,
     frontend_types::BackendError,
 };
 
 #[tauri::command]
 pub async fn restart_deployment(
-    client_registry_arc: State<'_, KubernetesClientRegistryState>,
-    client_id: ClientId,
+    clusters: State<'_, ClusterRegistryState>,
+    context_source: KubeContextSource,
     namespace: &str,
     name: &str,
 ) -> Result<(), BackendError> {
-    let client = client_registry_arc.try_clone(&client_id)?;
+    let client = clusters.get(&context_source).ok_or("not found")?.client;
+
     let api: kube::Api<Deployment> = kube::Api::namespaced(client, namespace);
 
     api.restart(name).await?;
@@ -23,12 +24,13 @@ pub async fn restart_deployment(
 
 #[tauri::command]
 pub async fn restart_statefulset(
-    client_registry_arc: State<'_, KubernetesClientRegistryState>,
-    client_id: ClientId,
+    clusters: State<'_, ClusterRegistryState>,
+    context_source: KubeContextSource,
     namespace: &str,
     name: &str,
 ) -> Result<(), BackendError> {
-    let client = client_registry_arc.try_clone(&client_id)?;
+    let client = clusters.get(&context_source).ok_or("not found")?.client;
+
     let api: kube::Api<StatefulSet> = kube::Api::namespaced(client, namespace);
 
     api.restart(name).await?;

@@ -1,8 +1,9 @@
 import { invoke } from "@tauri-apps/api/core";
+import { KubeContextSource } from "../../hooks/useContextDiscovery";
 
-export default function restartStatefulSet(clientId: string, namespace: string, name: string) {
+export default function restartStatefulSet(contextSource: KubeContextSource, namespace: string, name: string) {
     return invoke<void>('restart_statefulset', {
-        clientId,
+        contextSource,
         namespace, name
     });
 }

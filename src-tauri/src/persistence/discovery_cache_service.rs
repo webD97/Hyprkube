@@ -1,7 +1,7 @@
 use std::{collections::HashSet, sync::Arc};
 
 use crate::{
-    app_state::DiscoveredResource,
+    cluster_discovery::DiscoveredResource,
     persistence::repository::{self, Context, Repository},
 };
 
@@ -27,31 +27,7 @@ impl DiscoveryCacheService {
             .unwrap_or_default())
     }
 
-    pub fn cache_resource(&self, resource: DiscoveredResource) -> Result<(), Error> {
-        let mut current = self.read_cache()?;
-
-        if current.contains(&resource) {
-            return Ok(());
-        }
-
-        current.insert(resource);
-
-        self.set_cache(current)
-    }
-
-    pub fn forget_resource(&self, resource: &DiscoveredResource) -> Result<(), Error> {
-        let mut current = self.read_cache()?;
-
-        if !current.contains(resource) {
-            return Ok(());
-        }
-
-        current.retain(|cached| *cached != *resource);
-
-        self.set_cache(current)
-    }
-
-    fn set_cache(&self, state: HashSet<DiscoveredResource>) -> Result<(), Error> {
+    pub fn set_cache(&self, state: HashSet<DiscoveredResource>) -> Result<(), Error> {
         Ok(self.repository.set_key(
             &self.persistence_context,
             "discovery_cache",

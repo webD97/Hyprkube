@@ -40,19 +40,17 @@ const ResourceListInspector: React.FC<ResourceListInspectorProps> = (props) => {
 
     const [availableViews, setAvailableViews] = useState<ResourceViewDef[]>([]);
     const [selectedView, setSelectedView] = useState("");
-    const { discovery, clientId, lastError } = useClusterDiscovery(contextSource.source, contextSource.context);
-    const allNamespaces = useClusterNamespaces(clientId);
+    const { discovery, lastError } = useClusterDiscovery(contextSource.source, contextSource.context);
+    const allNamespaces = useClusterNamespaces(contextSource);
     const [selectedNamespace, setSelectedNamespace] = useState(preSelectedNamespace);
     const [resourceDefaultNamespace, setResourceDefaultNamespace] = useState('default');
     const [selectedResources, setSelectedResources] = useState<[string, DisplayableResource][]>([]);
-    const [columnDefinitions, resources] = useResourceWatch(clientId, gvk, selectedView, selectedNamespace);
+    const [columnDefinitions, resources] = useResourceWatch(contextSource, gvk, selectedView, selectedNamespace);
 
     const searchbarRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        if (!clientId) return;
-
-        listResourceViews(clientId, gvk)
+        listResourceViews(contextSource, gvk)
             .then(views => {
                 setAvailableViews(views);
 
@@ -62,7 +60,7 @@ const ResourceListInspector: React.FC<ResourceListInspectorProps> = (props) => {
             })
             .catch(e => alert(JSON.stringify(e)));
 
-    }, [clientId, gvk]);
+    }, [contextSource, gvk]);
 
     useEffect(() => {
         if (preSelectedNamespace) return;
@@ -77,18 +75,16 @@ const ResourceListInspector: React.FC<ResourceListInspectorProps> = (props) => {
     }, [clusterProfile, gvk, onNamespaceChanged, preSelectedNamespace]);
 
     const deleteSelectedResources = useCallback(() => {
-        if (!clientId) return console.warn('Cannot delete, clientId is not set!');
-
         confirm(`This action cannot be reverted. Are you sure?`, { kind: 'warning', title: `Permanently delete ${selectedResources.length} resources?` })
             .then(confirmed => {
                 if (!confirmed) return;
                 selectedResources.forEach(([, { namespace, name }]) => {
-                    deleteResource(clientId, gvk, namespace, name)
+                    deleteResource(contextSource, gvk, namespace, name)
                         .catch(e => alert(JSON.stringify(e)));
                 });
             })
             .catch(e => alert(JSON.stringify(e)));
-    }, [clientId, gvk, selectedResources]);
+    }, [contextSource, gvk, selectedResources]);
 
     const saveDefaultNamespace = useCallback(() => {
         setDefaultNamespace(clusterProfile, gvk, selectedNamespace)
@@ -96,21 +92,17 @@ const ResourceListInspector: React.FC<ResourceListInspectorProps> = (props) => {
     }, [clusterProfile, gvk, selectedNamespace]);
 
     const yamlViewerFactory = useCallback(() => {
-        if (clientId === undefined) {
-            return () => undefined;
-        }
-
         return (gvk: Gvk, resourceUID: string) => {
             const { namespace, name } = resources[resourceUID];
 
-            getResourceYaml(clientId, gvk, namespace, name)
+            getResourceYaml(contextSource, gvk, namespace, name)
                 .then((yaml) => {
                     pushBottomTab(
                         <Tab title={`Edit: ${name}`}>
                             {
                                 () => (
                                     <ResourceEditor
-                                        clientId={clientId}
+                                        contextSource={contextSource}
                                         currentGvk={gvk}
                                         fileContent={yaml}
                                         namespace={namespace}
@@ -123,7 +115,7 @@ const ResourceListInspector: React.FC<ResourceListInspectorProps> = (props) => {
                 })
                 .catch(e => alert(JSON.stringify(e)));
         }
-    }, [clientId, pushBottomTab, resources]);
+    }, [contextSource, pushBottomTab, resources]);
 
     const resourceScope = findResourceScope(discovery, gvk);
     const resourceNamePlural = findResourcePlural(discovery, gvk);
@@ -194,7 +186,7 @@ const ResourceListInspector: React.FC<ResourceListInspectorProps> = (props) => {
                         const { namespace, name } = resources[resourceUID];
 
                         return createMenuForResource({
-                            clientId: clientId!, gvk, namespace, name, pushTab: pushBottomTab,
+                            contextSource, gvk, namespace, name, pushTab: pushBottomTab,
                             onShowYaml: () => yamlViewerFactory()(gvk, resourceUID),
                             onSelectNamespace: (namespace) => {
                                 setSelectedNamespace(namespace)

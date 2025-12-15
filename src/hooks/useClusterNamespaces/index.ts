@@ -1,5 +1,6 @@
 import { Channel, invoke } from "@tauri-apps/api/core";
 import { useEffect, useState } from "react";
+import { KubeContextSource } from "../useContextDiscovery";
 
 export type WatchEvent =
     | {
@@ -11,12 +12,10 @@ export type WatchEvent =
         data: string
     }
 
-export default function useClusterNamespaces(kubernetesClientId: string | undefined): string[] {
+export default function useClusterNamespaces(contextSource: KubeContextSource): string[] {
     const [namespaces, setNamespaces] = useState<string[]>([]);
 
     useEffect(() => {
-        if (kubernetesClientId === undefined) return;
-
         const channel = new Channel<WatchEvent>();
 
         channel.onmessage = (message) => {
@@ -33,15 +32,20 @@ export default function useClusterNamespaces(kubernetesClientId: string | undefi
             }
         };
 
+        // We really want to reset the state at this point:
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setNamespaces([]);
 
-        invoke('watch_namespaces', { clientId: kubernetesClientId, channel })
-            .catch(e => alert(e));
+        invoke('watch_namespaces', { contextSource, channel })
+            .catch(e => {
+                if (e === 'BackgroundTaskRejected') return;
+                alert("blubb" + e);
+            });
 
         return () => {
             void invoke('cleanup_channel', { channel });
         };
-    }, [kubernetesClientId]);
+    }, [contextSource]);
 
     return namespaces;
 }

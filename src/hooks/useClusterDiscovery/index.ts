@@ -1,9 +1,7 @@
 import { Channel, invoke } from "@tauri-apps/api/core";
-import { listen } from "@tauri-apps/api/event";
 import { useEffect, useState } from "react";
 
 export type ClusterDiscovery = {
-    clientId?: string,
     discovery: DiscoveryResult,
     lastError: string | undefined,
     loading: boolean
@@ -34,13 +32,9 @@ export type AsyncDiscovery =
     }
     | {
         removedResource: DiscoveryResource,
-    }
-    | {
-        clientId: string
     };
 
 export function useClusterDiscovery(source: string | null, context: string | null): ClusterDiscovery {
-    const [clientId, setClientId] = useState<string>();
     const [discovery, setDiscovery] = useState<DiscoveryResult>({ gvks: {} });
     const [lastError, setLastError] = useState<string>();
     const [loading, setLoading] = useState(true);
@@ -52,9 +46,10 @@ export function useClusterDiscovery(source: string | null, context: string | nul
         const channel = new Channel<AsyncDiscovery>();
 
         channel.onmessage = (message) => {
-            if ("clientId" in message) {
-                setClientId(message.clientId);
-            } else if ("removedResource" in message) {
+            if ("discoveryComplete" in message) {
+                setLoading(false);
+            }
+            else if ("removedResource" in message) {
                 const toBeRemoved = message.removedResource;
 
                 setDiscovery((discovery) => {
@@ -98,20 +93,11 @@ export function useClusterDiscovery(source: string | null, context: string | nul
             }
         };
 
-        listen<string>('ERR_CLUSTER_DISCOVERY', (e) => setLastError(e.payload))
-            .then((unlisten) => {
-                invoke<{ clientId: string }>('discover_kubernetes_cluster', { channel, contextSource: { provider: 'file', source, context } })
-                    .then((response) => setClientId(response.clientId))
-                    .catch((e) => {
-                        if (e === 'BackgroundTaskRejected') return;
-                        setLastError(e as unknown as string);
-                    })
-                    .finally(() => {
-                        setLoading(false);
-                        unlisten();
-                    });
-            })
-            .catch(e => alert(JSON.stringify(e)));
+        invoke<void>('connect_cluster', { channel, contextSource: { provider: 'file', source, context } })
+            .catch((e) => {
+                if (e === 'BackgroundTaskRejected') return;
+                setLastError(e as unknown as string);
+            });
 
         return () => {
             void invoke('cleanup_channel', { channel });
@@ -119,6 +105,6 @@ export function useClusterDiscovery(source: string | null, context: string | nul
     }, [context, source]);
 
     return {
-        discovery, clientId, lastError, loading
+        discovery, lastError, loading
     };
 };

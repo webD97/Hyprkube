@@ -6,8 +6,8 @@ use tokio_util::compat::FuturesAsyncReadCompatExt;
 use tracing::info;
 
 use crate::{
-    app_state::{ClientId, JoinHandleStoreState, KubernetesClientRegistryState},
-    frontend_types::BackendError,
+    app_state::JoinHandleStoreState, cluster_discovery::ClusterRegistryState,
+    frontend_commands::KubeContextSource, frontend_types::BackendError,
 };
 
 #[derive(Clone, Serialize)]
@@ -25,15 +25,16 @@ pub enum LogStreamEvent {
 
 #[tauri::command]
 pub async fn kube_stream_podlogs(
-    client_registry_arc: State<'_, KubernetesClientRegistryState>,
+    clusters: State<'_, ClusterRegistryState>,
+    context_source: KubeContextSource,
     join_handle_store: State<'_, JoinHandleStoreState>,
-    client_id: ClientId,
     namespace: &str,
     name: &str,
     container: &str,
     channel: tauri::ipc::Channel<LogStreamEvent>,
 ) -> Result<(), BackendError> {
-    let client = client_registry_arc.try_clone(&client_id)?;
+    let client = clusters.get(&context_source).ok_or("not found")?.client;
+
     let namespace = namespace.to_string();
     let name = name.to_string();
     let container = container.to_string();

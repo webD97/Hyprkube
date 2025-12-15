@@ -5,8 +5,8 @@ use tauri::State;
 use tracing::{error, info};
 
 use crate::{
-    app_state::{ClientId, JoinHandleStoreState, KubernetesClientRegistryState},
-    frontend_types::BackendError,
+    app_state::JoinHandleStoreState, cluster_discovery::ClusterRegistryState,
+    frontend_commands::KubeContextSource, frontend_types::BackendError,
     internal::resources::ResourceWatchStreamEvent,
 };
 
@@ -20,9 +20,9 @@ pub enum WatchNamespacesEvent {
 #[tauri::command]
 #[tracing::instrument(skip_all, fields(request_id = tracing::field::Empty))]
 pub async fn watch_namespaces(
-    client_registry_arc: State<'_, KubernetesClientRegistryState>,
+    clusters: State<'_, ClusterRegistryState>,
+    context_source: KubeContextSource,
     join_handle_store: State<'_, JoinHandleStoreState>,
-    client_id: ClientId,
     channel: tauri::ipc::Channel<WatchNamespacesEvent>,
 ) -> Result<(), BackendError> {
     crate::internal::tracing::set_span_request_id();
@@ -30,7 +30,8 @@ pub async fn watch_namespaces(
     let channel_id = channel.id();
     info!("Streaming namespaces to channel {channel_id}");
 
-    let client = client_registry_arc.try_clone(&client_id)?;
+    let client = clusters.get(&context_source).ok_or("not found")?.client;
+
     let api: kube::Api<Namespace> = kube::Api::all(client);
 
     let stream = async move {

@@ -2,18 +2,19 @@ use k8s_openapi::api::core::v1::Pod;
 use tauri::State;
 
 use crate::{
-    app_state::{ClientId, KubernetesClientRegistryState},
+    cluster_discovery::ClusterRegistryState, frontend_commands::KubeContextSource,
     frontend_types::BackendError,
 };
 
 #[tauri::command]
 pub async fn list_pod_container_names(
-    client_registry_arc: State<'_, KubernetesClientRegistryState>,
-    client_id: ClientId,
+    clusters: State<'_, ClusterRegistryState>,
+    context_source: KubeContextSource,
     namespace: &str,
     name: &str,
 ) -> Result<Vec<String>, BackendError> {
-    let client = client_registry_arc.try_clone(&client_id)?;
+    let client = clusters.get(&context_source).ok_or("not found")?.client;
+
     let pods: kube::Api<Pod> = kube::Api::namespaced(client, namespace);
 
     let pod = pods.get(name).await?;
