@@ -1,22 +1,27 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useContext, useEffect, useRef, useState } from "react";
 import { Gvk } from "../../model/k8s";
 
+import { EventCallback } from "@tauri-apps/api/event";
 import { confirm } from '@tauri-apps/plugin-dialog';
 import { deleteResource } from "../../api/deleteResource";
 import getDefaultNamespace from "../../api/getDefaultNamespace";
 import getResourceYaml from "../../api/getResourceYaml";
 import listResourceViews, { ResourceViewDef } from "../../api/listResourceViews";
+import { popupKubernetesResourceMenu } from "../../api/popupKubernetesResourceMenu";
 import setDefaultNamespace from "../../api/setDefaultNamespace";
 import EmojiHint from "../../components/EmojiHint";
+import LogPanel from "../../components/LogPanel";
+import { MegaTabContext } from "../../components/MegaTabs/context";
 import ResourceList from "../../components/ResourceList";
 import { Tab } from "../../components/TabView";
 import { TabElement } from "../../components/TabView/hooks";
+import HyprkubeTerminal from "../../components/Terminal";
 import { DiscoveryResult, useClusterDiscovery } from "../../hooks/useClusterDiscovery";
 import useClusterNamespaces from "../../hooks/useClusterNamespaces";
 import { KubeContextSource } from "../../hooks/useContextDiscovery";
 import useResourceWatch, { DisplayableResource } from "../../hooks/useResourceWatch";
+import { useTauriEventListener } from "../../hooks/useTauriEventListener";
 import ResourceEditor from "../ResourceEditor";
-import { createMenuForResource } from "./menus";
 import classes from './styles.module.css';
 
 export interface ResourceListInspectorProps {
@@ -27,6 +32,11 @@ export interface ResourceListInspectorProps {
     pushBottomTab: (tab: TabElement) => void,
     onNamespaceChanged?: (namespace: string) => void,
 }
+
+type FrontendTriggerResourceEdit = { tabId: string, gvk: Gvk, namespace: string, name: string };
+type FrontendTriggerLogView = { tabId: string, namespace: string, name: string, container: string };
+type FrontendTriggerExecSession = { tabId: string, namespace: string, name: string, container: string };
+type FrontendTriggerPickNamespace = { tabId: string, namespace: string };
 
 const ResourceListInspector: React.FC<ResourceListInspectorProps> = (props) => {
     const {
@@ -46,6 +56,7 @@ const ResourceListInspector: React.FC<ResourceListInspectorProps> = (props) => {
     const [resourceDefaultNamespace, setResourceDefaultNamespace] = useState('default');
     const [selectedResources, setSelectedResources] = useState<[string, DisplayableResource][]>([]);
     const [columnDefinitions, resources] = useResourceWatch(contextSource, gvk, selectedView, selectedNamespace);
+    const { tabIdentifier } = useContext(MegaTabContext)!;
 
     const searchbarRef = useRef<HTMLDivElement>(null);
 
@@ -90,6 +101,77 @@ const ResourceListInspector: React.FC<ResourceListInspectorProps> = (props) => {
         setDefaultNamespace(clusterProfile, gvk, selectedNamespace)
             .catch(e => alert(JSON.stringify(e)));
     }, [clusterProfile, gvk, selectedNamespace]);
+
+    const onTriggerEdit = useCallback<EventCallback<FrontendTriggerResourceEdit>>((event) => {
+        const { gvk, namespace, name } = event.payload;
+
+        getResourceYaml(contextSource, gvk, namespace, name)
+            .then((yaml) => {
+                pushBottomTab(
+                    <Tab title={`Edit: ${name}`}>
+                        {
+                            () => (
+                                <ResourceEditor
+                                    contextSource={contextSource}
+                                    currentGvk={gvk}
+                                    fileContent={yaml}
+                                    namespace={namespace}
+                                    name={name}
+                                />
+                            )
+                        }
+                    </Tab >
+                )
+            })
+            .catch(e => alert(JSON.stringify(e)));
+    }, [contextSource, pushBottomTab]);
+
+    const onTriggerLogview = useCallback<EventCallback<FrontendTriggerLogView>>((event) => {
+        const { container, namespace, name } = event.payload;
+
+        pushBottomTab(
+            <Tab title={container} >
+                {
+                    () => (
+                        <LogPanel
+                            contextSource={contextSource}
+                            namespace={namespace}
+                            name={name}
+                            container={container}
+                        />
+                    )
+                }
+            </Tab>
+        );
+    }, [contextSource, pushBottomTab]);
+
+    const onTriggerExec = useCallback<EventCallback<FrontendTriggerExecSession>>((event) => {
+        const { container, namespace, name } = event.payload;
+
+        pushBottomTab(
+            <Tab title={`Shell (${name})`}>
+                {
+                    () => (
+                        <HyprkubeTerminal
+                            contextSource={contextSource}
+                            podName={name}
+                            podNamespace={namespace}
+                            container={container}
+                        />
+                    )
+                }
+            </Tab>
+        );
+    }, [contextSource, pushBottomTab]);
+
+    const onTriggerPickNamespace = useCallback<EventCallback<FrontendTriggerPickNamespace>>((event) => {
+        setSelectedNamespace(event.payload.namespace);
+    }, []);
+
+    useTauriEventListener<FrontendTriggerLogView>('hyprkube:menu:resource:trigger_logs', tabIdentifier.toString(), onTriggerLogview);
+    useTauriEventListener<FrontendTriggerResourceEdit>('hyprkube:menu:resource:trigger_edit', tabIdentifier.toString(), onTriggerEdit);
+    useTauriEventListener<FrontendTriggerExecSession>('hyprkube:menu:resource:trigger_exec', tabIdentifier.toString(), onTriggerExec);
+    useTauriEventListener<FrontendTriggerPickNamespace>('hyprkube:menu:resource:pick_namespace', tabIdentifier.toString(), onTriggerPickNamespace);
 
     const yamlViewerFactory = useCallback(() => {
         return (gvk: Gvk, resourceUID: string) => {
@@ -182,16 +264,11 @@ const ResourceListInspector: React.FC<ResourceListInspectorProps> = (props) => {
                     resourceData={resources}
                     onResourceClicked={yamlViewerFactory()}
                     searchbarPortal={searchbarRef}
-                    onResourceContextMenu={(gvk, resourceUID) => {
+                    onResourceContextMenu={(gvk, resourceUID, position) => {
                         const { namespace, name } = resources[resourceUID];
 
-                        return createMenuForResource({
-                            contextSource, gvk, namespace, name, pushTab: pushBottomTab,
-                            onShowYaml: () => yamlViewerFactory()(gvk, resourceUID),
-                            onSelectNamespace: (namespace) => {
-                                setSelectedNamespace(namespace)
-                            },
-                        });
+                        popupKubernetesResourceMenu(contextSource, tabIdentifier.toString(), namespace, name, gvk, position)
+                            .catch(e => console.log(e))
                     }}
                     onSelectionChanged={setSelectedResources}
                 />

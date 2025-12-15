@@ -96,7 +96,7 @@ const MegaTabs: React.FC<PropsWithChildren<MegaTabsProps>> = (props) => {
                                         <MegaTabContext.Provider
                                             value={{
                                                 tabIdentifier: idx,
-                                                setMeta: updateTabMeta
+                                                setMeta: updateTabMeta,
                                             }}
                                         >
                                             {render()}
