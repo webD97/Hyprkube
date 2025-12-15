@@ -24,7 +24,7 @@ use crate::{
 
 #[derive(Serialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
-pub enum DiscoveryResult {
+pub enum DiscoveryEvent {
     /// A resource kind that was either discovered from the cluster or read from cache
     DiscoveredResource(DiscoveredResource),
     /// A resource kind that was previously cached but vanished from the cluster (i.e. CRD uninstall)
@@ -39,7 +39,7 @@ pub async fn connect_cluster(
     background_tasks: State<'_, JoinHandleStoreState>,
     repository: State<'_, Arc<Repository>>,
     clusters: State<'_, ClusterRegistryState>,
-    channel: tauri::ipc::Channel<DiscoveryResult>,
+    channel: tauri::ipc::Channel<DiscoveryEvent>,
     context_source: KubeContextSource,
 ) -> Result<(), String> {
     crate::internal::tracing::set_span_request_id();
@@ -63,12 +63,12 @@ pub async fn connect_cluster(
                     tracing::info!("Skipping discovery, serving in-memory results");
 
                     for resource in discovery.resources.values() {
-                        channel.send(DiscoveryResult::DiscoveredResource(resource.clone()))?;
+                        channel.send(DiscoveryEvent::DiscoveredResource(resource.clone()))?;
                     }
                 }
             }
 
-            channel.send(DiscoveryResult::DiscoveryComplete(()))?;
+            channel.send(DiscoveryEvent::DiscoveryComplete(()))?;
 
             return Ok(());
         }
@@ -97,8 +97,8 @@ pub async fn connect_cluster(
         });
 
         for cached in &previously_cached {
-            inflight.send(DiscoveryResult::DiscoveredResource(cached.clone()));
-            channel.send(DiscoveryResult::DiscoveredResource(cached.clone()))?;
+            inflight.send(DiscoveryEvent::DiscoveredResource(cached.clone()));
+            channel.send(DiscoveryEvent::DiscoveredResource(cached.clone()))?;
         }
 
         // Online part
@@ -122,7 +122,7 @@ pub async fn connect_cluster(
 
             // Save
             match msg {
-                DiscoveryResult::DiscoveredResource(resource) => {
+                DiscoveryEvent::DiscoveredResource(resource) => {
                     confirmed_resources.insert(resource.clone());
 
                     let gvk =
@@ -130,7 +130,7 @@ pub async fn connect_cluster(
 
                     resources.entry(gvk).insert_entry(resource.clone());
                 }
-                DiscoveryResult::CustomResourceDefinition((gvk, crd)) => {
+                DiscoveryEvent::CustomResourceDefinition((gvk, crd)) => {
                     crds.entry(gvk).insert_entry(*crd);
                 }
                 _ => {}
@@ -145,7 +145,7 @@ pub async fn connect_cluster(
                 removed_resource.group
             );
 
-            let msg = DiscoveryResult::RemovedResource(removed_resource.to_owned());
+            let msg = DiscoveryEvent::RemovedResource(removed_resource.to_owned());
 
             inflight.send(msg.clone());
             channel.send(msg)?;
@@ -163,7 +163,7 @@ pub async fn connect_cluster(
             discovery: ClusterDiscovery::Completed(result),
         });
 
-        channel.send(DiscoveryResult::DiscoveryComplete(()))?;
+        channel.send(DiscoveryEvent::DiscoveryComplete(()))?;
 
         Ok(())
     });
@@ -196,7 +196,7 @@ async fn make_client(context_source: &KubeContextSource) -> anyhow::Result<kube:
 ///
 /// The discovery will first try to discover builtin (i.e. non-crd) resources to optimize
 /// the user experience. CRD-based resources will be yielded after that.
-fn online_discovery(client: kube::Client) -> impl Stream<Item = anyhow::Result<DiscoveryResult>> {
+fn online_discovery(client: kube::Client) -> impl Stream<Item = anyhow::Result<DiscoveryEvent>> {
     async_stream::stream! {
         tracing::info!("Discovering builtins");
         let apigroups = &client.list_api_groups().await?;
@@ -232,7 +232,7 @@ fn online_discovery(client: kube::Client) -> impl Stream<Item = anyhow::Result<D
                         scope: capabilities.scope.into(),
                     };
 
-                    yield Ok(DiscoveryResult::DiscoveredResource(resource.clone()));
+                    yield Ok(DiscoveryEvent::DiscoveredResource(resource.clone()));
                 }
             }
         }
@@ -261,7 +261,7 @@ fn online_discovery(client: kube::Client) -> impl Stream<Item = anyhow::Result<D
                         scope: capabilities.scope.into(),
                     };
 
-                    yield Ok(DiscoveryResult::DiscoveredResource(resource.clone()));
+                    yield Ok(DiscoveryEvent::DiscoveredResource(resource.clone()));
                 }
             }
         }
@@ -279,7 +279,7 @@ fn online_discovery(client: kube::Client) -> impl Stream<Item = anyhow::Result<D
 
                 if let Some(latest) = latest {
                     let gvk = GroupVersionKind::gvk(&crd.spec.group, &latest.name, &crd.spec.names.kind);
-                    yield Ok(DiscoveryResult::CustomResourceDefinition((gvk, Box::new(crd))));
+                    yield Ok(DiscoveryEvent::CustomResourceDefinition((gvk, Box::new(crd))));
                 } else {
                     tracing::error!("CustomResourceDefinition {}.{} has no versions.", crd.spec.names.kind, crd.spec.group);
                     continue;
