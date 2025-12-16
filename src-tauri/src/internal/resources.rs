@@ -55,8 +55,12 @@ where
 
 #[instrument(skip(client))]
 pub async fn determine_initial_list_strategy(client: Client) -> InitialListStrategy {
-    let streaming_list_requirement =
-        VersionReq::parse(">=1.32,<1.33").expect("must be a valid semver");
+    // See https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/#list-of-gates
+    // Feature gate is called "WatchList"
+    let streaming_list_requirements = [
+        VersionReq::parse(">=1.32,<1.33").unwrap(),
+        VersionReq::parse(">=1.34").unwrap(),
+    ];
 
     let apiserver_version = client.apiserver_version().await.unwrap();
     let apiserver_version = apiserver_version.git_version.trim_start_matches('v');
@@ -64,13 +68,16 @@ pub async fn determine_initial_list_strategy(client: Client) -> InitialListStrat
     let apiserver_version = semver::Version::parse(apiserver_version)
         .expect("expected a valid version from apiserver request");
 
-    match streaming_list_requirement.matches(&apiserver_version) {
+    match streaming_list_requirements
+        .iter()
+        .any(|r| r.matches(&apiserver_version))
+    {
         true => {
-            info!("Using StreamingList");
+            debug!("Using StreamingList (k8s {})", apiserver_version);
             InitialListStrategy::StreamingList
         }
         false => {
-            info!("Using ListWatch");
+            debug!("Using ListWatch (k8s {})", apiserver_version);
             InitialListStrategy::ListWatch
         }
     }
