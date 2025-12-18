@@ -9,7 +9,7 @@ use kube::{
 use semver::VersionReq;
 use serde::{de::DeserializeOwned, Serialize};
 use std::fmt::Debug;
-use tracing::{debug, error, info, instrument};
+use tracing::{debug, error, instrument};
 
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase", tag = "event", content = "data")]
