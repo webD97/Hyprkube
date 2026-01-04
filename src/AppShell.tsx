@@ -9,8 +9,8 @@ import { WindowControls } from "./components/WindowControls";
 import StatusPanel from "./containers/StatusPanel";
 import MegaTabsContext, { MegaTabDefinition } from "./contexts/MegaTabs";
 import { useHeadlessTabs } from "./hooks/useHeadlessTabs";
-import ClusterOverview from "./pages/ClusterOverview";
 import { Playground } from "./pages/Playground";
+import Welcome from "./pages/Welcome";
 
 function fallbackRender(context: FallbackProps) {
     // Call resetErrorBoundary() to reset the error boundary and retry the render.
@@ -38,9 +38,9 @@ const Layout: React.FC = () => {
 
     const megaTabsOutlet = useRef<HTMLDivElement>(null);
 
-    function openClusterExplorer() {
+    function openWelcomePage() {
         switchTab(
-            pushTab({ title: 'Connect to a cluster', icon: '🔮' }, () => <ClusterOverview />)
+            pushTab({ title: 'Connect to a cluster', icon: '🔮' }, () => <Welcome />)
         );
     }
 
@@ -61,7 +61,7 @@ const Layout: React.FC = () => {
                         <MegaTabsButton
                             icon="&nbsp;+&nbsp;"
                             title="Open new tab"
-                            onClick={openClusterExplorer}
+                            onClick={openWelcomePage}
                         />
                     </MegaTabs>
                     <section className={classes.right}>
@@ -85,7 +85,7 @@ const AppShell: React.FC = () => {
     const tabs = useHeadlessTabs<MegaTabDefinition>([
         {
             meta: { title: 'Connect to a cluster', icon: '🔮' },
-            render: () => <ClusterOverview />
+            render: () => <Welcome />
         }
     ]);
 

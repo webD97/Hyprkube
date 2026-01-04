@@ -1,0 +1,88 @@
+.clusterCardContainer {
+    border: 1px #666666 solid;
+    border-radius: .5rem;
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.clusterCardContainer:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+.clusterCardContainer>section:only-child,
+.clusterCardContainer>section:not(:last-child) {
+    margin: 0.5rem 0.75rem;
+}
+
+.clusterCardContainer .settingsButton {
+    visibility: hidden;
+}
+
+.clusterCardContainer:hover .settingsButton {
+    visibility: visible;
+}
+
+.clusterCardHeader {
+    display: flex;
+    align-items: center;
+}
+
+.clusterCardHeader h6 {
+    font-size: 1.2rem;
+    margin: 0;
+    cursor: pointer;
+}
+
+.clusterCardHeader code {
+    font-size: 0.9rem;
+}
+
+.clusterCardHeader .titleArea {
+    flex-grow: 1;
+}
+
+.clusterCardHeader .buttonArea {
+    flex-grow: 0;
+    padding-left: 2em;
+}
+
+.clusterCardContainer>section:not(:last-child) {
+    margin-bottom: 0.5rem;
+}
+
+.apps {
+    display: flex;
+    justify-content: space-evenly;
+    margin-bottom: 1em;
+}
+
+.appSummary {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-right: 1rem;
+}
+
+.appName {
+    font-size: 1rem;
+}
+
+.appSummary {
+    font-size: 0.75em;
+}
+
+.clusterCardActions {
+    display: flex;
+    border-top: 1px #666666 solid;
+}
+
+.clusterCardActions>button {
+    flex: 1 0 0;
+}
+
+.clusterVersion {
+    opacity: 0.5;
+}
+
+.cursorPointer {
+    cursor: pointer;
+}

@@ -1,4 +1,5 @@
-import { useContext, useMemo } from "react";
+import { use, useMemo } from "react";
+import ClusterCard from "../../components/ClusterCard";
 import MegaTabsContext from "../../contexts/MegaTabs";
 import { KubeContextSource, useContextDiscovery } from "../../hooks/useContextDiscovery";
 import { capitalizeFirstLetter } from "../../utils/strings";
@@ -11,9 +12,9 @@ type GroupedContextSources = {
     }
 };
 
-const ClusterOverview: React.FC = () => {
+export default function Welcome() {
     const contextSources = useContextDiscovery();
-    const { replaceActiveTab } = useContext(MegaTabsContext)!;
+    const { replaceActiveTab } = use(MegaTabsContext)!;
 
     const groupedContextSources = useMemo(() => {
         const groupedContextSources: GroupedContextSources = {};
@@ -41,29 +42,27 @@ const ClusterOverview: React.FC = () => {
     }, [contextSources]);
 
     return (
-        <div className={classes.container}>
+        <div className={classes.welcomeContainer}>
             <h2>Your clusters</h2>
             <div>
                 {
                     Object.entries(groupedContextSources).map(([source, contextGroup]) => (
                         <div key={source}>
                             <h4>{source}</h4>
-                            <ul className={classes.clusterList}>
+                            <div className={classes.clusterList}>
                                 {
                                     contextGroup.contexts.map((contextSource, idx) => (
-                                        <li key={idx}>
-                                            <a href="" onClick={(e) => {
-                                                e.preventDefault();
-
-                                                replaceActiveTab(
-                                                    { title: capitalizeFirstLetter(contextSource.context), icon: '🌍', keepAlive: true },
-                                                    () => <ClusterView contextSource={contextSource} />
-                                                );
-                                            }}>{contextSource.context}</a>
-                                        </li>
+                                        <ClusterCard key={idx}
+                                            clusterName={capitalizeFirstLetter(contextSource.context)}
+                                            clusterVersion="v1.34.2+k3s1"
+                                            onConnect={() => replaceActiveTab(
+                                                { title: capitalizeFirstLetter(contextSource.context), icon: '🌍', keepAlive: true },
+                                                () => <ClusterView contextSource={contextSource} />
+                                            )}
+                                        />
                                     ))
                                 }
-                            </ul>
+                            </div>
                         </div>
                     ))
                 }
@@ -71,5 +70,3 @@ const ClusterOverview: React.FC = () => {
         </div>
     );
 };
-
-export default ClusterOverview;
