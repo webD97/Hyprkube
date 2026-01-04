@@ -1,19 +1,17 @@
-import RelativeTime from "../../components/RelativeTime";
-import { WindowControls } from "../../components/WindowControls";
+import ClusterCard from "../../components/ClusterCard";
 
 export const Playground: React.FC = () => {
     return (
         <div>
             <h1>Development playground</h1>
-            <h2>Window controls</h2>
-            <WindowControls />
-            <h2>RelativeTime</h2>
-            <p>
-                <RelativeTime timestamp="2024-06-20T12:00:00Z" />
-            </p>
-            <p>
-                <RelativeTime timestamp={new Date().toISOString()} />
-            </p>
+            <h2>ClusterCard</h2>
+            <section style={{ maxWidth: '600px' }}>
+                <ClusterCard clusterName="Homelab" clusterVersion="v1.34.2+k3s1"
+                    actions={[
+                        { label: '📖 Connect', onTrigger: () => { } },
+                    ]}
+                />
+            </section>
         </div>
     );
 };

@@ -1,0 +1,68 @@
+.clusterCardContainer {
+    border: 1px #666666 solid;
+    border-radius: .5rem;
+}
+
+.clusterCardContainer>section:not(:last-child) {
+    margin: 0.25rem 0.5rem;
+}
+
+.clusterCardHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.clusterCardHeader h6 {
+    font-size: 1.2rem;
+    margin: 0
+}
+
+.clusterCardHeader code {
+    font-size: 0.9rem;
+}
+
+.clusterCardContainer>section:not(:last-child) {
+    margin-bottom: 0.5rem;
+}
+
+.apps {
+    display: flex;
+    justify-content: center;
+}
+
+.appSummary {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-right: 1rem;
+}
+
+.appName {
+    font-size: 1rem;
+}
+
+.appSummary:last-child {
+    margin-right: initial;
+}
+
+.appStatusBox {
+    width: 0.75em;
+    height: 0.75em;
+    border-radius: 20%;
+    transition: transform .2s;
+}
+
+.appStatusBox:hover {
+    transform: scale(1.2);
+    transition: transform .2s;
+}
+
+.clusterCardActions {
+    display: flex;
+    border-top: 1px #666666 solid;
+}
+
+.clusterCardActions>button {
+    flex: 1 0 0;
+}
