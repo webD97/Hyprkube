@@ -114,13 +114,13 @@ function resourceToDisplayableResource(resource: Resource): DisplayableResource 
     });
 }
 
-export default function useKubernetesResourceWatch(contextSource: KubeContextSource, gvk: Gvk | undefined, viewName: string, namespace: string): [ColumnDefinition[], ResourceViewData] {
+export default function useKubernetesResourceWatch(contextSource: KubeContextSource, gvk: Gvk | undefined, viewName: string | undefined, namespace: string): [ColumnDefinition[], ResourceViewData] {
     const [columnDefinitions, setColumnDefinitions] = useState<ColumnDefinition[]>([]);
     const [resources, setResources] = useState<ResourceViewData>({});
 
     useEffect(() => {
         if (gvk === undefined) return;
-        if (viewName === '') return;
+        if (!viewName) return;
 
         const channel = new Channel<WatchEvent>();
 

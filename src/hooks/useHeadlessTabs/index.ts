@@ -1,4 +1,4 @@
-import { ReactElement, useCallback, useEffect, useState } from "react";
+import { ReactElement, useCallback, useState } from "react";
 
 export type TabDefinition<T extends object> = {
     meta: T,
@@ -58,11 +58,9 @@ export function useHeadlessTabs<T extends object>(initialTabs: TabDefinition<T>[
         }))
     }, [activeTab, pushTab, setTabs, tabs]);
 
-    useEffect(() => {
-        if (tabs.length > 0 && activeTab > tabs.length - 1) {
-            setActiveTab(tabs.length - 1);
-        }
-    }, [activeTab, setActiveTab, tabs.length]);
+    if (tabs.length > 0 && activeTab > tabs.length - 1) {
+        setActiveTab(tabs.length - 1);
+    }
 
     return [tabs, activeTab, pushTab, removeTab, setActiveTab, replaceActiveTab, setTabMeta];
 };

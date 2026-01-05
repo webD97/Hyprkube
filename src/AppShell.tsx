@@ -1,7 +1,7 @@
 import { emit } from "@tauri-apps/api/event";
 import { ErrorBoundary, FallbackProps } from "react-error-boundary";
 
-import { useCallback, useContext, useEffect, useRef } from "react";
+import { useContext, useRef } from "react";
 import classes from './AppShell.module.css';
 import { DevModeOnly } from "./components/DevModeOnly";
 import MegaTabs, { MegaTabDefinition, MegaTabsButton } from "./components/MegaTabs";
@@ -39,14 +39,13 @@ const Layout: React.FC = () => {
 
     const megaTabsOutlet = useRef<HTMLDivElement>(null);
 
-    const openClusterExplorer = useCallback(() => {
+    const openClusterExplorer = () => {
         pushApplicationTab({ title: 'Connect to a cluster', icon: '🔮' }, () => <ClusterOverview />);
-    }, [pushApplicationTab]);
+    };
 
-    useEffect(() => {
-        if (applicationTabs.length > 0) return;
+    if (applicationTabs.length === 0) {
         openClusterExplorer();
-    }, [applicationTabs.length, openClusterExplorer]);
+    }
 
     return (
         <ErrorBoundary fallbackRender={fallbackRender}>

@@ -1,12 +1,10 @@
-import { useCallback, useContext, useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import { Gvk } from "../../model/k8s";
 
 import { EventCallback } from "@tauri-apps/api/event";
 import { confirm } from '@tauri-apps/plugin-dialog';
 import { deleteResource } from "../../api/deleteResource";
-import getDefaultNamespace from "../../api/getDefaultNamespace";
 import getResourceYaml from "../../api/getResourceYaml";
-import listResourceViews, { ResourceViewDef } from "../../api/listResourceViews";
 import { popupKubernetesResourceMenu } from "../../api/popupKubernetesResourceMenu";
 import setDefaultNamespace from "../../api/setDefaultNamespace";
 import EmojiHint from "../../components/EmojiHint";
@@ -19,10 +17,12 @@ import HyprkubeTerminal from "../../components/Terminal";
 import { DiscoveryResult, useClusterDiscovery } from "../../hooks/useClusterDiscovery";
 import useClusterNamespaces from "../../hooks/useClusterNamespaces";
 import { KubeContextSource } from "../../hooks/useContextDiscovery";
+import useResourceViews from "../../hooks/useResourceViews";
 import useResourceWatch, { DisplayableResource } from "../../hooks/useResourceWatch";
 import { useTauriEventListener } from "../../hooks/useTauriEventListener";
 import ResourceEditor from "../ResourceEditor";
 import classes from './styles.module.css';
+import { useDefaultNamespace } from "./useDefaultNamespace";
 
 export interface ResourceListInspectorProps {
     gvk: Gvk,
@@ -48,12 +48,12 @@ const ResourceListInspector: React.FC<ResourceListInspectorProps> = (props) => {
         onNamespaceChanged = () => undefined
     } = props;
 
-    const [availableViews, setAvailableViews] = useState<ResourceViewDef[]>([]);
-    const [selectedView, setSelectedView] = useState("");
+    const availableViews = useResourceViews(contextSource, gvk);
+    const [selectedView, setSelectedView] = useState('');
     const { discovery, lastError } = useClusterDiscovery(contextSource.source, contextSource.context);
     const allNamespaces = useClusterNamespaces(contextSource);
-    const [selectedNamespace, setSelectedNamespace] = useState(preSelectedNamespace);
-    const [resourceDefaultNamespace, setResourceDefaultNamespace] = useState('default');
+    const resourceDefaultNamespace = useDefaultNamespace(clusterProfile, gvk);
+    const [selectedNamespace, setSelectedNamespace] = useState(preSelectedNamespace ?? resourceDefaultNamespace);
     const [selectedResources, setSelectedResources] = useState<[string, DisplayableResource][]>([]);
     const [columnDefinitions, resources] = useResourceWatch(contextSource, gvk, selectedView, selectedNamespace);
     const { tabIdentifier } = useContext(MegaTabContext)!;
@@ -61,31 +61,10 @@ const ResourceListInspector: React.FC<ResourceListInspectorProps> = (props) => {
     const searchbarRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        listResourceViews(contextSource, gvk)
-            .then(views => {
-                setAvailableViews(views);
+        setSelectedView(availableViews[0]);
+    }, [availableViews]);
 
-                if (views.length > 0) {
-                    setSelectedView(views[0]);
-                }
-            })
-            .catch(e => alert(JSON.stringify(e)));
-
-    }, [contextSource, gvk]);
-
-    useEffect(() => {
-        if (preSelectedNamespace) return;
-
-        getDefaultNamespace(clusterProfile, gvk)
-            .then(namespace => {
-                setResourceDefaultNamespace(namespace);
-                setSelectedNamespace(namespace);
-                onNamespaceChanged(namespace);
-            })
-            .catch(e => alert(JSON.stringify(e)))
-    }, [clusterProfile, gvk, onNamespaceChanged, preSelectedNamespace]);
-
-    const deleteSelectedResources = useCallback(() => {
+    const deleteSelectedResources = () => {
         confirm(`This action cannot be reverted. Are you sure?`, { kind: 'warning', title: `Permanently delete ${selectedResources.length} resources?` })
             .then(confirmed => {
                 if (!confirmed) return;
@@ -95,14 +74,14 @@ const ResourceListInspector: React.FC<ResourceListInspectorProps> = (props) => {
                 });
             })
             .catch(e => alert(JSON.stringify(e)));
-    }, [contextSource, gvk, selectedResources]);
+    };
 
-    const saveDefaultNamespace = useCallback(() => {
+    const saveDefaultNamespace = () => {
         setDefaultNamespace(clusterProfile, gvk, selectedNamespace)
             .catch(e => alert(JSON.stringify(e)));
-    }, [clusterProfile, gvk, selectedNamespace]);
+    };
 
-    const onTriggerEdit = useCallback<EventCallback<FrontendTriggerResourceEdit>>((event) => {
+    const onTriggerEdit: EventCallback<FrontendTriggerResourceEdit> = (event) => {
         const { gvk, namespace, name } = event.payload;
 
         getResourceYaml(contextSource, gvk, namespace, name)
@@ -124,9 +103,9 @@ const ResourceListInspector: React.FC<ResourceListInspectorProps> = (props) => {
                 )
             })
             .catch(e => alert(JSON.stringify(e)));
-    }, [contextSource, pushBottomTab]);
+    };
 
-    const onTriggerLogview = useCallback<EventCallback<FrontendTriggerLogView>>((event) => {
+    const onTriggerLogview: EventCallback<FrontendTriggerLogView> = (event) => {
         const { container, namespace, name } = event.payload;
 
         pushBottomTab(
@@ -143,9 +122,9 @@ const ResourceListInspector: React.FC<ResourceListInspectorProps> = (props) => {
                 }
             </Tab>
         );
-    }, [contextSource, pushBottomTab]);
+    };
 
-    const onTriggerExec = useCallback<EventCallback<FrontendTriggerExecSession>>((event) => {
+    const onTriggerExec: EventCallback<FrontendTriggerExecSession> = (event) => {
         const { container, namespace, name } = event.payload;
 
         pushBottomTab(
@@ -162,18 +141,18 @@ const ResourceListInspector: React.FC<ResourceListInspectorProps> = (props) => {
                 }
             </Tab>
         );
-    }, [contextSource, pushBottomTab]);
+    };
 
-    const onTriggerPickNamespace = useCallback<EventCallback<FrontendTriggerPickNamespace>>((event) => {
+    const onTriggerPickNamespace: EventCallback<FrontendTriggerPickNamespace> = (event) => {
         setSelectedNamespace(event.payload.namespace);
-    }, []);
+    };
 
     useTauriEventListener<FrontendTriggerLogView>('hyprkube:menu:resource:trigger_logs', tabIdentifier.toString(), onTriggerLogview);
     useTauriEventListener<FrontendTriggerResourceEdit>('hyprkube:menu:resource:trigger_edit', tabIdentifier.toString(), onTriggerEdit);
     useTauriEventListener<FrontendTriggerExecSession>('hyprkube:menu:resource:trigger_exec', tabIdentifier.toString(), onTriggerExec);
     useTauriEventListener<FrontendTriggerPickNamespace>('hyprkube:menu:resource:pick_namespace', tabIdentifier.toString(), onTriggerPickNamespace);
 
-    const yamlViewerFactory = useCallback(() => {
+    const yamlViewerFactory = () => {
         return (gvk: Gvk, resourceUID: string) => {
             const { namespace, name } = resources[resourceUID];
 
@@ -197,7 +176,7 @@ const ResourceListInspector: React.FC<ResourceListInspectorProps> = (props) => {
                 })
                 .catch(e => alert(JSON.stringify(e)));
         }
-    }, [contextSource, pushBottomTab, resources]);
+    };
 
     const resourceScope = findResourceScope(discovery, gvk);
     const resourceNamePlural = findResourcePlural(discovery, gvk);
