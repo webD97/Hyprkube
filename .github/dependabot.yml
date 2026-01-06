@@ -29,6 +29,14 @@ updates:
           - "kube"
           - "k8s-openapi"
           - "schemars"
+      tokio:
+        patterns:
+          - "tokio"
+          - "tokio-*"
+      tracing:
+        patterns:
+          - "tracing"
+          - "tracing-*"
 
   - package-ecosystem: "npm"
     directory: "/"
