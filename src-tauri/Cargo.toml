@@ -25,8 +25,8 @@ tauri = { version = "2.9.5", features = [] }
 kube = { version = "2.0.1", features = ["runtime", "client", "ws", "gzip"] }
 k8s-openapi = { version = "0.26.1", features = ["v1_34"] }
 futures = { version = "0.3.31" }
-tokio = { version = "1.48.0" }
-tokio-util = { version = "0.7.17", features = ["compat"] }
+tokio = { version = "1.49.0" }
+tokio-util = { version = "0.7.18", features = ["compat"] }
 thiserror = "2.0.17"
 uuid = { version = "1.19.0", features = ["v4"] }
 rhai = { version = "1.23.6", features = [
@@ -52,7 +52,7 @@ rand = "0.9.2"
 chrono = "0.4.42"
 anyhow = "1.0.100"
 async-stream = "0.3.6"
-tokio-stream = "0.1.17"
+tokio-stream = "0.1.18"
 tauri-plugin-clipboard-manager = "2"
 async-trait = "0.1.89"
 
