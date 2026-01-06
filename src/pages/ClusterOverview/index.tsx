@@ -1,5 +1,5 @@
 import { useContext, useMemo } from "react";
-import ApplicationTabsContext from "../../contexts/ApplicationTabs";
+import MegaTabsContext from "../../contexts/MegaTabs";
 import { KubeContextSource, useContextDiscovery } from "../../hooks/useContextDiscovery";
 import { capitalizeFirstLetter } from "../../utils/strings";
 import ClusterView from "../ClusterView";
@@ -13,7 +13,7 @@ type GroupedContextSources = {
 
 const ClusterOverview: React.FC = () => {
     const contextSources = useContextDiscovery();
-    const { replaceApplicationTab } = useContext(ApplicationTabsContext)!;
+    const { replaceActiveTab } = useContext(MegaTabsContext)!;
 
     const groupedContextSources = useMemo(() => {
         const groupedContextSources: GroupedContextSources = {};
@@ -55,7 +55,7 @@ const ClusterOverview: React.FC = () => {
                                             <a href="" onClick={(e) => {
                                                 e.preventDefault();
 
-                                                replaceApplicationTab(
+                                                replaceActiveTab(
                                                     { title: capitalizeFirstLetter(contextSource.context), icon: '🌍', keepAlive: true },
                                                     () => <ClusterView contextSource={contextSource} />
                                                 );

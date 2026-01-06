@@ -1,13 +1,13 @@
 import { emit } from "@tauri-apps/api/event";
 import { ErrorBoundary, FallbackProps } from "react-error-boundary";
 
-import { useCallback, useContext, useEffect, useRef } from "react";
+import { use, useRef } from "react";
 import classes from './AppShell.module.css';
 import { DevModeOnly } from "./components/DevModeOnly";
-import MegaTabs, { MegaTabDefinition, MegaTabsButton } from "./components/MegaTabs";
+import MegaTabs, { MegaTabsButton } from "./components/MegaTabs";
 import { WindowControls } from "./components/WindowControls";
 import StatusPanel from "./containers/StatusPanel";
-import ApplicationTabsContext from "./contexts/ApplicationTabs";
+import MegaTabsContext, { MegaTabDefinition } from "./contexts/MegaTabs";
 import { useHeadlessTabs } from "./hooks/useHeadlessTabs";
 import ClusterOverview from "./pages/ClusterOverview";
 import { Playground } from "./pages/Playground";
@@ -28,49 +28,45 @@ window.onbeforeunload = function () {
 };
 
 const Layout: React.FC = () => {
+    const megaTabsContext = use(MegaTabsContext)!;
+
     const {
-        applicationTabs,
-        activeApplicationTab,
-        pushApplicationTab,
-        removeApplicationTab,
-        setActiveApplicationTab,
-        updateTabMeta
-    } = useContext(ApplicationTabsContext)!;
+        closeTab,
+        pushTab,
+        switchTab,
+    } = megaTabsContext;
 
     const megaTabsOutlet = useRef<HTMLDivElement>(null);
 
-    const openClusterExplorer = useCallback(() => {
-        pushApplicationTab({ title: 'Connect to a cluster', icon: '🔮' }, () => <ClusterOverview />);
-    }, [pushApplicationTab]);
+    function openClusterExplorer() {
+        switchTab(
+            pushTab({ title: 'Connect to a cluster', icon: '🔮' }, () => <ClusterOverview />)
+        );
+    }
 
-    useEffect(() => {
-        if (applicationTabs.length > 0) return;
-        openClusterExplorer();
-    }, [applicationTabs.length, openClusterExplorer]);
+    function openDevelopmentPlayground() {
+        switchTab(
+            pushTab({ title: 'Development playground', icon: '🛝' }, () => <Playground />)
+        );
+    }
 
     return (
         <ErrorBoundary fallbackRender={fallbackRender}>
             <div className={classes.container}>
                 <header className={classes.header} data-tauri-drag-region>
-                    <MegaTabs
-                        activeTab={activeApplicationTab}
-                        setActiveTab={setActiveApplicationTab}
-                        onCloseClicked={removeApplicationTab}
-                        updateTabMeta={updateTabMeta}
-                        tabs={applicationTabs}
+                    <MegaTabs context={megaTabsContext}
+                        onCloseClicked={closeTab}
                         outlet={megaTabsOutlet}
                     >
                         <MegaTabsButton
-                            icon="＋"
+                            icon="&nbsp;+&nbsp;"
                             title="Open new tab"
                             onClick={openClusterExplorer}
                         />
                     </MegaTabs>
                     <section className={classes.right}>
                         <DevModeOnly>
-                            <button title="Open development playground"
-                                onClick={() => pushApplicationTab({ title: 'Development playground', icon: '🛝' }, () => <Playground />)}
-                            >🛝</button>
+                            <button title="Open development playground" onClick={openDevelopmentPlayground}>🛝</button>
                         </DevModeOnly>
                         <WindowControls />
                     </section>
@@ -86,20 +82,17 @@ const Layout: React.FC = () => {
 };
 
 const AppShell: React.FC = () => {
-    const [
-        applicationTabs,
-        activeApplicationTab,
-        pushApplicationTab,
-        removeApplicationTab,
-        setActiveApplicationTab,
-        replaceApplicationTab,
-        updateTabMeta
-    ] = useHeadlessTabs<MegaTabDefinition>();
+    const tabs = useHeadlessTabs<MegaTabDefinition>([
+        {
+            meta: { title: 'Connect to a cluster', icon: '🔮' },
+            render: () => <ClusterOverview />
+        }
+    ]);
 
     return (
-        <ApplicationTabsContext.Provider value={{ applicationTabs, activeApplicationTab, pushApplicationTab, removeApplicationTab, setActiveApplicationTab, replaceApplicationTab, updateTabMeta }}>
+        <MegaTabsContext.Provider value={tabs}>
             <Layout />
-        </ApplicationTabsContext.Provider>
+        </MegaTabsContext.Provider>
     );
 };
 

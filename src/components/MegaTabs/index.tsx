@@ -1,36 +1,27 @@
-
-import React, { PropsWithChildren, useCallback, useState } from "react";
+import React, { PropsWithChildren, useCallback, useEffect, useReducer, useState } from "react";
 import { createPortal } from "react-dom";
 import { ErrorBoundary } from "react-error-boundary";
-import { TabDefinition, TabIdentifier, TabMetaUpdateFunction } from "../../hooks/useHeadlessTabs";
-import { MegaTabContext } from "./context";
+import { MegaTabContext } from "../../contexts/MegaTab";
+import { MegaTabDefinition, MegaTabsContextType } from "../../contexts/MegaTabs";
+import { TabDefinition, TabIdentifier } from "../../hooks/useHeadlessTabs";
 import classes from './styles.module.css';
 
-export type MegaTabDefinition = {
-    title: string,
-    icon: React.ReactNode,
-    subtitle?: string,
-    keepAlive?: boolean,
-    immortal?: boolean
-};
-
 export interface MegaTabsProps {
-    activeTab: number,
-    setActiveTab?: (idx: number) => void,
-    onCloseClicked?: (idx: number) => void,
-    updateTabMeta?: (idx: number, updater: TabMetaUpdateFunction<MegaTabDefinition>) => void,
-    tabs: TabDefinition<MegaTabDefinition>[],
+    onCloseClicked?: (idx: TabIdentifier) => void,
+    context: MegaTabsContextType,
     outlet: React.RefObject<HTMLDivElement | null>
 }
 
-const MegaTabs: React.FC<PropsWithChildren<MegaTabsProps>> = (props) => {
+function MegaTabs(props: PropsWithChildren<MegaTabsProps>) {
     const {
-        activeTab,
-        tabs,
-        setActiveTab = () => undefined,
+        outlet,
         onCloseClicked = () => undefined,
-        updateTabMeta = () => undefined,
-        outlet
+        context: {
+            tabState,
+            activeTab,
+            switchTab,
+            updateTabMeta
+        }
     } = props;
 
     const [closingTabs, setClosingTabs] = useState<TabIdentifier[]>([]);
@@ -43,45 +34,57 @@ const MegaTabs: React.FC<PropsWithChildren<MegaTabsProps>> = (props) => {
         }, 150);
     }, [onCloseClicked]);
 
+    // HACK: re-render once after the ref is populated
+    const [, incrementRefreshKey] = useReducer((x: number) => x + 1, 0);
+    useEffect(incrementRefreshKey, [incrementRefreshKey]);
+
     return (
         <div>
             <div className={classes.tabWrapper}>
                 {
-                    tabs.map(({ meta: { title, icon, immortal, subtitle } }, idx) => (
-                        <div key={idx} className={`${closingTabs.includes(idx) ? classes.fadeOut : ''}`}>
-                            <div
-                                title={`${title}${subtitle && ` - ${subtitle}`}`}
-                                className={`${idx === activeTab ? classes.activeTab : ''} ${classes.tab}`}
-                                onClick={() => setActiveTab(idx)}
-                                onAuxClick={(e) => e.button === 1 && !immortal && handleClose(idx)}
-                            >
-                                <span className={classes.tabIcon}>{icon}</span>
-                                <span className={classes.tabLabelWrapper}>
-                                    <span className={classes.tabLabel}>{title}</span>
+                    Object.entries(tabState)
+                        .map(([idx, tab]) => [idx, tab] as [TabIdentifier, TabDefinition<MegaTabDefinition>])
+                        .map(([idx, { meta: { title, icon, immortal, subtitle } }]) => (
+                            <div key={idx} className={`${closingTabs.includes(idx) ? classes.fadeOut : ''}`}>
+                                <div
+                                    title={`${title}${subtitle && ` - ${subtitle}`}`}
+                                    className={`${idx === activeTab ? classes.activeTab : ''} ${classes.tab}`}
+                                    onClick={() => switchTab(idx)}
+                                    onAuxClick={(e) => e.button === 1 && !immortal && handleClose(idx)}
+                                >
+                                    <span className={classes.tabIcon}>{icon}</span>
+                                    <span className={classes.tabLabelWrapper}>
+                                        <span className={classes.tabLabel}>{title}</span>
+                                        {
+                                            subtitle
+                                                ? <span className={classes.tabSubtitle}>{subtitle}</span>
+                                                : null
+                                        }
+                                    </span>
                                     {
-                                        subtitle
-                                            ? <span className={classes.tabSubtitle}>{subtitle}</span>
-                                            : null
+                                        immortal || Object.entries(tabState).length < 2
+                                            ? null
+                                            : <span className={classes.closeIcon} title="Close tab" onClick={(e) => {
+                                                e.stopPropagation();
+
+                                                if (!immortal) {
+                                                    handleClose(idx);
+                                                }
+                                            }}>🗙</span>
                                     }
-                                </span>
-                                {
-                                    immortal
-                                        ? null
-                                        : <span className={classes.closeIcon} title="Close tab" onClick={() => !immortal && handleClose(idx)}>🗙</span>
-                                }
+                                </div>
                             </div>
-                        </div>
-                    ))
+                        ))
                 }
                 {
                     props.children
                 }
             </div>
             {
-                !outlet.current
-                    ? null
-                    : createPortal(
-                        tabs.map(({ render, meta: { keepAlive } }, idx) => {
+                outlet.current && createPortal(
+                    Object.entries(tabState)
+                        .map(([idx, tab]) => [idx, tab] as [TabIdentifier, TabDefinition<MegaTabDefinition>])
+                        .map(([idx, { meta: { keepAlive }, render }]) => {
                             if (!keepAlive && activeTab !== idx) return;
                             return (
                                 <div key={idx} style={{ display: activeTab === idx ? 'initial' : 'none' }}>
@@ -105,8 +108,8 @@ const MegaTabs: React.FC<PropsWithChildren<MegaTabsProps>> = (props) => {
                                 </div>
                             );
                         })
-                        , outlet.current
-                    )
+                    , outlet.current
+                )
             }
         </div>
     );
