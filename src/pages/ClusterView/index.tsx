@@ -39,7 +39,7 @@ const ClusterView: React.FC<ClusterViewProps> = ({ contextSource, preSelectedGvk
         setMeta(tabIdentifier, (meta) => ({ ...meta, icon: '🌍' }));
     }, [setMeta, tabIdentifier]);
 
-    const { discovery } = useClusterDiscovery(contextSource.source, contextSource.context, {
+    const { discovery, lastError: discoveryError } = useClusterDiscovery(contextSource.source, contextSource.context, {
         onStart: onClusterDiscoveryStarted,
         onFinished: onClusterDiscoveryFinished,
     });
@@ -75,6 +75,10 @@ const ClusterView: React.FC<ClusterViewProps> = ({ contextSource, preSelectedGvk
         return null;
     }
 
+    if (discoveryError !== undefined) {
+        return <EmojiHint emoji="💩"><span style={{ color: 'red' }}>{discoveryError}</span></EmojiHint>
+    }
+
     return (
         <div className={classes.container}>
             <PanelGroup direction='horizontal'>
@@ -103,6 +107,7 @@ const ClusterView: React.FC<ClusterViewProps> = ({ contextSource, preSelectedGvk
                                             ? <EmojiHint emoji="👈">Select a resource to get started.</EmojiHint>
                                             : (
                                                 <ResourceListInspector
+                                                    discovery={discovery}
                                                     gvk={activeGvk}
                                                     preSelectedNamespace={preSelectedNamespace || 'default'}
                                                     onNamespaceChanged={handleNamespaceChange}
