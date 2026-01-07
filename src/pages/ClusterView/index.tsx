@@ -1,6 +1,6 @@
 import { use, useCallback, useState } from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
-import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
+import { Group, Panel, Separator } from 'react-resizable-panels';
 import EmojiHint from '../../components/EmojiHint';
 import RotatingSpinner from '../../components/RotatingSpinner';
 import TabView from '../../components/TabView';
@@ -80,67 +80,63 @@ const ClusterView: React.FC<ClusterViewProps> = ({ contextSource, preSelectedGvk
     }
 
     return (
-        <div className={classes.container}>
-            <PanelGroup direction='horizontal'>
-                <Panel minSize={12.5} maxSize={30} defaultSize={15}>
-                    <Sidebar
-                        clusterProfile={clusterProfiles[0][0]}
-                        discovery={discovery}
-                        onGvkClicked={handleGvkClick}
-                    />
-                </Panel>
-                <PanelResizeHandle />
-                <Panel>
-                    <PanelGroup direction='vertical'>
-                        <Panel id="mainArea" minSize={20} maxSize={80}>
-                            <section className={classes.mainArea}>
-                                <ErrorBoundary
-                                    fallbackRender={(context) => (
-                                        <div role="alert">
-                                            <p>Something went wrong:</p>
-                                            <pre style={{ color: "red" }}>{JSON.stringify(context, undefined, 2)}</pre>
-                                        </div>
-                                    )}
-                                >
-                                    {
-                                        !activeGvk
-                                            ? <EmojiHint emoji="👈">Select a resource to get started.</EmojiHint>
-                                            : (
-                                                <ResourceListInspector
-                                                    discovery={discovery}
-                                                    gvk={activeGvk}
-                                                    preSelectedNamespace={preSelectedNamespace || 'default'}
-                                                    onNamespaceChanged={handleNamespaceChange}
-                                                    contextSource={contextSource}
-                                                    clusterProfile={clusterProfiles[0][0]}
-                                                    pushBottomTab={pushBottomTab}
-                                                />
-                                            )
-                                    }</ErrorBoundary>
-                            </section>
-                        </Panel>
-                        {
-                            (bottomTabs.length > 0) && (
-                                <>
-                                    <PanelResizeHandle />
-                                    <Panel id="bottomTabs" defaultSize={65}>
-                                        <section className={classes.bottomPanel}>
-                                            <TabView
-                                                activeTab={activeBottomTab}
-                                                onCloseClicked={(idx) => removeBottomTab(idx)}
-                                                setActiveTab={setActiveBottomTab}
-                                            >
-                                                {bottomTabs}
-                                            </TabView>
-                                        </section>
-                                    </Panel>
-                                </>
-                            )
-                        }
-                    </PanelGroup>
-                </Panel>
-            </PanelGroup>
-        </div>
+        <Group orientation='horizontal' className={classes.clusterViewContainer}>
+            <Panel minSize="12.5%" maxSize="30%" defaultSize="15%">
+                <Sidebar
+                    clusterProfile={clusterProfiles[0][0]}
+                    discovery={discovery}
+                    onGvkClicked={handleGvkClick}
+                />
+            </Panel>
+            <Separator className={classes.panelHandle} />
+            <Panel>
+                <Group orientation='vertical'>
+                    <Panel id="mainArea" className={classes.mainArea}>
+                        <ErrorBoundary
+                            fallbackRender={(context) => (
+                                <div role="alert">
+                                    <p>Something went wrong:</p>
+                                    <pre style={{ color: "red" }}>{JSON.stringify(context, undefined, 2)}</pre>
+                                </div>
+                            )}
+                        >
+                            {
+                                !activeGvk
+                                    ? <EmojiHint emoji="👈">Select a resource to get started.</EmojiHint>
+                                    : (
+                                        <ResourceListInspector
+                                            discovery={discovery}
+                                            gvk={activeGvk}
+                                            preSelectedNamespace={preSelectedNamespace || 'default'}
+                                            onNamespaceChanged={handleNamespaceChange}
+                                            contextSource={contextSource}
+                                            clusterProfile={clusterProfiles[0][0]}
+                                            pushBottomTab={pushBottomTab}
+                                        />
+                                    )
+                            }</ErrorBoundary>
+                    </Panel>
+                    {
+                        (bottomTabs.length > 0) && (
+                            <>
+                                <Separator className={classes.panelHandle} />
+                                <Panel id="bottomTabs" defaultSize="65%">
+                                    <section className={classes.bottomPanel}>
+                                        <TabView
+                                            activeTab={activeBottomTab}
+                                            onCloseClicked={(idx) => removeBottomTab(idx)}
+                                            setActiveTab={setActiveBottomTab}
+                                        >
+                                            {bottomTabs}
+                                        </TabView>
+                                    </section>
+                                </Panel>
+                            </>
+                        )
+                    }
+                </Group>
+            </Panel >
+        </Group >
     )
 }
 
