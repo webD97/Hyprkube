@@ -1,8 +1,6 @@
 import dayjs from "dayjs";
-import DurationPlugin, { Duration } from 'dayjs/plugin/duration';
+import { Duration } from 'dayjs/plugin/duration';
 import { useEffect, useState } from "react";
-
-dayjs.extend(DurationPlugin);
 
 function formatRelative(duration: Duration): string {
     const units = [
