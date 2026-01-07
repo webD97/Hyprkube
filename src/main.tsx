@@ -1,9 +1,17 @@
 import { invoke } from '@tauri-apps/api/core';
+import dayjs from 'dayjs';
+import durationPlugin from 'dayjs/plugin/duration';
+import localizedFormatPlugin from "dayjs/plugin/localizedFormat";
+import relativeTimePlugin from 'dayjs/plugin/relativeTime';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import AppShell from './AppShell.tsx';
 import BackendPanicListener from './components/BackendPanicListener/index.tsx';
 import './index.css';
+
+dayjs.extend(relativeTimePlugin);
+dayjs.extend(durationPlugin);
+dayjs.extend(localizedFormatPlugin);
 
 const consoleLog = console.log;
 

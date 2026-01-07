@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 export type ClusterDiscovery = {
     discovery: DiscoveryResult,
     lastError: string | undefined,
-    loading: boolean
 };
 
 export type DiscoveredGroup = {
@@ -34,10 +33,14 @@ export type AsyncDiscovery =
         removedResource: DiscoveryResource,
     };
 
-export function useClusterDiscovery(source: string | null, context: string | null): ClusterDiscovery {
+export type UseClusterDiscoveryOptions = {
+    onStart?: () => void,
+    onFinished?: () => void
+}
+
+export function useClusterDiscovery(source: string | null, context: string | null, { onStart, onFinished }: UseClusterDiscoveryOptions): ClusterDiscovery {
     const [discovery, setDiscovery] = useState<DiscoveryResult>({ gvks: {} });
     const [lastError, setLastError] = useState<string>();
-    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         if (source === null) return;
@@ -47,7 +50,7 @@ export function useClusterDiscovery(source: string | null, context: string | nul
 
         channel.onmessage = (message) => {
             if ("discoveryComplete" in message) {
-                setLoading(false);
+                onFinished?.();
             }
             else if ("removedResource" in message) {
                 const toBeRemoved = message.removedResource;
@@ -93,6 +96,7 @@ export function useClusterDiscovery(source: string | null, context: string | nul
             }
         };
 
+        onStart?.();
         invoke<void>('connect_cluster', { channel, contextSource: { provider: 'file', source, context } })
             .catch((e) => {
                 if (e === 'BackgroundTaskRejected') return;
@@ -102,9 +106,9 @@ export function useClusterDiscovery(source: string | null, context: string | nul
         return () => {
             void invoke('cleanup_channel', { channel });
         };
-    }, [context, source]);
+    }, [context, onFinished, onStart, source]);
 
     return {
-        discovery, lastError, loading
+        discovery, lastError
     };
 };
