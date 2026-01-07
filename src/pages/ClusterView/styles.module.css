@@ -5,53 +5,6 @@
     height: 100%;
 }
 
-.resourceSectionTitle {
-    font-size: 1.3rem;
-}
-
-.resourceSectionTitle:first-child {
-    margin-top: 0.25em;
-}
-
-nav {
-    height: 100%;
-    overflow: scroll;
-    border-right: 1px #333333 solid;
-    padding-left: 0.5rem;
-}
-
-nav ul {
-    margin: 0;
-}
-
-nav details summary {
-    height: 2.25em;
-    line-height: 2.25em;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-nav details>summary::before {
-    content: "📁";
-    margin: 0 .5em;
-}
-
-nav details[open]>summary::before {
-    content: "📂";
-}
-
-nav details>summary::marker,
-nav details>summary::-webkit-details-marker {
-    display: none;
-    content: "";
-}
-
-nav details summary:hover {
-    background-color: rgba(0, 0, 0, 0.4);
-    cursor: pointer;
-}
-
 .mainArea {
     height: 100%;
     overflow: scroll;

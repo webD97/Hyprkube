@@ -1,14 +1,10 @@
 import { CellContext } from "@tanstack/react-table";
 import dayjs from "dayjs";
-import LocalizedFormat from "dayjs/plugin/localizedFormat";
-import RelativeTimePlugin from "dayjs/plugin/relativeTime";
 import React from "react";
 import { DisplayableResource, ViewComponent } from "../../hooks/useResourceWatch";
 import RelativeTime from "../RelativeTime";
 import styles from './CustomCell.module.css';
 
-dayjs.extend(RelativeTimePlugin);
-dayjs.extend(LocalizedFormat);
 
 export const CustomCell: React.FC<CellContext<[string, DisplayableResource], unknown>> = (props) => {
     const component = (props.getValue() as ViewComponent);

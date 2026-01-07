@@ -9,14 +9,13 @@ import getResourceYaml from "../../api/getResourceYaml";
 import listResourceViews, { ResourceViewDef } from "../../api/listResourceViews";
 import { popupKubernetesResourceMenu } from "../../api/popupKubernetesResourceMenu";
 import setDefaultNamespace from "../../api/setDefaultNamespace";
-import EmojiHint from "../../components/EmojiHint";
 import LogPanel from "../../components/LogPanel";
 import ResourceList from "../../components/ResourceList";
 import { Tab } from "../../components/TabView";
 import { TabElement } from "../../components/TabView/hooks";
 import HyprkubeTerminal from "../../components/Terminal";
 import { MegaTabContext } from "../../contexts/MegaTab";
-import { DiscoveryResult, useClusterDiscovery } from "../../hooks/useClusterDiscovery";
+import { DiscoveryResult } from "../../hooks/useClusterDiscovery";
 import useClusterNamespaces from "../../hooks/useClusterNamespaces";
 import { KubeContextSource } from "../../hooks/useContextDiscovery";
 import useResourceWatch, { DisplayableResource } from "../../hooks/useResourceWatch";
@@ -29,6 +28,7 @@ export interface ResourceListInspectorProps {
     preSelectedNamespace: string,
     contextSource: KubeContextSource,
     clusterProfile: string,
+    discovery: DiscoveryResult,
     pushBottomTab: (tab: TabElement) => void,
     onNamespaceChanged?: (namespace: string) => void,
 }
@@ -43,6 +43,7 @@ const ResourceListInspector: React.FC<ResourceListInspectorProps> = (props) => {
         gvk,
         contextSource,
         clusterProfile,
+        discovery,
         pushBottomTab,
         preSelectedNamespace,
         onNamespaceChanged = () => undefined
@@ -50,7 +51,7 @@ const ResourceListInspector: React.FC<ResourceListInspectorProps> = (props) => {
 
     const [availableViews, setAvailableViews] = useState<ResourceViewDef[]>([]);
     const [selectedView, setSelectedView] = useState("");
-    const { discovery, lastError } = useClusterDiscovery(contextSource.source, contextSource.context);
+    // const { discovery, lastError } = useClusterDiscovery(contextSource.source, contextSource.context);
     const allNamespaces = useClusterNamespaces(contextSource);
     const [selectedNamespace, setSelectedNamespace] = useState(preSelectedNamespace);
     const [resourceDefaultNamespace, setResourceDefaultNamespace] = useState('default');
@@ -201,10 +202,6 @@ const ResourceListInspector: React.FC<ResourceListInspectorProps> = (props) => {
 
     const resourceScope = findResourceScope(discovery, gvk);
     const resourceNamePlural = findResourcePlural(discovery, gvk);
-
-    if (lastError !== undefined) {
-        return <EmojiHint emoji="💩"><span style={{ color: 'red' }}>{lastError}</span></EmojiHint>
-    }
 
     return (
         <div className={classes.container}>

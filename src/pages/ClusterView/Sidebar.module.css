@@ -1,0 +1,46 @@
+.sidebarContainer {
+    height: 100%;
+    overflow: scroll;
+    border-right: 1px #333333 solid;
+    padding-left: 0.5rem;
+}
+
+.sidebarContainer ul {
+    margin: 0;
+}
+
+.sidebarContainer details summary {
+    height: 2.25em;
+    line-height: 2.25em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.sidebarContainer details>summary::before {
+    content: "📁";
+    margin: 0 .5em;
+}
+
+.sidebarContainer details[open]>summary::before {
+    content: "📂";
+}
+
+.sidebarContainer details>summary::marker,
+.sidebarContainer details>summary::-webkit-details-marker {
+    display: none;
+    content: "";
+}
+
+.sidebarContainer details summary:hover {
+    background-color: rgba(0, 0, 0, 0.4);
+    cursor: pointer;
+}
+
+.resourceSectionTitle {
+    font-size: 1.3rem;
+}
+
+.resourceSectionTitle:first-child {
+    margin-top: 0.25em;
+}
