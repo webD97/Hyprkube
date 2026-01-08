@@ -53,10 +53,10 @@ const ClusterCard: React.FC<ClusterCardProps> = (props) => {
             {
                 componentsStatus.length > 0 && (
                     <section>
-                        <div className={styles.apps}>
+                        <div className={styles.componentStatusContainer}>
                             {
                                 componentsStatus.map(({ label, status }, idx) => (
-                                    <div key={idx} className={styles.appSummary}>
+                                    <div key={idx} className={styles.componentStatus}>
                                         <StatusBox label={label} status={status} />
                                     </div>
                                 ))

@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { invoke } from '@tauri-apps/api/core';
 import dayjs from 'dayjs';
 import durationPlugin from 'dayjs/plugin/duration';
@@ -29,11 +30,15 @@ console.log = function (...data: unknown[]) {
   consoleLog(...data);
 }
 
+const queryClient = new QueryClient();
+
 createRoot(document.getElementById('root')!).render(
   <>
     <BackendPanicListener />
     <StrictMode>
-      <AppShell />
+      <QueryClientProvider client={queryClient}>
+        <AppShell />
+      </QueryClientProvider>
     </StrictMode>
   </>,
 );

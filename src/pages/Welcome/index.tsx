@@ -1,6 +1,7 @@
 import { use, useMemo } from "react";
 import ClusterCard from "../../components/ClusterCard";
 import MegaTabsContext from "../../contexts/MegaTabs";
+import useApiServerGitVersion from "../../hooks/useApiServerGitVersion";
 import { KubeContextSource, useContextDiscovery } from "../../hooks/useContextDiscovery";
 import { capitalizeFirstLetter } from "../../utils/strings";
 import ClusterView from "../ClusterView";
@@ -52,9 +53,8 @@ export default function Welcome() {
                             <div className={classes.clusterList}>
                                 {
                                     contextGroup.contexts.map((contextSource, idx) => (
-                                        <ClusterCard key={idx}
-                                            clusterName={capitalizeFirstLetter(contextSource.context)}
-                                            clusterVersion="v1.34.2+k3s1"
+                                        <ClusterCardWithInfo key={idx}
+                                            contextSource={contextSource}
                                             onConnect={() => replaceActiveTab(
                                                 { title: capitalizeFirstLetter(contextSource.context), icon: '🌍', keepAlive: true },
                                                 () => <ClusterView contextSource={contextSource} />
@@ -70,3 +70,30 @@ export default function Welcome() {
         </div>
     );
 };
+
+interface ClusterCardWithInfoProps {
+    contextSource: KubeContextSource,
+    onConnect: () => void
+}
+
+function ClusterCardWithInfo({ contextSource, onConnect }: ClusterCardWithInfoProps) {
+    const {
+        data: version,
+        isSuccess,
+        isError, error, isPending
+    } = useApiServerGitVersion(contextSource);
+
+    if (isError) {
+        console.log(error)
+    }
+
+    const versionString = isPending ? '…' : isError ? `❌ ${error.toString().split(':')[1]}` : isSuccess ? version : '?';
+
+    return (
+        <ClusterCard
+            clusterName={capitalizeFirstLetter(contextSource.context)}
+            clusterVersion={versionString}
+            onConnect={onConnect}
+        />
+    );
+}

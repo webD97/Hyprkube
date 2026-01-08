@@ -45,44 +45,28 @@
     padding-left: 2em;
 }
 
-.clusterCardContainer>section:not(:last-child) {
-    margin-bottom: 0.5rem;
-}
-
-.apps {
-    display: flex;
-    justify-content: space-evenly;
-    margin-bottom: 1em;
-}
-
-.appSummary {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    margin-right: 1rem;
-}
-
-.appName {
-    font-size: 1rem;
-}
-
-.appSummary {
-    font-size: 0.75em;
-}
-
-.clusterCardActions {
-    display: flex;
-    border-top: 1px #666666 solid;
-}
-
-.clusterCardActions>button {
-    flex: 1 0 0;
-}
-
 .clusterVersion {
     opacity: 0.5;
 }
 
 .cursorPointer {
     cursor: pointer;
+}
+
+.clusterCardContainer>section:not(:last-child) {
+    margin-bottom: 0.5rem;
+}
+
+.componentStatusContainer {
+    display: flex;
+    justify-content: space-evenly;
+    margin-bottom: 1em;
+}
+
+.componentStatus {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-right: 1rem;
+    font-size: 0.75em;
 }
