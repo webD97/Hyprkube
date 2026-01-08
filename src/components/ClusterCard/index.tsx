@@ -1,36 +1,42 @@
-import { ReactNode } from 'react';
+import { CSSProperties, ReactNode } from 'react';
 import styles from './styles.module.css';
+
+export type Component = { label: string, status: ComponentStatus };
+export type ComponentStatus = 'ok' | 'warning' | 'error' | 'unknown';
 
 export interface ClusterCardProps {
     clusterName: string,
     clusterVersion: string,
-    actions: { label: string, onTrigger: () => void, onAuxTrigger?: () => void }[],
     statusStrings?: ReactNode[],
-    componentsStatus?: { label: string, color: string }[],
-    availableProfiles?: string[],
-    selectedProfile?: string
-    onProfileChanged?: (profile: string) => void
+    componentsStatus?: Component[],
+    onConnect?: () => void,
+    onSettingsClicked?: () => void,
+    style?: CSSProperties
 }
 
 const ClusterCard: React.FC<ClusterCardProps> = (props) => {
-    const { clusterName, clusterVersion, actions: quickActions, statusStrings = [], componentsStatus = [], availableProfiles = [], selectedProfile, onProfileChanged = () => undefined } = props;
+    const {
+        clusterName,
+        clusterVersion,
+        statusStrings = [],
+        componentsStatus = [],
+        onConnect,
+        onSettingsClicked,
+        style
+    } = props;
 
-    return <>
-        <div className={styles.clusterCardContainer}>
+    return (
+        <div className={styles.clusterCardContainer} style={style}>
             <section className={styles.clusterCardHeader}>
-                <div>
+                <div onClick={onConnect} className={`${styles.cursorPointer} ${styles.titleArea}`}>
                     <h6>{clusterName}</h6>
-                    <code>{clusterVersion}</code>
+                    <code className={styles.clusterVersion}>{clusterVersion}</code>
                 </div>
                 {
-                    availableProfiles.length > 0 && (
-                        <select onChange={(e) => onProfileChanged(e.target.value)} value={selectedProfile}>
-                            {
-                                availableProfiles.map(profile => (
-                                    <option key={profile} value={profile}>{profile}</option>
-                                ))
-                            }
-                        </select>
+                    onSettingsClicked && (
+                        <div className={styles.buttonArea}>
+                            <button className={styles.settingsButton} onClick={onSettingsClicked}>⚙️</button>
+                        </div>
                     )
                 }
             </section>
@@ -48,10 +54,9 @@ const ClusterCard: React.FC<ClusterCardProps> = (props) => {
                     <section>
                         <div className={styles.apps}>
                             {
-                                componentsStatus.map(({ label, color }, idx) => (
+                                componentsStatus.map(({ label, status }, idx) => (
                                     <div key={idx} className={styles.appSummary}>
-                                        <span className={styles.appName}>{label}</span>
-                                        <span className={styles.appStatusBox} style={{ backgroundColor: color }}>&nbsp;</span>
+                                        <span title={label} className={styles.appStatusBox} data-status={status}>&nbsp;</span>
                                     </div>
                                 ))
                             }
@@ -59,15 +64,8 @@ const ClusterCard: React.FC<ClusterCardProps> = (props) => {
                     </section>
                 )
             }
-            <section className={styles.clusterCardActions}>
-                {
-                    quickActions.map(({ label, onTrigger, onAuxTrigger }) => (
-                        <button key={label} onClick={onTrigger} onAuxClick={onAuxTrigger}>{label}</button>
-                    ))
-                }
-            </section>
         </div>
-    </>;
+    );
 }
 
 export default ClusterCard;
