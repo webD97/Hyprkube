@@ -1,0 +1,27 @@
+.statusBox {
+    width: 1em;
+    height: 1em;
+    border-radius: 20%;
+    transition: transform .2s;
+}
+
+.statusBox:hover {
+    transform: scale(1.2);
+    transition: transform .2s;
+}
+
+.statusBox[data-status="ok"] {
+    background-color: forestgreen;
+}
+
+.statusBox[data-status="warning"] {
+    background-color: orange;
+}
+
+.statusBox[data-status="error"] {
+    background-color: red;
+}
+
+.statusBox[data-status="unknown"] {
+    background-color: darkgray;
+}

@@ -66,36 +66,8 @@
     font-size: 1rem;
 }
 
-.appSummary:last-child {
-    margin-right: initial;
-}
-
-.appStatusBox {
-    width: 0.9em;
-    height: 0.9em;
-    border-radius: 20%;
-    transition: transform .2s;
-}
-
-.appStatusBox:hover {
-    transform: scale(1.2);
-    transition: transform .2s;
-}
-
-.appStatusBox[data-status="ok"] {
-    background-color: forestgreen;
-}
-
-.appStatusBox[data-status="warning"] {
-    background-color: orange;
-}
-
-.appStatusBox[data-status="error"] {
-    background-color: red;
-}
-
-.appStatusBox[data-status="unknown"] {
-    background-color: darkgray;
+.appSummary {
+    font-size: 0.75em;
 }
 
 .clusterCardActions {

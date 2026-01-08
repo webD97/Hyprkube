@@ -14,7 +14,7 @@ type GroupedContextSources = {
 
 export default function Welcome() {
     const contextSources = useContextDiscovery();
-    const { pushTab, switchTab, replaceActiveTab } = use(MegaTabsContext)!;
+    const { replaceActiveTab } = use(MegaTabsContext)!;
 
     const groupedContextSources = useMemo(() => {
         const groupedContextSources: GroupedContextSources = {};

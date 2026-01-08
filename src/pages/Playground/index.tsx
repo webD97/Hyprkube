@@ -21,8 +21,7 @@ const commanders: Commander[] = [
 
 
 
-// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-const controllers: Commander[] = new Array(30).fill(0).map((_i, idx) => ({
+const controllers: Commander[] = new Array(30).fill(0).map((_, idx) => ({
     name: `Controller Prod ${String(idx + 1).padStart(3, '0')}`, components: [
         { status: 'ok', label: 'Homeassistant' },
         { status: 'ok', label: 'PaperlessNGX' },

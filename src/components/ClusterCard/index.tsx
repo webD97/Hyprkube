@@ -1,4 +1,5 @@
 import { CSSProperties, ReactNode } from 'react';
+import StatusBox from '../StatusBox';
 import styles from './styles.module.css';
 
 export type Component = { label: string, status: ComponentStatus };
@@ -56,7 +57,7 @@ const ClusterCard: React.FC<ClusterCardProps> = (props) => {
                             {
                                 componentsStatus.map(({ label, status }, idx) => (
                                     <div key={idx} className={styles.appSummary}>
-                                        <span title={label} className={styles.appStatusBox} data-status={status}>&nbsp;</span>
+                                        <StatusBox label={label} status={status} />
                                     </div>
                                 ))
                             }
