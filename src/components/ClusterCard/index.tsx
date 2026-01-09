@@ -1,4 +1,4 @@
-import { CSSProperties, ReactNode } from 'react';
+import { CSSProperties, forwardRef, ReactNode } from 'react';
 import StatusBox from '../StatusBox';
 import styles from './styles.module.css';
 
@@ -15,7 +15,7 @@ export interface ClusterCardProps {
     style?: CSSProperties
 }
 
-const ClusterCard: React.FC<ClusterCardProps> = (props) => {
+const ClusterCard = forwardRef<HTMLDivElement, ClusterCardProps>(function ClusterCard(props, ref) {
     const {
         clusterName,
         clusterVersion,
@@ -27,7 +27,7 @@ const ClusterCard: React.FC<ClusterCardProps> = (props) => {
     } = props;
 
     return (
-        <div className={styles.clusterCardContainer} style={style}>
+        <div className={styles.clusterCardContainer} style={style} ref={ref}>
             <section className={styles.clusterCardHeader}>
                 <div onClick={onConnect} className={`${styles.cursorPointer} ${styles.titleArea}`}>
                     <h6>{clusterName}</h6>
@@ -67,6 +67,6 @@ const ClusterCard: React.FC<ClusterCardProps> = (props) => {
             }
         </div>
     );
-}
+});
 
 export default ClusterCard;
