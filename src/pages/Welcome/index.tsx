@@ -1,8 +1,9 @@
-import { use, useMemo } from "react";
+import { use, useMemo, useRef } from "react";
 import ClusterCard from "../../components/ClusterCard";
 import MegaTabsContext from "../../contexts/MegaTabs";
 import useApiServerGitVersion from "../../hooks/useApiServerGitVersion";
 import { KubeContextSource, useContextDiscovery } from "../../hooks/useContextDiscovery";
+import useIntersectionObserver from "../../hooks/useIntersectionObserver";
 import { capitalizeFirstLetter } from "../../utils/strings";
 import ClusterView from "../ClusterView";
 import classes from './styles.module.css';
@@ -77,11 +78,14 @@ interface ClusterCardWithInfoProps {
 }
 
 function ClusterCardWithInfo({ contextSource, onConnect }: ClusterCardWithInfoProps) {
+    const ref = useRef(null);
+    const visible = useIntersectionObserver(ref);
+
     const {
         data: version,
         isSuccess,
         isError, error, isPending
-    } = useApiServerGitVersion(contextSource);
+    } = useApiServerGitVersion(contextSource, visible);
 
     if (isError) {
         console.log(error)
@@ -90,7 +94,7 @@ function ClusterCardWithInfo({ contextSource, onConnect }: ClusterCardWithInfoPr
     const versionString = isPending ? '…' : isError ? `❌ ${error.toString().split(':')[1]}` : isSuccess ? version : '?';
 
     return (
-        <ClusterCard
+        <ClusterCard ref={ref}
             clusterName={capitalizeFirstLetter(contextSource.context)}
             clusterVersion={versionString}
             onConnect={onConnect}
