@@ -101,6 +101,7 @@ pub fn run() {
             cluster_profiles::set_default_namespace,
             frontend_commands::log_stdout,
             crate::cluster_discovery::connect_cluster,
+            crate::cluster_discovery::get_apiserver_gitversion,
             frontend_commands::decode_secret_key,
             frontend_commands::list_secret_keys,
             resource_menu::popup_kubernetes_resource_menu

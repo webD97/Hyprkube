@@ -1,0 +1,16 @@
+.welcomeContainer {
+    width: 50%;
+    height: 100%;
+    margin: 0 auto;
+    padding: 5vh 0;
+}
+
+.welcomeContainer h2 {
+    text-align: center;
+}
+
+.clusterList {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1.5em;
+}
