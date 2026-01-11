@@ -23,7 +23,7 @@ serde_json = "1.0.148"
 serde = { version = "1.0.228", features = ["derive"] }
 tauri = { version = "2.9.5", features = [] }
 kube = { version = "2.0.1", features = ["runtime", "client", "ws", "gzip"] }
-k8s-openapi = { version = "0.26.1", features = ["v1_34"] }
+k8s-openapi = { version = "0.27.0", features = ["v1_34"] }
 futures = { version = "0.3.31" }
 tokio = { version = "1.49.0" }
 tokio-util = { version = "0.7.18", features = ["compat"] }
