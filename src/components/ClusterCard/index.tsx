@@ -12,7 +12,8 @@ export interface ClusterCardProps {
     componentsStatus?: Component[],
     onConnect?: () => void,
     onSettingsClicked?: () => void,
-    style?: CSSProperties
+    style?: CSSProperties,
+    inert?: boolean
 }
 
 const ClusterCard = forwardRef<HTMLDivElement, ClusterCardProps>(function ClusterCard(props, ref) {
@@ -23,13 +24,14 @@ const ClusterCard = forwardRef<HTMLDivElement, ClusterCardProps>(function Cluste
         componentsStatus = [],
         onConnect,
         onSettingsClicked,
-        style
+        style,
+        inert
     } = props;
 
     return (
         <div className={styles.clusterCardContainer} style={style} ref={ref}>
             <section className={styles.clusterCardHeader}>
-                <div onClick={onConnect} className={`${styles.cursorPointer} ${styles.titleArea}`}>
+                <div onClick={onConnect} className={`${styles.cursorPointer} ${styles.titleArea}`} inert={inert}>
                     <h6>{clusterName}</h6>
                     <code className={styles.clusterVersion}>{clusterVersion}</code>
                 </div>

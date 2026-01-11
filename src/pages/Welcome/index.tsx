@@ -69,7 +69,7 @@ function ClusterCardWithInfo({ contextSource, onConnect }: ClusterCardWithInfoPr
     const versionString = isPending ? '…' : isError ? `❌ ${error.toString().split(':')[1]}` : isSuccess ? version : '?';
 
     return (
-        <ClusterCard ref={ref}
+        <ClusterCard ref={ref} inert={isError || isPending}
             clusterName={capitalizeFirstLetter(contextSource.context)}
             clusterVersion={versionString}
             onConnect={onConnect}
