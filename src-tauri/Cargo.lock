@@ -1713,7 +1713,7 @@ dependencies = [
  "chrono",
  "dirs",
  "futures",
- "k8s-openapi",
+ "k8s-openapi 0.27.0",
  "kube",
  "rand 0.9.2",
  "rhai",
@@ -2011,6 +2011,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "jiff"
+version = "0.2.18"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e67e8da4c49d6d9909fe03361f9b620f58898859f5c7aded68351e85e71ecf50"
+dependencies = [
+ "jiff-static",
+ "portable-atomic",
+ "portable-atomic-util",
+ "serde_core",
+]
+
+[[package]]
+name = "jiff-static"
+version = "0.2.18"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e0c84ee7f197eca9a86c6fd6cb771e55eb991632f15f2bc3ca6ec838929e6e78"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.111",
+]
+
+[[package]]
 name = "jni"
 version = "0.21.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2112,6 +2135,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "k8s-openapi"
+version = "0.27.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "05a6d6f3611ad1d21732adbd7a2e921f598af6c92d71ae6e2620da4b67ee1f0d"
+dependencies = [
+ "base64 0.22.1",
+ "jiff",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "keyboard-types"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2128,7 +2163,7 @@ version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "48e7bb0b6a46502cc20e4575b6ff401af45cfea150b34ba272a3410b78aa014e"
 dependencies = [
- "k8s-openapi",
+ "k8s-openapi 0.26.1",
  "kube-client",
  "kube-core",
  "kube-runtime",
@@ -2154,7 +2189,7 @@ dependencies = [
  "hyper-timeout",
  "hyper-util",
  "jsonpath-rust",
- "k8s-openapi",
+ "k8s-openapi 0.26.1",
  "kube-core",
  "pem",
  "rustls",
@@ -2182,7 +2217,7 @@ dependencies = [
  "form_urlencoded",
  "http",
  "json-patch 4.1.0",
- "k8s-openapi",
+ "k8s-openapi 0.26.1",
  "serde",
  "serde-value",
  "serde_json",
@@ -2204,7 +2239,7 @@ dependencies = [
  "hashbrown 0.15.5",
  "hostname",
  "json-patch 4.1.0",
- "k8s-openapi",
+ "k8s-openapi 0.26.1",
  "kube-client",
  "parking_lot",
  "pin-project",
@@ -3220,6 +3255,15 @@ name = "portable-atomic"
 version = "1.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f84267b20a16ea918e43c6a88433c2d54fa145c92a811b5b047ccbe153674483"
+
+[[package]]
+name = "portable-atomic-util"
+version = "0.2.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d8a2f0d8d040d7848a709caf78912debcc3f33ee4b3cac47d73d1e1069e83507"
+dependencies = [
+ "portable-atomic",
+]
 
 [[package]]
 name = "potential_utf"
