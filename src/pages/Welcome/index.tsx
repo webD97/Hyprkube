@@ -1,12 +1,13 @@
 import { use, useMemo, useRef } from "react";
 import ClusterCard from "../../components/ClusterCard";
 import MegaTabsContext from "../../contexts/MegaTabs";
-import useApiServerGitVersion from "../../hooks/useApiServerGitVersion";
 import { KubeContextSource, useContextDiscovery } from "../../hooks/useContextDiscovery";
 import useIntersectionObserver from "../../hooks/useIntersectionObserver";
 import { capitalizeFirstLetter } from "../../utils/strings";
 import ClusterView from "../ClusterView";
 import classes from './styles.module.css';
+import { useQuery } from "@tanstack/react-query";
+import getApiServerGitVersionQuery from "../../queries/getApiServerGitVersion";
 
 type GroupedContextSources = {
     [key: string]: {
@@ -85,11 +86,11 @@ function ClusterCardWithInfo({ contextSource, onConnect }: ClusterCardWithInfoPr
         data: version,
         isSuccess,
         isError, error, isPending
-    } = useApiServerGitVersion(contextSource, visible);
-
-    if (isError) {
-        console.log(error)
-    }
+    } = useQuery({
+        ...getApiServerGitVersionQuery(contextSource),
+        enabled: (query) => visible && !query.state.error,
+        retry: 0,
+    });
 
     const versionString = isPending ? '…' : isError ? `❌ ${error.toString().split(':')[1]}` : isSuccess ? version : '?';
 
