@@ -171,6 +171,23 @@ pub async fn connect_cluster(
     Ok(())
 }
 
+#[tauri::command]
+#[tracing::instrument(skip_all, fields(request_id = tracing::field::Empty))]
+pub async fn get_apiserver_gitversion(context_source: KubeContextSource) -> Result<String, String> {
+    crate::internal::tracing::set_span_request_id();
+
+    let client = make_client(&context_source)
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let version = client
+        .apiserver_version()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    Ok(version.git_version)
+}
+
 async fn make_client(context_source: &KubeContextSource) -> anyhow::Result<kube::Client> {
     if context_source.provider != "file" {
         anyhow::bail!(
