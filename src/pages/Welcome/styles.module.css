@@ -1,5 +1,5 @@
 .welcomeContainer {
-    width: 50%;
+    max-width: 50%;
     height: 100%;
     margin: 0 auto;
     padding: 5vh 0;
@@ -10,7 +10,17 @@
 }
 
 .clusterList {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    display: flex;
+    flex-wrap: wrap;
     gap: 1.5em;
+    justify-content: flex-start;
+}
+
+.clusterList:not(:has(:nth-child(3))) {
+    justify-content: center;
+}
+
+.clusterList>* {
+    flex: 0 0 calc((100% - 2 * 1.5em) / 3);
+    max-width: 33%;
 }
