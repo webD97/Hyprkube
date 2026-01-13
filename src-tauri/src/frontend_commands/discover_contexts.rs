@@ -69,6 +69,7 @@ pub async fn discover_contexts(
                     }
                 }
             }
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
             Err(e) => {
                 warn!(
                     "Failed to scan directory {:?} for kubeconfigs: {e}",
@@ -79,4 +80,43 @@ pub async fn discover_contexts(
     }
 
     Ok(contexts)
+}
+
+#[tauri::command]
+#[tracing::instrument(skip_all, fields(request_id = tracing::field::Empty))]
+pub async fn get_kubeconfig_yaml(context_source: KubeContextSource) -> Result<String, String> {
+    crate::internal::tracing::set_span_request_id();
+
+    if context_source.provider != "file" {
+        return Err("Unsupport provider".to_owned());
+    }
+
+    let path = context_source.source;
+
+    let file_contents = tokio::fs::read_to_string(path)
+        .await
+        .map_err(|e| e.to_string())?;
+
+    Ok(file_contents)
+}
+
+#[tauri::command]
+#[tracing::instrument(skip_all, fields(request_id = tracing::field::Empty))]
+pub async fn write_kubeconfig_yaml(
+    context_source: KubeContextSource,
+    yaml: String,
+) -> Result<(), String> {
+    crate::internal::tracing::set_span_request_id();
+
+    if context_source.provider != "file" {
+        return Err("Unsupport provider".to_owned());
+    }
+
+    let path = context_source.source;
+
+    tokio::fs::write(path, yaml)
+        .await
+        .map_err(|e| e.to_string())?;
+
+    Ok(())
 }
