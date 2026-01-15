@@ -21,6 +21,10 @@
     visibility: visible;
 }
 
+.clusterCardContainer.error {
+    border-color: firebrick;
+}
+
 .clusterCardHeader {
     display: flex;
     align-items: center;

@@ -11,7 +11,7 @@ import ClusterView from "../ClusterView";
 import classes from './styles.module.css';
 
 export default function Welcome() {
-    const { replaceActiveTab } = use(MegaTabsContext)!;
+    const { replaceActiveTab, pushTab } = use(MegaTabsContext)!;
 
     const contextSources = useQuery({
         ...discoverContextsQuery(),
@@ -35,6 +35,10 @@ export default function Welcome() {
                                                 { title: capitalizeFirstLetter(contextSource.context), icon: '🌍', keepAlive: true },
                                                 () => <ClusterView contextSource={contextSource} />
                                             )}
+                                            onConnectNewTab={() => pushTab(
+                                                { title: capitalizeFirstLetter(contextSource.context), icon: '🌍', keepAlive: true },
+                                                () => <ClusterView contextSource={contextSource} />
+                                            )}
                                         />
                                     ))
                                 }
@@ -49,10 +53,12 @@ export default function Welcome() {
 
 interface ClusterCardWithInfoProps {
     contextSource: KubeContextSource,
-    onConnect: () => void
+    onConnect: () => void,
+    onConnectNewTab: () => void,
+    onSettingsClicked?: () => void
 }
 
-function ClusterCardWithInfo({ contextSource, onConnect }: ClusterCardWithInfoProps) {
+function ClusterCardWithInfo({ contextSource, onConnect, onConnectNewTab, onSettingsClicked }: ClusterCardWithInfoProps) {
     const ref = useRef(null);
     const visible = useIntersectionObserver(ref);
 
@@ -62,17 +68,20 @@ function ClusterCardWithInfo({ contextSource, onConnect }: ClusterCardWithInfoPr
         isError, error, isPending
     } = useQuery({
         ...getApiServerGitVersionQuery(contextSource),
-        enabled: (query) => visible && !query.state.error,
-        retry: 0,
+        enabled: visible,
+        retryDelay: 1000,
+        retry: 2
     });
 
     const versionString = isPending ? '…' : isError ? `❌ ${error.toString().split(':')[1]}` : isSuccess ? version : '?';
 
     return (
-        <ClusterCard ref={ref} inert={isError || isPending}
+        <ClusterCard ref={ref} inert={isError} error={isError}
             clusterName={capitalizeFirstLetter(contextSource.context)}
             clusterVersion={versionString}
-            onConnect={onConnect}
+            onClick={onConnect}
+            onAuxClick={onConnectNewTab}
+            onSettingsClicked={onSettingsClicked}
         />
     );
 }
