@@ -27,7 +27,7 @@ k8s-openapi = { version = "0.26.1", features = ["v1_34"] }
 futures = { version = "0.3.31" }
 tokio = { version = "1.49.0" }
 tokio-util = { version = "0.7.18", features = ["compat"] }
-thiserror = "2.0.17"
+thiserror = "2.0.18"
 uuid = { version = "1.19.0", features = ["v4"] }
 rhai = { version = "1.23.6", features = [
     "serde",
