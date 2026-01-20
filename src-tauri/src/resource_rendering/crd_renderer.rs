@@ -155,7 +155,7 @@ impl ResourceRenderer for CrdRenderer {
                     .metadata
                     .creation_timestamp
                     .as_ref()
-                    .map_or("".into(), |v| v.0.to_rfc3339())
+                    .map_or("".into(), |v| v.0.to_string())
                     .to_owned(),
                 properties: None,
             })));

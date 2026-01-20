@@ -59,7 +59,7 @@ impl ResourceRenderer for FallbackRenderer {
                     .metadata
                     .clone()
                     .creation_timestamp
-                    .map_or("".into(), |v| v.0.to_rfc3339()),
+                    .map_or("".into(), |v| v.0.to_string()),
                 properties: None,
             })),
         ])
