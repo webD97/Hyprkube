@@ -1,6 +1,7 @@
 import { emit } from "@tauri-apps/api/event";
 import { ErrorBoundary, FallbackProps } from "react-error-boundary";
 
+import { App as AntApp, ConfigProvider, theme } from "antd";
 import { use, useRef } from "react";
 import classes from './AppShell.module.css';
 import { DevModeOnly } from "./components/DevModeOnly";
@@ -89,10 +90,27 @@ const AppShell: React.FC = () => {
         }
     ]);
 
+    const { darkAlgorithm } = theme;
+
     return (
-        <MegaTabsContext.Provider value={tabs}>
-            <Layout />
-        </MegaTabsContext.Provider>
+        <ConfigProvider
+            theme={{
+                algorithm: darkAlgorithm,
+                token: {
+                    colorPrimary: '#1e90ff',
+                    colorBgBase: '#1e1e1e',
+                    // This is the default set of antd (https://ant.design/docs/spec/font#font-family) but with 'Noto Sans' and Arial flipped
+                    // This is necessary because on my KDE Arial resolves to 'Liberation Sans' instead of being skipped.
+                    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', 'Noto Sans', Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji'",
+                }
+            }}
+        >
+            <AntApp>
+                <MegaTabsContext.Provider value={tabs}>
+                    <Layout />
+                </MegaTabsContext.Provider>
+            </AntApp>
+        </ConfigProvider>
     );
 };
 

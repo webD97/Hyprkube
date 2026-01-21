@@ -7,7 +7,7 @@
 
 .topBar {
     display: flex;
-    align-items: stretch;
+    align-items: center;
 }
 
 .topBar>* {

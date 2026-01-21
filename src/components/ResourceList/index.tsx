@@ -18,10 +18,10 @@ import {
     VisibilityState
 } from '@tanstack/react-table';
 import { LogicalPosition } from "@tauri-apps/api/dpi";
+import { Checkbox, Input, Space } from "antd";
 import React from "react";
 import { createPortal } from "react-dom";
 import { Gvk } from "../../model/k8s";
-import Checkbox from "../Checkbox";
 import { CustomCell } from "./CustomCell";
 
 type _TData = [string, DisplayableResource];
@@ -64,6 +64,7 @@ function createColumns(columnDefinitions: ColumnDefinition[]) {
             return <Checkbox
                 checked={table.getIsAllPageRowsSelected()}
                 onChange={table.getToggleAllRowsSelectedHandler()}
+                onClick={(e) => e.stopPropagation()}
             />
         },
         cell({ row }) {
@@ -71,6 +72,7 @@ function createColumns(columnDefinitions: ColumnDefinition[]) {
                 checked={row.getIsSelected()}
                 disabled={!row.getCanSelect()}
                 onChange={row.getToggleSelectedHandler()}
+                onClick={(e) => e.stopPropagation()}
             />
         },
     };
@@ -191,18 +193,20 @@ const ResourceList: React.FC<ResourceViewProps> = (props) => {
                                                         <th key={header.id} colSpan={header.colSpan}>
                                                             {
                                                                 header.column.getCanFilter() && (
-                                                                    <input type="text"
-                                                                        value={columnFilters.find(({ id }) => id === header.column.id)?.value as string ?? ''}
-                                                                        onChange={(e) => table.setColumnFilters((currentFilters) => {
-                                                                            const columnId = columns.find(({ id }) => id === header.column.id)?.id;
-                                                                            if (!columnId) return currentFilters;
+                                                                    <Space.Compact>
+                                                                        <Input type="search" size="small"
+                                                                            value={columnFilters.find(({ id }) => id === header.column.id)?.value as string ?? ''}
+                                                                            onChange={(e) => table.setColumnFilters((currentFilters) => {
+                                                                                const columnId = columns.find(({ id }) => id === header.column.id)?.id;
+                                                                                if (!columnId) return currentFilters;
 
-                                                                            return [
-                                                                                ...currentFilters.filter(({ id }) => id !== columnId),
-                                                                                { id: columnId, value: e.target.value }
-                                                                            ];
-                                                                        })}
-                                                                    />
+                                                                                return [
+                                                                                    ...currentFilters.filter(({ id }) => id !== columnId),
+                                                                                    { id: columnId, value: e.target.value }
+                                                                                ];
+                                                                            })}
+                                                                        />
+                                                                    </Space.Compact>
                                                                 )
                                                             }
                                                         </th>
@@ -215,19 +219,22 @@ const ResourceList: React.FC<ResourceViewProps> = (props) => {
                             <tbody>
                                 {
                                     table.getRowModel().rows.map((row) => {
+                                        const filters = Object.values(row.columnFilters)
+                                        const collapsed = filters.length > 0 && filters.findIndex(c => c === true) === -1;
                                         return (
-                                            <tr key={row.id}
-                                                onClick={() => onResourceClicked(gvk, row.original[0])}
+                                            <tr key={row.id} className={collapsed ? styles.collapsed : undefined}
                                                 onContextMenu={(e) => {
                                                     e.preventDefault();
                                                     onResourceContextMenu(gvk, row.original[0], new LogicalPosition(e.clientX, e.clientY));
                                                 }}
                                             >
                                                 {
-                                                    row.getVisibleCells().map((cell) => {
+                                                    row.getVisibleCells().map((cell, idx) => {
                                                         return (
-                                                            <td key={cell.id}>
-                                                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                                            <td key={cell.id} onClick={idx === 0 ? undefined : () => onResourceClicked(gvk, row.original[0])}>
+                                                                <div>
+                                                                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                                                </div>
                                                             </td>
                                                         )
                                                     })}

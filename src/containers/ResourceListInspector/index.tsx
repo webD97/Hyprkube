@@ -3,6 +3,7 @@ import { Gvk } from "../../model/k8s";
 
 import { EventCallback } from "@tauri-apps/api/event";
 import { confirm } from '@tauri-apps/plugin-dialog';
+import { Button, Select } from "antd";
 import { deleteResource } from "../../api/deleteResource";
 import getDefaultNamespace from "../../api/getDefaultNamespace";
 import getResourceYaml from "../../api/getResourceYaml";
@@ -207,39 +208,30 @@ const ResourceListInspector: React.FC<ResourceListInspectorProps> = (props) => {
         <div className={classes.container}>
             <div className={classes.topBar}>
                 <h2>{resourceNamePlural}</h2>
-                <select value={selectedView} onChange={(e) => setSelectedView(e.target.value)}>
-                    {
-                        availableViews.map(view => (
-                            <option key={view}>{view}</option>
-                        ))
-                    }
-                </select>
+                <Select
+                    options={availableViews.map(v => ({ label: v, value: v }))}
+                    value={selectedView}
+                    onChange={(value) => setSelectedView(value)}
+                />
                 {
                     resourceScope === 'cluster'
                         ? null
                         : (
                             <>
-                                <select value={selectedNamespace} onChange={(e) => {
-                                    setSelectedNamespace(e.target.value);
-                                    onNamespaceChanged(e.target.value);
-                                }}>
-                                    <option label="(All namespaces)"></option>
-                                    {
-                                        Object.values(allNamespaces).map(namespace => (
-                                            <option key={namespace} value={namespace}>
-                                                {namespace}
-                                                {
-                                                    resourceDefaultNamespace === namespace
-                                                        ? ' ⭐'
-                                                        : ''
-                                                }
-                                            </option>
-                                        ))
-                                    }
-                                </select>
+                                <Select style={{ minWidth: '200px' }}
+                                    options={[
+                                        { label: '(All namespaces)', value: '' },
+                                        ...allNamespaces.map(n => ({ label: n === resourceDefaultNamespace ? n + ' ⭐' : n, value: n }))
+                                    ]}
+                                    value={selectedNamespace}
+                                    onChange={(value) => setSelectedNamespace(value)}
+                                    showSearch={{ optionFilterProp: 'label' }}
+                                    popupMatchSelectWidth={false}
+                                    listHeight={512}
+                                />
                                 {
                                     resourceDefaultNamespace !== selectedNamespace
-                                        ? <button title="Save as custom default namespace" onClick={saveDefaultNamespace}>💾 Save as default</button>
+                                        ? <Button icon="💾" title="Save as custom default namespace" onClick={saveDefaultNamespace}>Save as default</Button>
                                         : null
                                 }
                             </>
@@ -248,7 +240,7 @@ const ResourceListInspector: React.FC<ResourceListInspectorProps> = (props) => {
                 {
                     selectedResources.length < 1
                         ? null
-                        : <button onClick={deleteSelectedResources}>🗑️ Delete {selectedResources.length}</button>
+                        : <Button icon="🗑️" onClick={deleteSelectedResources}> Delete {selectedResources.length}</Button>
                 }
                 <div ref={searchbarRef}></div>
             </div>
