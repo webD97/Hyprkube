@@ -25,7 +25,7 @@ export type ViewComponent =
         kind: "Hyperlink",
         args: {
             url: string,
-            display: string
+            content: string
         }
     } & CommonFields
     |

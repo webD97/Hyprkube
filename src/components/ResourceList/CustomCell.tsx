@@ -1,4 +1,5 @@
 import { CellContext } from "@tanstack/react-table";
+import { open } from '@tauri-apps/plugin-shell';
 import dayjs from "dayjs";
 import React from "react";
 import { DisplayableResource, ViewComponent } from "../../hooks/useResourceWatch";
@@ -19,8 +20,14 @@ export const CustomCell: React.FC<CellContext<[string, DisplayableResource], unk
     }
 
     if (kind === "Hyperlink") {
-        const { url, display } = component.args;
-        inner = <a style={{ cursor: "pointer" }} onClick={() => open(url)} title={url}>🔗&nbsp;{display}</a>;
+        const { url, content } = component.args;
+
+        function linkHandler(e: React.MouseEvent<HTMLAnchorElement>) {
+            e.stopPropagation();
+            void open(url);
+        }
+
+        inner = <a style={{ cursor: "pointer" }} onClick={linkHandler} title={url}>🔗&nbsp;{content}</a>;
     }
 
     if (kind === "RelativeTime") {

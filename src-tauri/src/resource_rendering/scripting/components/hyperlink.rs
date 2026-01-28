@@ -30,7 +30,7 @@ impl From<Hyperlink> for ViewComponent {
 }
 
 impl Hyperlink {
-    pub fn new_with_props(content: String, url: String, props: rhai::Map) -> Self {
+    pub fn new_with_props(url: String, content: String, props: rhai::Map) -> Self {
         Hyperlink {
             url,
             content,
@@ -38,7 +38,7 @@ impl Hyperlink {
         }
     }
 
-    pub fn new(content: String, url: String) -> Self {
+    pub fn new(url: String, content: String) -> Self {
         Hyperlink {
             url,
             content,
