@@ -9,6 +9,7 @@ import { createRoot } from 'react-dom/client';
 import AppShell from './AppShell.tsx';
 import BackendPanicListener from './components/BackendPanicListener/index.tsx';
 import './index.css';
+import './monaco.ts';
 
 dayjs.extend(relativeTimePlugin);
 dayjs.extend(durationPlugin);
