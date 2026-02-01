@@ -22,7 +22,7 @@ tauri-build = { version = "2.5.1", features = [] }
 serde_json = "1.0.149"
 serde = { version = "1.0.228", features = ["derive"] }
 tauri = { version = "2.9.5", features = [] }
-kube = { version = "3.0.0", features = ["runtime", "client", "ws", "gzip"] }
+kube = { version = "3.0.1", features = ["runtime", "client", "ws", "gzip"] }
 k8s-openapi = { version = "0.27.0", features = ["v1_34"] }
 futures = { version = "0.3.31" }
 tokio = { version = "1.49.0" }
