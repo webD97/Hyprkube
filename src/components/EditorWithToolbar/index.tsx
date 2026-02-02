@@ -1,7 +1,7 @@
 import { Editor } from '@monaco-editor/react';
+import { Button, Checkbox, Space } from 'antd';
 import { editor } from 'monaco-editor';
 import { useRef, useState } from 'react';
-import Checkbox from '../Checkbox';
 import styles from './styles.module.css';
 
 export interface EditorWithToolbarProps {
@@ -52,43 +52,39 @@ export default function EditorWithToolbar({
     return (
         <div className={styles.editorContainer}>
             <div className={styles.editorToolbar}>
-                <div>
+                <Space>
                     {
                         withSaveButton && (
-                            <button disabled={!dirty} onClick={() => {
+                            <Button size="small" disabled={!dirty} onClick={() => {
                                 if (modelRef.current) onSave(modelRef.current);
                                 handleFileDirtyCleared();
-                            }}>💾 Save</button>
+                            }}>💾 Save</Button>
                         )
                     }
                     {
                         withDiscardButton && (
-                            <button disabled={!dirty} onClick={() => {
+                            <Button size="small" variant="dashed" color="danger" disabled={!dirty} onClick={() => {
                                 void (async () => {
                                     if (!onDiscard) return;
                                     editorRef.current?.setValue(await onDiscard());
                                     handleFileDirtyCleared();
                                 })();
-                            }}>⬇️ Reset</button>
+                            }}>⬇️ Reset</Button>
                         )
                     }
-                </div>
-                <div>
+                </Space>
+                <Space>
                     {
                         withWhiteSpaceToggle && (
-                            <Checkbox label="Show whitespace" checked={whiteSpace}
-                                onChange={(e) => setWhiteSpace(e.target.checked)}
-                            />
+                            <Checkbox checked={whiteSpace} onChange={(e) => setWhiteSpace(e.target.checked)}>Show whitespace</Checkbox>
                         )
                     }
                     {
                         withWordWrapToggle && (
-                            <Checkbox label="Word-wrap" checked={wordWrap}
-                                onChange={(e) => setWordWrap(e.target.checked)}
-                            />
+                            <Checkbox checked={wordWrap} onChange={(e) => setWordWrap(e.target.checked)}>Word-wrap</Checkbox>
                         )
                     }
-                </div>
+                </Space>
             </div>
             <Editor keepCurrentModel
                 theme="vs-dark"

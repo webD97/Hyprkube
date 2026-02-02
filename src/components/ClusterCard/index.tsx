@@ -1,3 +1,5 @@
+import { SettingOutlined } from '@ant-design/icons';
+import { Button } from 'antd';
 import { CSSProperties, forwardRef, ReactNode } from 'react';
 import StatusBox from '../StatusBox';
 import styles from './styles.module.css';
@@ -42,7 +44,7 @@ const ClusterCard = forwardRef<HTMLDivElement, ClusterCardProps>(function Cluste
                 {
                     onSettingsClicked && (
                         <div className={styles.buttonArea}>
-                            <button className={styles.settingsButton} onClick={onSettingsClicked}>⚙️</button>
+                            <Button variant="dashed" className={styles.settingsButton} onClick={onSettingsClicked} icon={<SettingOutlined />} />
                         </div>
                     )
                 }
