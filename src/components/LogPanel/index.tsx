@@ -1,10 +1,10 @@
 import React, { useLayoutEffect, useMemo, useRef, useState } from 'react';
 
 import { useVirtualizer } from '@tanstack/react-virtual';
+import { Button, Checkbox, Flex, Input } from 'antd';
 import { KubeContextSource } from '../../hooks/useContextDiscovery';
 import { usePodLogs } from '../../hooks/usePodLogs';
 import Ansi from '../Ansi';
-import Checkbox from '../Checkbox';
 import classes from './component.module.css';
 
 export interface LogPanelProps {
@@ -41,12 +41,11 @@ const LogPanel: React.FC<LogPanelProps> = (props) => {
 
     return (
         <div className={classes.container}>
-            <div className={classes.toolbar}>
-                <span style={{ marginLeft: 'auto' }}></span>
-                <button onClick={() => void navigator.clipboard.writeText(text)}>Copy to clipboard</button>
-                <Checkbox label="Follow" checked={follow} onChange={(e) => setFollow(e.target.checked)} />
-                <input type="search" placeholder="Filter lines" value={search} onChange={(e) => setSearch(e.target.value)} />
-            </div>
+            <Flex gap="middle" align="center" justify="flex-end">
+                <Button onClick={() => void navigator.clipboard.writeText(text)}>Copy to clipboard</Button>
+                <Checkbox checked={follow} onChange={(e) => setFollow(e.target.checked)}>Follow</Checkbox>
+                <Input type="search" style={{ width: "300px" }} placeholder="Filter lines" value={search} onChange={(e) => setSearch(e.target.value)} />
+            </Flex>
             <div ref={parentRef} style={{ overflow: 'scroll', width: '100%', height: '100%', flexGrow: 1 }} onWheel={() => setFollow(false)}>
                 <div className={classes.logWrapper}
                     style={{

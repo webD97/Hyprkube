@@ -15,8 +15,12 @@
     z-index: 10;
 }
 
-.container table tr {
+.container table tr:not(.collapsed) {
     height: 2.22em;
+}
+
+.container table tr.collapsed>td>div {
+    height: 0;
 }
 
 .container table tbody tr {
