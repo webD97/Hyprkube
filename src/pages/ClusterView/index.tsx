@@ -1,6 +1,6 @@
+import { Splitter } from 'antd';
 import { use, useCallback, useState } from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
-import { Group, Panel, Separator } from 'react-resizable-panels';
 import EmojiHint from '../../components/EmojiHint';
 import RotatingSpinner from '../../components/RotatingSpinner';
 import TabView from '../../components/TabView';
@@ -80,18 +80,17 @@ const ClusterView: React.FC<ClusterViewProps> = ({ contextSource, preSelectedGvk
     }
 
     return (
-        <Group orientation='horizontal' className={classes.clusterViewContainer}>
-            <Panel minSize="12.5%" maxSize="30%" defaultSize="15%">
+        <Splitter orientation='horizontal' className={classes.clusterViewContainer}>
+            <Splitter.Panel min="12.5%" max="30%" defaultSize="15%">
                 <Sidebar
                     clusterProfile={clusterProfiles[0][0]}
                     discovery={discovery}
                     onGvkClicked={handleGvkClick}
                 />
-            </Panel>
-            <Separator className={classes.panelHandle} />
-            <Panel>
-                <Group orientation='vertical'>
-                    <Panel id="mainArea" className={classes.mainArea}>
+            </Splitter.Panel>
+            <Splitter.Panel>
+                <Splitter orientation='vertical'>
+                    <Splitter.Panel className={classes.mainArea}>
                         <ErrorBoundary
                             fallbackRender={(context) => (
                                 <div role="alert">
@@ -115,12 +114,11 @@ const ClusterView: React.FC<ClusterViewProps> = ({ contextSource, preSelectedGvk
                                         />
                                     )
                             }</ErrorBoundary>
-                    </Panel>
+                    </Splitter.Panel>
                     {
                         (bottomTabs.length > 0) && (
                             <>
-                                <Separator className={classes.panelHandle} />
-                                <Panel id="bottomTabs" defaultSize="65%">
+                                <Splitter.Panel defaultSize="65%">
                                     <section className={classes.bottomPanel}>
                                         <TabView
                                             activeTab={activeBottomTab}
@@ -130,13 +128,13 @@ const ClusterView: React.FC<ClusterViewProps> = ({ contextSource, preSelectedGvk
                                             {bottomTabs}
                                         </TabView>
                                     </section>
-                                </Panel>
+                                </Splitter.Panel>
                             </>
                         )
                     }
-                </Group>
-            </Panel >
-        </Group >
+                </Splitter>
+            </Splitter.Panel >
+        </Splitter >
     )
 }
 

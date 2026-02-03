@@ -14,9 +14,3 @@
 .bottomPanel {
     height: 100%;
 }
-
-.panelHandle[data-separator="hover"],
-.panelHandle[data-separator="active"] {
-    box-shadow: 0 0 2px 1px lightslategrey;
-    z-index: 999;
-}
