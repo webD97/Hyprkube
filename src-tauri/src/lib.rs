@@ -11,6 +11,7 @@ mod menus;
 mod persistence;
 mod resource_menu;
 mod resource_rendering;
+mod scripting;
 
 use std::sync::Arc;
 
