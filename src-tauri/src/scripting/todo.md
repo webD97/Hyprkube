@@ -1,0 +1,5 @@
+- control layer: https://rhai.rs/book/patterns/control.html vs singleton: https://rhai.rs/book/patterns/singleton.html
+    - might affect: one engine per call: https://rhai.rs/book/patterns/parallel.html
+- print and debug: https://rhai.rs/book/language/print-debug.html
+- hot reload: https://rhai.rs/book/patterns/hot-reload.html
+- blocking/async calls: https://rhai.rs/book/patterns/blocking.html
