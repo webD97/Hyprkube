@@ -48,7 +48,7 @@ semver = "1.0.27"
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.22", features = ["env-filter"] }
 tracing-futures = "0.2.5"
-rand = "0.9.2"
+rand = "0.10.0"
 chrono = "0.4.43"
 anyhow = "1.0.101"
 async-stream = "0.3.6"
