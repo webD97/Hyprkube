@@ -1,4 +1,4 @@
-use rand::{rng, Rng as _};
+use rand::{rng, RngExt as _};
 
 pub fn set_span_request_id() {
     tracing::Span::current().record("request_id", generate_base36_id(6));
