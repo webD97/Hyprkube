@@ -226,15 +226,14 @@ fn online_discovery(client: kube::Client) -> impl Stream<Item = anyhow::Result<D
             .collect();
         tracing::debug!("Finished discovering builtins");
 
+        let full_discovery = kube::Discovery::new(client.clone())
+            .run_aggregated()
+            .await?;
+
         // Discover builtin resources
         tracing::info!("Starting discovery of builtin resources");
         {
-            let discovery_builtins = kube::Discovery::new(client.clone())
-                .filter(&builtins)
-                .run()
-                .await?;
-
-            for group in discovery_builtins.groups() {
+            for group in full_discovery.groups().filter(|i| builtins.contains(&i.name())) {
                 for (ar, capabilities) in group.resources_by_stability() {
                     if !capabilities.supports_operation(kube::discovery::verbs::WATCH) {
                         continue;
@@ -258,12 +257,7 @@ fn online_discovery(client: kube::Client) -> impl Stream<Item = anyhow::Result<D
         // Discover custom resources
         tracing::info!("Starting discovery of custom resources");
         {
-            let discovery_builtins = kube::Discovery::new(client.clone())
-                .exclude(&builtins)
-                .run()
-                .await?;
-
-            for group in discovery_builtins.groups() {
+            for group in full_discovery.groups().filter(|i| !builtins.contains(&i.name())) {
                 for (ar, capabilities) in group.resources_by_stability() {
                     if !capabilities.supports_operation(kube::discovery::verbs::WATCH) {
                         continue;
