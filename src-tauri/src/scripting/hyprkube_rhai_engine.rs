@@ -1,9 +1,19 @@
-use std::sync::Arc;
+use std::{
+    collections::HashMap,
+    path::PathBuf,
+    sync::{Arc, Mutex},
+};
 
 use kube::{api::DynamicObject, Api};
+use rhai::EvalAltResult;
 
 pub struct HyprkubeRhaiEngine {
-    pub engine: rhai::Engine,
+    engine: rhai::Engine,
+    resource_action_scripts: Mutex<HashMap<PathBuf, UserScript>>,
+}
+
+pub struct UserScript {
+    ast: Option<Result<rhai::AST, Box<EvalAltResult>>>,
 }
 
 #[allow(dead_code)]
@@ -66,11 +76,42 @@ impl HyprkubeRhaiEngine {
             );
         }
 
-        Self { engine }
+        Self {
+            engine,
+            resource_action_scripts: Mutex::new(HashMap::new()),
+        }
     }
 
-    pub fn run_script(&self, script: &str) -> Result<(), Box<rhai::EvalAltResult>> {
-        self.engine.run(script)
+    /// Registers a script with its source code in some file system location for later use.
+    pub fn register_user_script(&self, source: PathBuf) {
+        self.resource_action_scripts
+            .lock()
+            .expect("failed to lock Mutex")
+            .entry(source)
+            .insert_entry(UserScript { ast: None });
+    }
+
+    // Run a previously registered script
+    pub fn run_user_script(&self, path: PathBuf) -> Result<(), Box<EvalAltResult>> {
+        let mut scripts = self
+            .resource_action_scripts
+            .lock()
+            .expect("failed to lock Mutex");
+
+        let script = scripts
+            .get_mut(&path)
+            .ok_or_else(|| format!("Unknown script: {}", path.to_string_lossy()))?;
+
+        let ast = script.ast.get_or_insert_with(|| {
+            tracing::debug!("Compiling script {}", path.to_string_lossy());
+            self.engine.compile_file(path)
+        });
+
+        let ast = ast
+            .as_ref()
+            .map_err(|e| format!("Cannot execute script with compilation error: {}", e))?;
+
+        self.engine.run_ast(ast)
     }
 
     fn block_on<F, T>(future: F) -> T
@@ -78,5 +119,30 @@ impl HyprkubeRhaiEngine {
         F: std::future::Future<Output = T>,
     {
         tokio::task::block_in_place(|| tokio::runtime::Handle::current().block_on(future))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test(flavor = "multi_thread")]
+    pub async fn test() {
+        let client = kube::Client::try_default()
+            .await
+            .expect("Failed to create Kubernetes client");
+
+        let discovery = kube::Discovery::new(client.clone())
+            .run_aggregated()
+            .await
+            .unwrap();
+
+        let engine = HyprkubeRhaiEngine::new(client, Arc::new(discovery)).await;
+
+        let script: PathBuf =
+            "/home/christian/Repositories/github.com/webd97/_sandbox/kube-rhai/src/script.rhai"
+                .into();
+        engine.register_user_script(script.clone());
+        engine.run_user_script(script).unwrap();
     }
 }
