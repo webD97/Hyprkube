@@ -5,7 +5,9 @@ use std::{
 };
 
 use kube::{api::DynamicObject, Api};
-use rhai::EvalAltResult;
+use rhai::{CallFnOptions, EvalAltResult};
+
+use crate::scripting::types::ResourceRef;
 
 pub struct HyprkubeRhaiEngine {
     engine: rhai::Engine,
@@ -20,6 +22,8 @@ pub struct UserScript {
 impl HyprkubeRhaiEngine {
     pub async fn new(client: kube::Client, discovery: Arc<kube::Discovery>) -> Self {
         let mut engine = rhai::Engine::new();
+
+        engine.build_type::<ResourceRef>();
 
         {
             let client = client.clone();
@@ -111,7 +115,18 @@ impl HyprkubeRhaiEngine {
             .as_ref()
             .map_err(|e| format!("Cannot execute script with compilation error: {}", e))?;
 
-        self.engine.run_ast(ast)
+        self.engine.call_fn_with_options(
+            CallFnOptions::new().eval_ast(false).rewind_scope(true),
+            &mut rhai::Scope::new(),
+            ast,
+            "main",
+            (ResourceRef {
+                api_version: "v1".into(),
+                kind: "Pod".into(),
+                namespace: Some("smart-home".into()),
+                name: "home-assistant-0".into(),
+            },),
+        )
     }
 
     fn block_on<F, T>(future: F) -> T
@@ -143,6 +158,8 @@ mod tests {
             "/home/christian/Repositories/github.com/webd97/_sandbox/kube-rhai/src/script.rhai"
                 .into();
         engine.register_user_script(script.clone());
-        engine.run_user_script(script).unwrap();
+        if let Err(e) = engine.run_user_script(script) {
+            eprintln!("Runtime error: ${e}");
+        }
     }
 }

@@ -1,11 +1,18 @@
-use rhai::{CustomType, Dynamic, EvalAltResult, Position, TypeBuilder};
+use rhai::{CustomType, Dynamic, EvalAltResult, TypeBuilder};
 
-#[derive(Clone, rhai::CustomType)]
+#[derive(Clone, Debug, rhai::CustomType)]
 #[rhai_type(extra = Self::build_extra)]
 pub struct ResourceRef {
+    #[rhai_type(readonly)]
     pub api_version: String,
+
+    #[rhai_type(readonly)]
     pub kind: String,
+
+    #[rhai_type(readonly)]
     pub namespace: Option<String>,
+
+    #[rhai_type(readonly)]
     pub name: String,
 }
 
