@@ -5,7 +5,7 @@ use std::{
 };
 
 use kube::{api::DynamicObject, Api};
-use rhai::{CallFnOptions, EvalAltResult};
+use rhai::{CallFnOptions, EvalAltResult, FuncRegistration, Module};
 
 use crate::scripting::types::ResourceRef;
 
@@ -24,12 +24,23 @@ impl HyprkubeRhaiEngine {
         let mut engine = rhai::Engine::new();
 
         engine.build_type::<ResourceRef>();
+        engine.register_static_module("kube", Self::make_kube_module(client, discovery).into());
+
+        Self {
+            engine,
+            resource_action_scripts: Mutex::new(HashMap::new()),
+        }
+    }
+
+    fn make_kube_module(client: kube::Client, discovery: Arc<kube::Discovery>) -> Module {
+        let mut kube_module = Module::new();
 
         {
             let client = client.clone();
             let discovery = Arc::clone(&discovery);
-            engine.register_fn(
-                "get",
+
+            FuncRegistration::new("get").set_into_module(
+                &mut kube_module,
                 move |api_version: &str,
                       kind: &str,
                       namespace: &str,
@@ -56,8 +67,9 @@ impl HyprkubeRhaiEngine {
         {
             let client = client.clone();
             let discovery = Arc::clone(&discovery);
-            engine.register_fn(
-                "get",
+
+            FuncRegistration::new("get").set_into_module(
+                &mut kube_module,
                 move |api_version: &str,
                       kind: &str,
                       name: &str|
@@ -80,10 +92,7 @@ impl HyprkubeRhaiEngine {
             );
         }
 
-        Self {
-            engine,
-            resource_action_scripts: Mutex::new(HashMap::new()),
-        }
+        kube_module
     }
 
     /// Registers a script with its source code in some file system location for later use.
