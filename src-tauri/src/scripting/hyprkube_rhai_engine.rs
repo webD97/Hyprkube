@@ -4,7 +4,10 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use kube::{api::DynamicObject, Api};
+use kube::{
+    api::{ApiResource, DynamicObject},
+    Api, Discovery,
+};
 use rhai::{CallFnOptions, EvalAltResult, FuncRegistration, Module};
 
 use crate::scripting::types::ResourceRef;
@@ -32,6 +35,20 @@ impl HyprkubeRhaiEngine {
         }
     }
 
+    fn api_resource_for(
+        api_version: &str,
+        kind: &str,
+        discovery: &Discovery,
+    ) -> Result<ApiResource, String> {
+        let (ar, _) = discovery
+            .get(api_version)
+            .ok_or(format!("ApiVersion not found: {}", api_version))?
+            .recommended_kind(kind)
+            .ok_or(format!("Kind not found: {}", kind))?;
+
+        Ok(ar)
+    }
+
     fn make_kube_module(client: kube::Client, discovery: Arc<kube::Discovery>) -> Module {
         let mut kube_module = Module::new();
 
@@ -47,11 +64,7 @@ impl HyprkubeRhaiEngine {
                       name: &str|
                       -> Result<rhai::Map, Box<rhai::EvalAltResult>> {
                     Self::block_on(async {
-                        let (ar, _) = discovery
-                            .get(api_version)
-                            .ok_or(format!("ApiVersion not found: {}", api_version))?
-                            .recommended_kind(kind)
-                            .ok_or(format!("Kind not found: {}", kind))?;
+                        let ar = Self::api_resource_for(api_version, kind, &discovery)?;
 
                         let api: Api<DynamicObject> =
                             Api::namespaced_with(client.clone(), namespace, &ar);
@@ -75,11 +88,7 @@ impl HyprkubeRhaiEngine {
                       name: &str|
                       -> Result<rhai::Map, Box<rhai::EvalAltResult>> {
                     Self::block_on(async {
-                        let (ar, _) = discovery
-                            .get(api_version)
-                            .ok_or(format!("ApiVersion not found: {}", api_version))?
-                            .recommended_kind(kind)
-                            .ok_or(format!("Kind not found: {}", kind))?;
+                        let ar = Self::api_resource_for(api_version, kind, &discovery)?;
 
                         let api: kube::Api<kube::api::DynamicObject> =
                             kube::Api::all_with(client.clone(), &ar);
