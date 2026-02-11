@@ -8,9 +8,9 @@ use kube::{
     api::{ApiResource, DynamicObject},
     Api, Discovery,
 };
-use rhai::{CallFnOptions, EvalAltResult, FuncRegistration, Module};
+use rhai::{exported_module, CallFnOptions, EvalAltResult, FuncRegistration, Module};
 
-use crate::scripting::types::ResourceRef;
+use crate::scripting::{modules, types::ResourceRef};
 
 pub struct HyprkubeRhaiEngine {
     engine: rhai::Engine,
@@ -28,6 +28,7 @@ impl HyprkubeRhaiEngine {
 
         engine.build_type::<ResourceRef>();
         engine.register_static_module("kube", Self::make_kube_module(client, discovery).into());
+        engine.register_static_module("base64", exported_module!(modules::base64_rhai).into());
 
         Self {
             engine,

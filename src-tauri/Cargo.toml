@@ -55,6 +55,7 @@ async-stream = "0.3.6"
 tokio-stream = "0.1.18"
 tauri-plugin-clipboard-manager = "2"
 async-trait = "0.1.89"
+base64 = "0.22.1"
 
 [features]
 # this feature is used for production builds or when `devPath` points to the filesystem and the built-in dev server is disabled.
