@@ -61,8 +61,20 @@ fn api_resource_for(
     kind: &str,
     discovery: &Discovery,
 ) -> Result<ApiResource, String> {
+    let x: Vec<&str> = api_version.split("/").collect();
+
+    let (group, _) = {
+        if x.len() == 1 {
+            (&"", x.first().unwrap())
+        } else if x.len() == 2 {
+            (x.first().unwrap(), x.get(1).unwrap())
+        } else {
+            panic!("wtf");
+        }
+    };
+
     let (ar, _) = discovery
-        .get(api_version)
+        .get(group)
         .ok_or(format!("ApiVersion not found: {}", api_version))?
         .recommended_kind(kind)
         .ok_or(format!("Kind not found: {}", kind))?;
