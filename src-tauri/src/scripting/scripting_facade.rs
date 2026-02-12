@@ -56,6 +56,8 @@ impl<'a> ScriptingFacade<'a> {
 
         engine.build_type::<types::ResourceRef>();
         engine.build_type::<types::ActionButton>();
+        engine.build_type::<types::MenuSection>();
+
         engine.register_static_module(
             "kube",
             modules::kube::build_module(client, discovery).into(),
