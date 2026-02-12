@@ -1,54 +1,71 @@
 use std::{
     collections::HashMap,
     path::PathBuf,
-    sync::{Arc, Mutex, RwLock},
+    sync::{Arc, OnceLock, RwLock},
 };
 
-use kube::{
-    api::{ApiResource, DynamicObject},
-    Api, Discovery,
-};
-use rhai::{exported_module, CallFnOptions, Dynamic, EvalAltResult, FuncRegistration, Module};
+use rhai::{exported_module, EvalAltResult};
 
 use crate::scripting::{
     modules,
-    types::{self, ResourceRef},
+    types::{self},
 };
 
-struct ContextMenuSection<'a> {
-    pub matcher: rhai::FnPtr,
-    pub matcher_context: rhai::NativeCallContext<'a>,
-
+#[allow(unused)]
+struct ContextMenuSection {
+    pub title: Option<String>,
+    pub matcher: Option<rhai::FnPtr>,
     pub items: rhai::FnPtr,
-    pub items_context: rhai::NativeCallContext<'a>,
+    pub ast: Arc<rhai::AST>,
 }
 
-pub struct ScriptingFacade<'a> {
-    engine: rhai::Engine,
-
+pub struct ScriptingFacade {
     /// Handles scripts that render a resource context menu
-    resource_contextmenu_engine: rhai::Engine,
-    registered_contextmenu_sections: RwLock<HashMap<String, ContextMenuSection<'a>>>,
-
-    resource_action_scripts: Mutex<HashMap<PathBuf, UserScript>>,
+    resource_contextmenu_engine: OnceLock<rhai::Engine>,
+    registered_contextmenu_sections: RwLock<Vec<ContextMenuSection>>,
+    resource_action_scripts: RwLock<HashMap<PathBuf, UserScript>>,
+    menu_stacks: RwLock<HashMap<String, MenuStack>>,
 }
 
 pub struct UserScript {
-    ast: Option<Result<rhai::AST, Box<EvalAltResult>>>,
+    ast: Option<Result<Arc<rhai::AST>, Box<EvalAltResult>>>,
+}
+
+#[derive(Debug, Clone)]
+pub struct FnPtrWithAst {
+    fnptr: rhai::FnPtr,
+    ast: Arc<rhai::AST>,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct MenuStack {
+    actions: HashMap<String, FnPtrWithAst>,
 }
 
 #[allow(dead_code)]
-impl<'a> ScriptingFacade<'a> {
-    pub async fn new(client: kube::Client, discovery: Arc<kube::Discovery>) -> Self {
-        Self {
-            engine: rhai::Engine::new(),
-            resource_contextmenu_engine: Self::make_resource_contextmenu_engine(client, discovery),
-            registered_contextmenu_sections: RwLock::new(HashMap::new()),
-            resource_action_scripts: Mutex::new(HashMap::new()),
-        }
+impl ScriptingFacade {
+    pub fn new() -> Arc<Self> {
+        Arc::new(Self {
+            resource_contextmenu_engine: OnceLock::new(),
+            registered_contextmenu_sections: RwLock::new(Vec::new()),
+            resource_action_scripts: RwLock::new(HashMap::new()),
+            menu_stacks: RwLock::new(HashMap::new()),
+        })
+    }
+
+    pub fn initialize_engines(
+        self: &Arc<Self>,
+        client: kube::Client,
+        discovery: Arc<kube::Discovery>,
+    ) {
+        let engine = Self::make_resource_contextmenu_engine(Arc::clone(self), client, discovery);
+        self.resource_contextmenu_engine
+            .set(engine)
+            .expect("Must not be initialized more than once");
     }
 
     fn make_resource_contextmenu_engine(
+        facade: Arc<Self>,
         client: kube::Client,
         discovery: Arc<kube::Discovery>,
     ) -> rhai::Engine {
@@ -64,87 +81,238 @@ impl<'a> ScriptingFacade<'a> {
         );
         engine.register_static_module("base64", exported_module!(modules::base64_rhai).into());
 
+        engine.register_fn(
+            "register_resource_contextmenu_section",
+            move |ctx: rhai::NativeCallContext, definition: types::MenuSection| {
+                let script = ctx
+                    .call_source()
+                    .expect("only file-based scripts supported");
+                facade.register_resource_contextmenu_section(definition, script);
+            },
+        );
+
+        engine.set_max_expr_depths(64, 32);
+
         engine
     }
 
-    /// Runs all scripts that contribute to the given resource's context menu and returns the specification.
+    fn register_resource_contextmenu_section(&self, section: types::MenuSection, script: &str) {
+        let script: PathBuf = script.into();
+
+        let ast = self.resource_action_scripts.read().unwrap();
+        let ast = ast
+            .get(&script)
+            .unwrap()
+            .ast
+            .as_ref()
+            .expect("already compiled")
+            .as_ref()
+            .expect("compiled without errors");
+
+        let mut sections = self.registered_contextmenu_sections.write().unwrap();
+        sections.push(ContextMenuSection {
+            title: section.title,
+            matcher: section.matcher,
+            items: section.items,
+            ast: Arc::clone(ast),
+        });
+    }
+
     #[allow(unused)]
-    pub fn evaluate_resource_contextmenu(&self, obj: kube::api::DynamicObject) {
+    pub fn create_resource_menustack(&self, obj: kube::api::DynamicObject) -> MenuBlueprint {
         let api_version = obj.types.as_ref().unwrap().api_version.to_owned();
         let kind = obj.types.as_ref().unwrap().kind.to_owned();
         let obj = rhai::serde::to_dynamic(obj).unwrap();
 
         let sections_defs = self.registered_contextmenu_sections.read().unwrap();
 
-        let mut sections: Vec<Vec<Dynamic>> = Vec::new();
+        let mut sections: Vec<Vec<(types::MenuItem, Option<Arc<rhai::AST>>)>> = Vec::new();
 
-        for section_def in sections_defs.values() {
+        let engine = self
+            .resource_contextmenu_engine
+            .get()
+            .expect("engine must be initialized");
+
+        for section_def in sections_defs.iter() {
+            let ast = &section_def.ast;
+
             let matches = section_def
                 .matcher
-                .call_within_context::<bool>(&section_def.matcher_context, ("", "", kind.clone()))
-                .unwrap();
+                .as_ref()
+                .map(|matcher| {
+                    matcher
+                        .call::<bool>(engine, ast, ("", "", kind.clone()))
+                        .unwrap()
+                })
+                .unwrap_or(true);
 
             if !matches {
                 continue;
             }
 
-            let section_items = section_def
+            let items = section_def
                 .items
-                .call_within_context::<rhai::Array>(&section_def.items_context, (obj.clone(),))
-                .unwrap();
+                .call::<rhai::Array>(engine, ast, (obj.clone(),))
+                .unwrap() // TODO: The callback might fail
+                .into_iter()
+                .filter(|i| !i.is_unit())
+                .flat_map(|dynamic| {
+                    let type_name = dynamic.type_name();
+                    if let Some(mut item) = dynamic.try_cast::<types::ActionButton>() {
+                        // Curry the callback with the object that we want to operate on when called later
+                        item.action = item.action.add_curry(obj.clone()).to_owned();
+                        Some((types::MenuItem::ActionButton(item), Some(Arc::clone(ast))))
+                    } else {
+                        tracing::warn!("Unsupported menu item: {type_name}");
+                        None
+                    }
+                })
+                .collect();
 
-            sections.push(section_items);
+            sections.push(items);
         }
 
-        todo!();
+        let stack_id = generate_id(5);
+        // println!("{stack_id}: {sections:?}");
+
+        let mut items = Vec::new();
+
+        {
+            let mut menu_stack = MenuStack::default();
+
+            for section in sections {
+                for section_item in section {
+                    items.push(match section_item {
+                        (types::MenuItem::ActionButton(action_button), ast) => {
+                            let action_id = generate_id(5);
+                            menu_stack.actions.entry(action_id.clone()).insert_entry(
+                                FnPtrWithAst {
+                                    fnptr: action_button.action,
+                                    ast: ast.expect("must be set"),
+                                },
+                            );
+
+                            FrontendMenuItem::ActionButton(FrontendActionButton {
+                                title: action_button.title,
+                                dangerous: action_button.dangerous,
+                                action_ref: action_id,
+                            })
+                        }
+                    });
+                }
+
+                items.push(FrontendMenuItem::Separator);
+            }
+
+            let mut menu_stacks = self.menu_stacks.write().unwrap();
+            menu_stacks
+                .entry(stack_id.to_owned())
+                .insert_entry(menu_stack);
+        }
+
+        MenuBlueprint {
+            id: stack_id,
+            items,
+        }
+    }
+
+    pub fn drop_resource_menustack(&self, id: &str) {
+        let mut menu_stacks = self.menu_stacks.write().unwrap();
+        menu_stacks.remove(id);
+    }
+
+    pub fn call_menustack_action(&self, menu_id: &str, action_ref: &str) {
+        let menus = self.menu_stacks.read().unwrap();
+        let menu = menus.get(menu_id).unwrap();
+        let action = menu.actions.get(action_ref).unwrap().clone();
+
+        let engine = self.resource_contextmenu_engine.get().unwrap();
+
+        action.fnptr.call::<()>(engine, &action.ast, ()).unwrap();
     }
 
     /// Registers a script with its source code in some file system location for later use.
     pub fn register_user_script(&self, source: PathBuf) {
         self.resource_action_scripts
-            .lock()
+            .write()
             .expect("failed to lock Mutex")
             .entry(source)
             .insert_entry(UserScript { ast: None });
     }
 
     // Run a previously registered script
-    pub fn run_user_script(&self, path: PathBuf) -> Result<(), Box<EvalAltResult>> {
-        let mut scripts = self
-            .resource_action_scripts
-            .lock()
-            .expect("failed to lock Mutex");
+    pub fn evaluate_all(&self) -> Result<(), Box<EvalAltResult>> {
+        let engine = self
+            .resource_contextmenu_engine
+            .get()
+            .expect("Engine not initialized");
 
-        let script = scripts
-            .get_mut(&path)
-            .ok_or_else(|| format!("Unknown script: {}", path.to_string_lossy()))?;
+        let paths: Vec<PathBuf> = {
+            let scripts = self.resource_action_scripts.read().unwrap();
+            scripts.keys().cloned().collect()
+        };
 
-        let ast = script.ast.get_or_insert_with(|| {
-            tracing::debug!("Compiling script {}", path.to_string_lossy());
-            self.engine.compile_file(path)
-        });
+        for path in paths {
+            let ast_arc = {
+                let mut scripts = self.resource_action_scripts.write().unwrap();
+                let script = scripts
+                    .get_mut(&path)
+                    .ok_or_else(|| format!("Unknown script: {}", path.display()))?;
 
-        let ast = ast
-            .as_ref()
-            .map_err(|e| format!("Cannot execute script with compilation error: {}", e))?;
+                let ast_result = script
+                    .ast
+                    .get_or_insert_with(|| engine.compile_file(path.clone()).map(Arc::new));
 
-        self.engine.call_fn_with_options(
-            CallFnOptions::new().eval_ast(false).rewind_scope(true),
-            &mut rhai::Scope::new(),
-            ast,
-            "main",
-            (ResourceRef {
-                api_version: "v1".into(),
-                kind: "Pod".into(),
-                namespace: Some("smart-home".into()),
-                name: "home-assistant-0".into(),
-            },),
-        )
+                ast_result
+                    .as_ref()
+                    .map_err(|e| format!("Compilation failed for {}: {e}", path.display()))?
+                    .clone()
+            };
+
+            engine.eval_ast::<()>(&ast_arc)?;
+        }
+
+        Ok(())
     }
+}
+
+fn generate_id(len: usize) -> String {
+    use rand::RngExt as _;
+
+    const CHARSET: &[u8] = b"abcdefghklmnpqrstuvwxyz123456789";
+    let mut rng = rand::rng();
+
+    (0..len)
+        .map(|_| {
+            let i = rng.random_range(0..32);
+            CHARSET[i] as char
+        })
+        .collect()
+}
+
+#[derive(Debug, Clone)]
+pub struct FrontendActionButton {
+    title: String,
+    action_ref: String,
+    dangerous: bool,
+}
+
+#[derive(Debug, Clone)]
+pub enum FrontendMenuItem {
+    ActionButton(FrontendActionButton),
+    Separator,
+}
+
+#[derive(Debug, Clone)]
+pub struct MenuBlueprint {
+    id: String,
+    items: Vec<FrontendMenuItem>,
 }
 
 #[cfg(test)]
 mod tests {
+    use kube::api::DynamicObject;
+
     use super::*;
 
     #[tokio::test(flavor = "multi_thread")]
@@ -153,19 +321,48 @@ mod tests {
             .await
             .expect("Failed to create Kubernetes client");
 
-        let discovery = kube::Discovery::new(client.clone())
-            .run_aggregated()
+        let discovery = Arc::new(
+            kube::Discovery::new(client.clone())
+                .run_aggregated()
+                .await
+                .unwrap(),
+        );
+
+        let engine = ScriptingFacade::new();
+        engine.initialize_engines(client.clone(), Arc::clone(&discovery));
+
+        engine.register_user_script("/home/christian/Downloads/test.rhai".into());
+
+        if let Err(e) = engine.evaluate_all() {
+            eprintln!("Runtime error: {e}");
+        }
+
+        let (ar, _) = discovery.get("").unwrap().recommended_kind("Pod").unwrap();
+
+        let api: kube::Api<DynamicObject> =
+            kube::Api::namespaced_with(client, "monitoring-system", &ar);
+        let pod = api
+            .get("alertmanager-kube-prometheus-stack-alertmanager-0")
             .await
             .unwrap();
 
-        let engine = ScriptingFacade::new(client, Arc::new(discovery)).await;
-
-        let script: PathBuf =
-            "/home/christian/Repositories/github.com/webd97/_sandbox/kube-rhai/src/script.rhai"
-                .into();
-        engine.register_user_script(script.clone());
-        if let Err(e) = engine.run_user_script(script) {
-            eprintln!("Runtime error: ${e}");
-        }
+        let blueprint = engine.create_resource_menustack(pod);
+        println!("{blueprint:?}");
+        let first_action = {
+            blueprint
+                .items
+                .iter()
+                .filter_map(|i: &FrontendMenuItem| match i {
+                    FrontendMenuItem::ActionButton(b) => Some(b.clone()),
+                    _ => None,
+                })
+                .collect::<Vec<FrontendActionButton>>()
+                .first()
+                .unwrap()
+                .action_ref
+                .clone()
+        };
+        engine.call_menustack_action(&blueprint.id, &first_action);
+        engine.drop_resource_menustack(&blueprint.id);
     }
 }
