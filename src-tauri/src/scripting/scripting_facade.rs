@@ -10,7 +10,10 @@ use kube::{
 };
 use rhai::{exported_module, CallFnOptions, Dynamic, EvalAltResult, FuncRegistration, Module};
 
-use crate::scripting::{modules, types::ResourceRef};
+use crate::scripting::{
+    modules,
+    types::{self, ResourceRef},
+};
 
 struct ContextMenuSection<'a> {
     pub matcher: rhai::FnPtr,
@@ -45,28 +48,18 @@ impl<'a> ScriptingFacade<'a> {
         }
     }
 
-    fn api_resource_for(
-        api_version: &str,
-        kind: &str,
-        discovery: &Discovery,
-    ) -> Result<ApiResource, String> {
-        let (ar, _) = discovery
-            .get(api_version)
-            .ok_or(format!("ApiVersion not found: {}", api_version))?
-            .recommended_kind(kind)
-            .ok_or(format!("Kind not found: {}", kind))?;
-
-        Ok(ar)
-    }
-
     fn make_resource_contextmenu_engine(
         client: kube::Client,
         discovery: Arc<kube::Discovery>,
     ) -> rhai::Engine {
         let mut engine = rhai::Engine::new();
 
-        engine.build_type::<ResourceRef>();
-        engine.register_static_module("kube", Self::make_kube_module(client, discovery).into());
+        engine.build_type::<types::ResourceRef>();
+        engine.build_type::<types::ActionButton>();
+        engine.register_static_module(
+            "kube",
+            modules::kube::build_module(client, discovery).into(),
+        );
         engine.register_static_module("base64", exported_module!(modules::base64_rhai).into());
 
         engine
@@ -102,61 +95,6 @@ impl<'a> ScriptingFacade<'a> {
         }
 
         todo!();
-    }
-
-    fn make_kube_module(client: kube::Client, discovery: Arc<kube::Discovery>) -> Module {
-        let mut kube_module = Module::new();
-
-        {
-            let client = client.clone();
-            let discovery = Arc::clone(&discovery);
-
-            FuncRegistration::new("get").set_into_module(
-                &mut kube_module,
-                move |api_version: &str,
-                      kind: &str,
-                      namespace: &str,
-                      name: &str|
-                      -> Result<rhai::Map, Box<rhai::EvalAltResult>> {
-                    Self::block_on(async {
-                        let ar = Self::api_resource_for(api_version, kind, &discovery)?;
-
-                        let api: Api<DynamicObject> =
-                            Api::namespaced_with(client.clone(), namespace, &ar);
-
-                        let resource = api.get(name).await.map_err(|e| e.to_string())?;
-
-                        Ok(rhai::serde::to_dynamic(resource)?.cast::<rhai::Map>())
-                    })
-                },
-            );
-        }
-
-        {
-            let client = client.clone();
-            let discovery = Arc::clone(&discovery);
-
-            FuncRegistration::new("get").set_into_module(
-                &mut kube_module,
-                move |api_version: &str,
-                      kind: &str,
-                      name: &str|
-                      -> Result<rhai::Map, Box<rhai::EvalAltResult>> {
-                    Self::block_on(async {
-                        let ar = Self::api_resource_for(api_version, kind, &discovery)?;
-
-                        let api: kube::Api<kube::api::DynamicObject> =
-                            kube::Api::all_with(client.clone(), &ar);
-
-                        let resource = api.get(name).await.map_err(|e| e.to_string())?;
-
-                        Ok(rhai::serde::to_dynamic(resource)?.cast::<rhai::Map>())
-                    })
-                },
-            );
-        }
-
-        kube_module
     }
 
     /// Registers a script with its source code in some file system location for later use.
@@ -200,13 +138,6 @@ impl<'a> ScriptingFacade<'a> {
                 name: "home-assistant-0".into(),
             },),
         )
-    }
-
-    fn block_on<F, T>(future: F) -> T
-    where
-        F: std::future::Future<Output = T>,
-    {
-        tokio::task::block_in_place(|| tokio::runtime::Handle::current().block_on(future))
     }
 }
 
