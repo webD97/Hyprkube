@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use kube::{
-    api::{ApiResource, DynamicObject},
+    api::{ApiResource, DeleteParams, DynamicObject},
     Api, Discovery,
 };
 use rhai::{FuncRegistration, Module};
@@ -48,6 +48,32 @@ pub fn build_module(client: kube::Client, discovery: Arc<kube::Discovery>) -> Mo
                     let resource = api.get(name).await.map_err(|e| e.to_string())?;
 
                     Ok(rhai::serde::to_dynamic(resource)?.cast::<rhai::Map>())
+                })
+            },
+        );
+    }
+
+    {
+        let client = client.clone();
+        let discovery = Arc::clone(&discovery);
+
+        FuncRegistration::new("delete").set_into_module(
+            &mut kube_module,
+            move |api_version: &str,
+                  kind: &str,
+                  namespace: &str,
+                  name: &str|
+                  -> Result<(), Box<rhai::EvalAltResult>> {
+                block_on(async {
+                    let ar = api_resource_for(api_version, kind, &discovery)?;
+                    let api: Api<DynamicObject> =
+                        Api::namespaced_with(client.clone(), namespace, &ar);
+
+                    api.delete(name, &DeleteParams::default())
+                        .await
+                        .map_err(|e| e.to_string())?;
+
+                    Ok(())
                 })
             },
         );
