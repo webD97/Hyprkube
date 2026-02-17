@@ -1,3 +1,3 @@
 pub mod modules;
-pub mod scripting_facade;
+pub mod resource_context_menu_facade;
 pub mod types;

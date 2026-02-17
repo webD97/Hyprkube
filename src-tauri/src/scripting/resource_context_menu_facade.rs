@@ -19,7 +19,7 @@ struct ContextMenuSection {
     pub ast: Arc<rhai::AST>,
 }
 
-pub struct ScriptingFacade {
+pub struct ResourceContextMenuFacade {
     /// Handles scripts that render a resource context menu
     resource_contextmenu_engine: OnceLock<rhai::Engine>,
     registered_contextmenu_sections: RwLock<Vec<ContextMenuSection>>,
@@ -43,7 +43,7 @@ pub struct MenuStack {
 }
 
 #[allow(dead_code)]
-impl ScriptingFacade {
+impl ResourceContextMenuFacade {
     pub fn new() -> Arc<Self> {
         Arc::new(Self {
             resource_contextmenu_engine: OnceLock::new(),
@@ -328,7 +328,7 @@ mod tests {
                 .unwrap(),
         );
 
-        let engine = ScriptingFacade::new();
+        let engine = ResourceContextMenuFacade::new();
         engine.initialize_engines(client.clone(), Arc::clone(&discovery));
 
         engine.register_user_script("/home/christian/Downloads/test.rhai".into());
