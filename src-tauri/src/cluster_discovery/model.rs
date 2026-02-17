@@ -9,7 +9,7 @@ use kube::api::GroupVersionKind;
 use serde::{Deserialize, Serialize};
 use tokio::sync::broadcast;
 
-use crate::{cluster_discovery::DiscoveryEvent, frontend_commands::KubeContextSource};
+use crate::{cluster_discovery::FrontendDiscoveryEvent, frontend_commands::KubeContextSource};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
 #[serde(rename_all = "camelCase")]
@@ -61,12 +61,13 @@ pub struct ClusterState {
     pub context_source: KubeContextSource,
     pub client: kube::Client,
     pub discovery: ClusterDiscovery,
+    pub kube_discovery: Option<Arc<kube::Discovery>>,
 }
 
 #[derive(Clone)]
 pub struct InflightDiscovery {
-    tx: broadcast::Sender<DiscoveryEvent>,
-    messages: Arc<RwLock<Vec<DiscoveryEvent>>>,
+    tx: broadcast::Sender<FrontendDiscoveryEvent>,
+    messages: Arc<RwLock<Vec<FrontendDiscoveryEvent>>>,
 }
 
 impl InflightDiscovery {
@@ -79,7 +80,7 @@ impl InflightDiscovery {
         }
     }
 
-    pub fn subscribe(&self) -> impl Stream<Item = DiscoveryEvent> + use<'_> {
+    pub fn subscribe(&self) -> impl Stream<Item = FrontendDiscoveryEvent> + use<'_> {
         async_stream::stream! {
             {
                 let messages = &*self.messages.read().unwrap().clone();
@@ -95,7 +96,7 @@ impl InflightDiscovery {
         }
     }
 
-    pub fn send(&self, value: DiscoveryEvent) {
+    pub fn send(&self, value: FrontendDiscoveryEvent) {
         let messages = &mut *self.messages.write().unwrap();
         messages.push(value.clone());
 

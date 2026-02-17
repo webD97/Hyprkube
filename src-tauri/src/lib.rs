@@ -43,12 +43,15 @@ pub fn run() {
 
             setup_panic_handler(app_handle.clone());
 
+            let facade = ResourceContextMenuFacade::new();
+            facade.register_user_script("/home/christian/Downloads/test.rhai".into());
+
             app.manage(RendererRegistry::new_state(app_handle.clone()));
             app.manage(ChannelTasks::new_state(app_handle.clone()));
             app.manage(ExecSessions::new_state());
             app.manage(Arc::new(ClusterRegistry::new()));
             app.manage(ResourceMenuContext::new_state());
-            app.manage(ResourceContextMenuFacade::new());
+            app.manage(facade);
 
             let mut cluster_profile_registry =
                 cluster_profiles::ClusterProfileRegistry::new(app_handle.clone());
@@ -108,7 +111,8 @@ pub fn run() {
             frontend_commands::decode_secret_key,
             frontend_commands::list_secret_keys,
             resource_menu::popup_kubernetes_resource_menu,
-            crate::scripting::resource_context_menu_facade::create_resource_menustack
+            crate::scripting::resource_context_menu_facade::create_resource_menustack,
+            crate::scripting::resource_context_menu_facade::call_menustack_action
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
