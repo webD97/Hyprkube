@@ -4,11 +4,19 @@ use std::{
     sync::{Arc, OnceLock, RwLock},
 };
 
+use kube::api::DynamicObject;
 use rhai::{exported_module, EvalAltResult};
+use serde::Serialize;
+use tauri::Manager;
 
-use crate::scripting::{
-    modules,
-    types::{self},
+use crate::{
+    cluster_discovery::ClusterRegistryState,
+    frontend_commands::KubeContextSource,
+    frontend_types::BackendError,
+    scripting::{
+        modules,
+        types::{self},
+    },
 };
 
 #[allow(unused)]
@@ -59,9 +67,7 @@ impl ResourceContextMenuFacade {
         discovery: Arc<kube::Discovery>,
     ) {
         let engine = Self::make_resource_contextmenu_engine(Arc::clone(self), client, discovery);
-        self.resource_contextmenu_engine
-            .set(engine)
-            .expect("Must not be initialized more than once");
+        self.resource_contextmenu_engine.get_or_init(|| engine);
     }
 
     fn make_resource_contextmenu_engine(
@@ -147,6 +153,7 @@ impl ResourceContextMenuFacade {
                 .unwrap_or(true);
 
             if !matches {
+                println!("Does not match");
                 continue;
             }
 
@@ -290,23 +297,81 @@ fn generate_id(len: usize) -> String {
         .collect()
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct FrontendActionButton {
     title: String,
     action_ref: String,
     dangerous: bool,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub enum FrontendMenuItem {
     ActionButton(FrontendActionButton),
     Separator,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct MenuBlueprint {
     id: String,
     items: Vec<FrontendMenuItem>,
+}
+
+#[tauri::command]
+#[tracing::instrument(skip_all, fields(request_id = tracing::field::Empty))]
+pub async fn call_menustack_action(
+    app: tauri::AppHandle,
+    menustack_id: &str,
+    action_ref: &str,
+) -> Result<(), BackendError> {
+    let facade = app.state::<Arc<ResourceContextMenuFacade>>();
+
+    facade.call_menustack_action(menustack_id, action_ref);
+
+    Ok(())
+}
+
+#[tauri::command]
+#[tracing::instrument(skip_all, fields(request_id = tracing::field::Empty))]
+pub async fn create_resource_menustack(
+    app: tauri::AppHandle,
+    context_source: KubeContextSource,
+    gvk: kube::api::GroupVersionKind,
+    namespace: &str,
+    name: &str,
+) -> Result<MenuBlueprint, BackendError> {
+    crate::internal::tracing::set_span_request_id();
+
+    let clusters = app.state::<ClusterRegistryState>();
+    let facade = app.state::<Arc<ResourceContextMenuFacade>>();
+    let cluster = clusters.get(&context_source).ok_or("not found")?;
+    let client = cluster.client;
+    let discovery = cluster.kube_discovery.expect("no discovery found");
+
+    // THis should not happen here
+    facade.initialize_engines(client.clone(), discovery);
+    if let Err(e) = facade.evaluate_all() {
+        eprintln!("Runtime error: {e}");
+    }
+
+    let (api_resource, capabilities) = kube::discovery::oneshot::pinned_kind(&client, &gvk).await?;
+
+    let api = match capabilities.scope {
+        kube::discovery::Scope::Cluster => {
+            kube::Api::<DynamicObject>::all_with(client, &api_resource)
+        }
+        kube::discovery::Scope::Namespaced => match namespace {
+            "" => kube::Api::all_with(client, &api_resource),
+            namespace => kube::Api::namespaced_with(client, namespace, &api_resource),
+        },
+    };
+
+    let obj = api.get(name).await?;
+    let blueprint = facade.create_resource_menustack(obj);
+
+    println!("{blueprint:?}");
+
+    Ok(blueprint)
 }
 
 #[cfg(test)]
