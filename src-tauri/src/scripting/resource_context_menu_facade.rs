@@ -4,11 +4,19 @@ use std::{
     sync::{Arc, OnceLock, RwLock},
 };
 
+use kube::api::DynamicObject;
 use rhai::{exported_module, EvalAltResult};
+use serde::Serialize;
+use tauri::Manager;
 
-use crate::scripting::{
-    modules,
-    types::{self},
+use crate::{
+    cluster_discovery::ClusterRegistryState,
+    frontend_commands::KubeContextSource,
+    frontend_types::BackendError,
+    scripting::{
+        modules,
+        types::{self},
+    },
 };
 
 #[allow(unused)]
@@ -290,23 +298,56 @@ fn generate_id(len: usize) -> String {
         .collect()
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct FrontendActionButton {
     title: String,
     action_ref: String,
     dangerous: bool,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub enum FrontendMenuItem {
     ActionButton(FrontendActionButton),
     Separator,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct MenuBlueprint {
     id: String,
     items: Vec<FrontendMenuItem>,
+}
+
+#[tauri::command]
+#[tracing::instrument(skip_all, fields(request_id = tracing::field::Empty))]
+pub async fn create_resource_menustack(
+    app: tauri::AppHandle,
+    context_source: KubeContextSource,
+    gvk: kube::api::GroupVersionKind,
+    namespace: &str,
+    name: &str,
+) -> Result<MenuBlueprint, BackendError> {
+    crate::internal::tracing::set_span_request_id();
+
+    let clusters = app.state::<ClusterRegistryState>();
+    let facade = app.state::<ResourceContextMenuFacade>();
+    let client = clusters.get(&context_source).ok_or("not found")?.client;
+
+    let (api_resource, capabilities) = kube::discovery::oneshot::pinned_kind(&client, &gvk).await?;
+
+    let api = match capabilities.scope {
+        kube::discovery::Scope::Cluster => {
+            kube::Api::<DynamicObject>::all_with(client, &api_resource)
+        }
+        kube::discovery::Scope::Namespaced => match namespace {
+            "" => kube::Api::all_with(client, &api_resource),
+            namespace => kube::Api::namespaced_with(client, namespace, &api_resource),
+        },
+    };
+
+    let obj = api.get(name).await?;
+    let blueprint = facade.create_resource_menustack(obj);
+
+    Ok(blueprint)
 }
 
 #[cfg(test)]
