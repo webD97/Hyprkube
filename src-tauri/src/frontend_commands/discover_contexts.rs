@@ -5,7 +5,7 @@ use tracing::warn;
 
 use crate::frontend_types::BackendError;
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Hash)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct KubeContextSource {
     pub provider: String,
     pub source: String,

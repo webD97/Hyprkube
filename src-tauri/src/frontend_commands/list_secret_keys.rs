@@ -13,7 +13,7 @@ pub async fn list_secret_keys(
     namespace: &str,
     name: &str,
 ) -> Result<Vec<String>, BackendError> {
-    let client = clusters.get(&context_source).ok_or("not found")?.client;
+    let client = clusters.client_for(&context_source)?;
     let api: kube::Api<v1::Secret> = kube::Api::namespaced(client, namespace);
     let secret = api.get(name).await.unwrap();
 

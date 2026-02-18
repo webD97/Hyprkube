@@ -1,6 +1,6 @@
 use crate::{
-    app_state::Rejected, persistence::discovery_cache_service,
-    resource_rendering::ResourceViewError,
+    app_state::Rejected, cluster_discovery::ClusterRegistryError,
+    persistence::discovery_cache_service, resource_rendering::ResourceViewError,
 };
 
 #[derive(thiserror::Error, Debug)]
@@ -22,6 +22,9 @@ pub enum BackendError {
 
     #[error(transparent)]
     DiscoveryCacheServiceError(#[from] discovery_cache_service::Error),
+
+    #[error(transparent)]
+    ClusterRegistry(#[from] ClusterRegistryError),
 
     #[error("{0}")]
     Generic(String),

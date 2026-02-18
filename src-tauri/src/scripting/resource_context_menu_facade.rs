@@ -344,12 +344,11 @@ pub async fn create_resource_menustack(
 
     let clusters = app.state::<ClusterRegistryState>();
     let facade = app.state::<Arc<ResourceContextMenuFacade>>();
-    let cluster = clusters.get(&context_source).ok_or("not found")?;
-    let client = cluster.client;
-    let discovery = cluster.kube_discovery.expect("no discovery found");
+    let client = clusters.client_for(&context_source)?;
+    let discovery = clusters.discovery_cache_for(&context_source)?;
 
     // THis should not happen here
-    facade.initialize_engines(client.clone(), discovery);
+    facade.initialize_engines(client.clone(), Arc::clone(&discovery));
     if let Err(e) = facade.evaluate_all() {
         eprintln!("Runtime error: {e}");
     }

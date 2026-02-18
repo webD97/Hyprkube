@@ -35,7 +35,7 @@ pub async fn popup_kubernetes_resource_menu(
 ) -> Result<(), BackendError> {
     crate::internal::tracing::set_span_request_id();
 
-    let client = clusters.get(&context_source).ok_or("not found")?.client;
+    let client = clusters.client_for(&context_source)?;
 
     let (api_resource, capabilities) = pinned_kind(&client, &gvk).await.unwrap();
 
