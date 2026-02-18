@@ -20,6 +20,7 @@ use crate::{
     },
     frontend_commands::KubeContextSource,
     persistence::{discovery_cache_service::DiscoveryCacheService, repository::Repository},
+    scripting::resource_context_menu_facade::ResourceContextMenuFacade,
 };
 
 #[derive(Serialize, Clone, Debug)]
@@ -114,6 +115,7 @@ pub async fn connect_cluster(
             client: client.clone(),
             discovery: Arc::new(ClusterDiscovery::Inflight(Arc::clone(&inflight))),
             kube_discovery: None,
+            script_facade: None,
         });
 
         // Cached part
@@ -202,11 +204,17 @@ pub async fn connect_cluster(
 
         let result = CompletedDiscovery { resources, crds };
 
+        let facade = ResourceContextMenuFacade::new();
+        facade.register_user_script("/home/christian/Downloads/test.rhai".into());
+        facade.initialize_engines(client.clone(), Arc::clone(kube_discovery.as_ref().unwrap()));
+        facade.evaluate_all().unwrap();
+
         clusters.manage(ClusterState {
             context_source,
             client,
             discovery: Arc::new(ClusterDiscovery::Completed(result)),
             kube_discovery,
+            script_facade: Some(facade),
         });
 
         channel.send(FrontendDiscoveryEvent::DiscoveryComplete(()))?;

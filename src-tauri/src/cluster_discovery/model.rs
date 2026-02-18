@@ -9,7 +9,10 @@ use kube::api::GroupVersionKind;
 use serde::{Deserialize, Serialize};
 use tokio::sync::broadcast;
 
-use crate::{cluster_discovery::FrontendDiscoveryEvent, frontend_commands::KubeContextSource};
+use crate::{
+    cluster_discovery::FrontendDiscoveryEvent, frontend_commands::KubeContextSource,
+    scripting::resource_context_menu_facade::ResourceContextMenuFacade,
+};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
 #[serde(rename_all = "camelCase")]
@@ -62,6 +65,7 @@ pub struct ClusterState {
     pub client: kube::Client,
     pub discovery: Arc<ClusterDiscovery>,
     pub kube_discovery: Option<Arc<kube::Discovery>>,
+    pub script_facade: Option<Arc<ResourceContextMenuFacade>>,
 }
 
 #[derive(Clone)]

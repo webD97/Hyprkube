@@ -55,7 +55,7 @@ export const Playground: React.FC = () => {
                             <Button
                                 key={item.ActionButton.title}
                                 danger={item.ActionButton.dangerous}
-                                onClick={() => void invoke("call_menustack_action", { menustackId: menu.data.id, actionRef: item.ActionButton.actionRef })}
+                                onClick={() => void invoke("call_menustack_action", { contextSource, menustackId: menu.data.id, actionRef: item.ActionButton.actionRef })}
                             >
                                 {item.ActionButton.title}
                             </Button>

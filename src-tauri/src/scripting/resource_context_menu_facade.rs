@@ -321,11 +321,12 @@ pub struct MenuBlueprint {
 #[tracing::instrument(skip_all, fields(request_id = tracing::field::Empty))]
 pub async fn call_menustack_action(
     app: tauri::AppHandle,
+    context_source: KubeContextSource,
     menustack_id: &str,
     action_ref: &str,
 ) -> Result<(), BackendError> {
-    let facade = app.state::<Arc<ResourceContextMenuFacade>>();
-
+    let clusters = app.state::<ClusterRegistryState>();
+    let facade = clusters.scripting_for(&context_source)?;
     facade.call_menustack_action(menustack_id, action_ref);
 
     Ok(())
@@ -343,17 +344,13 @@ pub async fn create_resource_menustack(
     crate::internal::tracing::set_span_request_id();
 
     let clusters = app.state::<ClusterRegistryState>();
-    let facade = app.state::<Arc<ResourceContextMenuFacade>>();
-    let client = clusters.client_for(&context_source)?;
+    let facade = clusters.scripting_for(&context_source)?;
     let discovery = clusters.discovery_cache_for(&context_source)?;
+    let client = clusters.client_for(&context_source)?;
 
-    // THis should not happen here
-    facade.initialize_engines(client.clone(), Arc::clone(&discovery));
-    if let Err(e) = facade.evaluate_all() {
-        eprintln!("Runtime error: {e}");
-    }
-
-    let (api_resource, capabilities) = kube::discovery::oneshot::pinned_kind(&client, &gvk).await?;
+    let (api_resource, capabilities) = discovery
+        .resolve_gvk(&gvk)
+        .ok_or("GroupVersionKind not found")?;
 
     let api = match capabilities.scope {
         kube::discovery::Scope::Cluster => {

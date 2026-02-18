@@ -6,6 +6,7 @@ use std::{
 use crate::{
     cluster_discovery::{ClusterDiscovery, ClusterState},
     frontend_commands::KubeContextSource,
+    scripting::resource_context_menu_facade::ResourceContextMenuFacade,
 };
 
 pub struct ClusterRegistry {
@@ -40,6 +41,22 @@ impl ClusterRegistry {
             .ok_or_else(|| ClusterRegistryError::NotFound(context_source.to_owned()))?
             .client
             .to_owned())
+    }
+
+    pub fn scripting_for(
+        &self,
+        context_source: &KubeContextSource,
+    ) -> Result<Arc<ResourceContextMenuFacade>, ClusterRegistryError> {
+        Ok(self
+            .clusters
+            .read()
+            .unwrap()
+            .get(context_source)
+            .ok_or_else(|| ClusterRegistryError::NotFound(context_source.to_owned()))?
+            .script_facade
+            .as_ref()
+            .unwrap()
+            .clone())
     }
 
     pub fn discovery_for(
