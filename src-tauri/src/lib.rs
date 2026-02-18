@@ -24,7 +24,6 @@ use tracing_subscriber::{fmt, layer::SubscriberExt as _, util::SubscriberInitExt
 use crate::{
     cluster_discovery::ClusterRegistry, frontend_types::BackendPanic,
     persistence::repository::Repository, resource_menu::ResourceMenuContext,
-    scripting::resource_context_menu_facade::ResourceContextMenuFacade,
 };
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -43,15 +42,11 @@ pub fn run() {
 
             setup_panic_handler(app_handle.clone());
 
-            let facade = ResourceContextMenuFacade::new();
-            facade.register_user_script("/home/christian/Downloads/test.rhai".into());
-
             app.manage(RendererRegistry::new_state(app_handle.clone()));
             app.manage(ChannelTasks::new_state(app_handle.clone()));
             app.manage(ExecSessions::new_state());
             app.manage(Arc::new(ClusterRegistry::new()));
             app.manage(ResourceMenuContext::new_state());
-            app.manage(facade);
 
             let mut cluster_profile_registry =
                 cluster_profiles::ClusterProfileRegistry::new(app_handle.clone());
