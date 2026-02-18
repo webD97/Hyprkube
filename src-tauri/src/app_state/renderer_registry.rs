@@ -95,9 +95,9 @@ impl RendererRegistry {
         let renderers = self.mappings.get(gvk).unwrap_or(Self::EMPTY_VEC);
 
         let clusters = self.app_handle.state::<ClusterRegistryState>();
-        let context = clusters.get(context_source).ok_or("not found").unwrap();
+        let discovery = clusters.discovery_for(context_source).unwrap();
 
-        let crds: Vec<GroupVersionKind> = match context.discovery {
+        let crds: Vec<GroupVersionKind> = match &*discovery {
             ClusterDiscovery::Inflight(inflight) => inflight
                 .block_until_done()
                 .await

@@ -77,8 +77,8 @@ pub async fn connect_cluster(
 
     let _ = background_tasks.submit(channel.id(), async move {
         // Fast path: If there is already a discovery, use its results
-        if let Some(ctx) = clusters.get(&context_source) {
-            match ctx.discovery {
+        if let Ok(discovery) = clusters.discovery_for(&context_source) {
+            match &*discovery {
                 ClusterDiscovery::Inflight(discovery) => {
                     tracing::info!("Attaching to inflight discovery");
 
@@ -112,7 +112,7 @@ pub async fn connect_cluster(
         clusters.manage(ClusterState {
             context_source: context_source.clone(),
             client: client.clone(),
-            discovery: ClusterDiscovery::Inflight(Arc::clone(&inflight)),
+            discovery: Arc::new(ClusterDiscovery::Inflight(Arc::clone(&inflight))),
             kube_discovery: None,
         });
 
@@ -205,7 +205,7 @@ pub async fn connect_cluster(
         clusters.manage(ClusterState {
             context_source,
             client,
-            discovery: ClusterDiscovery::Completed(result),
+            discovery: Arc::new(ClusterDiscovery::Completed(result)),
             kube_discovery,
         });
 

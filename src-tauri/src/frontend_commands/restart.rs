@@ -13,7 +13,7 @@ pub async fn restart_deployment(
     namespace: &str,
     name: &str,
 ) -> Result<(), BackendError> {
-    let client = clusters.get(&context_source).ok_or("not found")?.client;
+    let client = clusters.client_for(&context_source)?;
 
     let api: kube::Api<Deployment> = kube::Api::namespaced(client, namespace);
 
@@ -29,7 +29,7 @@ pub async fn restart_statefulset(
     namespace: &str,
     name: &str,
 ) -> Result<(), BackendError> {
-    let client = clusters.get(&context_source).ok_or("not found")?.client;
+    let client = clusters.client_for(&context_source)?;
 
     let api: kube::Api<StatefulSet> = kube::Api::namespaced(client, namespace);
 

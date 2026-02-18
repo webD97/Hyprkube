@@ -30,7 +30,7 @@ pub async fn watch_namespaces(
     let channel_id = channel.id();
     info!("Streaming namespaces to channel {channel_id}");
 
-    let client = clusters.get(&context_source).ok_or("not found")?.client;
+    let client = clusters.client_for(&context_source)?;
 
     let api: kube::Api<Namespace> = kube::Api::all(client);
 

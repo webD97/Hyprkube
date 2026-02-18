@@ -60,7 +60,7 @@ pub enum ClusterDiscovery {
 pub struct ClusterState {
     pub context_source: KubeContextSource,
     pub client: kube::Client,
-    pub discovery: ClusterDiscovery,
+    pub discovery: Arc<ClusterDiscovery>,
     pub kube_discovery: Option<Arc<kube::Discovery>>,
 }
 

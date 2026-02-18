@@ -74,7 +74,7 @@ pub async fn pod_exec_start_session(
     container: &str,
     session_event_channel: Channel<ExecSessionEvent>,
 ) -> Result<ExecSessionId, BackendError> {
-    let client = clusters.get(&context_source).ok_or("not found")?.client;
+    let client = clusters.client_for(&context_source)?;
 
     let pods: kube::Api<Pod> = kube::Api::namespaced(client, pod_namespace);
 

@@ -14,7 +14,8 @@ pub async fn decode_secret_key(
     name: &str,
     key: &str,
 ) -> Result<Option<ByteString>, BackendError> {
-    let client = clusters.get(&context_source).ok_or("not found")?.client;
+    let client = clusters.client_for(&context_source)?;
+
     let api: kube::Api<v1::Secret> = kube::Api::namespaced(client, namespace);
     let secret = api.get(name).await.unwrap();
 

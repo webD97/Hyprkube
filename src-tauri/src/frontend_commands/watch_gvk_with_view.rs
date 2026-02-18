@@ -54,8 +54,8 @@ pub async fn watch_gvk_with_view(
     let channel_id = channel.id();
     info!("Streaming {gvk:?} in namespace {namespace} to channel {channel_id}");
 
-    let context = clusters.get(&context_source).ok_or("not found")?;
-    let client = context.client;
+    let discovery = clusters.discovery_for(&context_source)?;
+    let client = clusters.client_for(&context_source)?;
 
     let (api_resource, resource_capabilities) =
         kube::discovery::oneshot::pinned_kind(&client, &gvk).await?;
@@ -75,9 +75,9 @@ pub async fn watch_gvk_with_view(
     let stream = async move {
         let view = views.get_renderer(&gvk, view_name.as_str()).await;
 
-        let crds: HashMap<GroupVersionKind, CustomResourceDefinition> = match context.discovery {
+        let crds: HashMap<GroupVersionKind, CustomResourceDefinition> = match &*discovery {
             ClusterDiscovery::Inflight(inflight) => inflight.block_until_done().await.unwrap().crds,
-            ClusterDiscovery::Completed(resources) => resources.crds,
+            ClusterDiscovery::Completed(resources) => resources.crds.clone(),
         };
 
         let crd = crds.get(&gvk);
