@@ -79,6 +79,8 @@ pub fn run() {
             frontend_commands::watch_namespaces,
             frontend_commands::cleanup_channel,
             frontend_commands::discover_contexts,
+            frontend_commands::get_kubeconfig_yaml,
+            frontend_commands::write_kubeconfig_yaml,
             frontend_commands::delete_resource,
             frontend_commands::list_resource_views,
             frontend_commands::pod_exec_start_session,
