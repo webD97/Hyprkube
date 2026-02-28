@@ -14,6 +14,16 @@ register_resource_contextmenu_section(
                     }
                 }),
                 ActionButton(#{
+                    title: "Copy name",
+                    action: |obj| {
+                        let name = obj.metadata?.name;
+
+                        if name != () {
+                            clipboard::write_text(name);
+                        }
+                    }
+                }),
+                ActionButton(#{
                     title: "Delete",
                     dangerous: true,
                     action: |obj| {
