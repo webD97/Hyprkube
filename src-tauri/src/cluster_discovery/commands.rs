@@ -20,7 +20,9 @@ use crate::{
     },
     frontend_commands::KubeContextSource,
     persistence::{discovery_cache_service::DiscoveryCacheService, repository::Repository},
-    scripting::resource_context_menu_facade::ResourceContextMenuFacade,
+    scripting::{
+        resource_context_menu_facade::ResourceContextMenuFacade, scripts_provider::ScriptsProvider,
+    },
 };
 
 #[derive(Serialize, Clone, Debug)]
@@ -40,9 +42,6 @@ impl From<&InternalDiscoveryEvent> for FrontendDiscoveryEvent {
             InternalDiscoveryEvent::DiscoveredResource(resource) => {
                 FrontendDiscoveryEvent::DiscoveredResource(resource.clone())
             }
-            InternalDiscoveryEvent::RemovedResource(resource) => {
-                FrontendDiscoveryEvent::RemovedResource(resource.clone())
-            }
             InternalDiscoveryEvent::CustomResourceDefinition(inner) => {
                 FrontendDiscoveryEvent::CustomResourceDefinition(inner.clone())
             }
@@ -56,8 +55,6 @@ impl From<&InternalDiscoveryEvent> for FrontendDiscoveryEvent {
 pub enum InternalDiscoveryEvent {
     /// A resource kind that was either discovered from the cluster or read from cache
     DiscoveredResource(DiscoveredResource),
-    /// A resource kind that was previously cached but vanished from the cluster (i.e. CRD uninstall)
-    RemovedResource(DiscoveredResource),
     CustomResourceDefinition((GroupVersionKind, Box<CustomResourceDefinition>)),
     DiscoveryComplete(kube::Discovery),
 }
@@ -68,6 +65,7 @@ pub async fn connect_cluster(
     background_tasks: State<'_, JoinHandleStoreState>,
     repository: State<'_, Arc<Repository>>,
     clusters: State<'_, ClusterRegistryState>,
+    scripts_provider: State<'_, Arc<ScriptsProvider>>,
     channel: tauri::ipc::Channel<FrontendDiscoveryEvent>,
     context_source: KubeContextSource,
 ) -> Result<(), String> {
@@ -75,6 +73,7 @@ pub async fn connect_cluster(
 
     let repository = Arc::clone(&repository);
     let clusters = Arc::clone(&clusters);
+    let scripts_provider = Arc::clone(&scripts_provider);
 
     let _ = background_tasks.submit(channel.id(), async move {
         // Fast path: If there is already a discovery, use its results
@@ -180,7 +179,6 @@ pub async fn connect_cluster(
                 InternalDiscoveryEvent::DiscoveryComplete(discovery) => {
                     kube_discovery = Some(Arc::new(discovery))
                 }
-                _ => {}
             }
         }
 
@@ -205,9 +203,9 @@ pub async fn connect_cluster(
         let result = CompletedDiscovery { resources, crds };
 
         let facade = ResourceContextMenuFacade::new();
-        facade.register_user_script("/home/christian/Downloads/test.rhai".into());
+        // facade.register_user_script("/home/christian/Downloads/test.rhai".into());
         facade.initialize_engines(client.clone(), Arc::clone(kube_discovery.as_ref().unwrap()));
-        facade.evaluate_all().unwrap();
+        facade.evaluate(&scripts_provider);
 
         clusters.manage(ClusterState {
             context_source,

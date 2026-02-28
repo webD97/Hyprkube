@@ -24,6 +24,7 @@ use tracing_subscriber::{fmt, layer::SubscriberExt as _, util::SubscriberInitExt
 use crate::{
     cluster_discovery::ClusterRegistry, frontend_types::BackendPanic,
     persistence::repository::Repository, resource_menu::ResourceMenuContext,
+    scripting::scripts_provider::ScriptsProvider,
 };
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -47,6 +48,7 @@ pub fn run() {
             app.manage(ExecSessions::new_state());
             app.manage(Arc::new(ClusterRegistry::new()));
             app.manage(ResourceMenuContext::new_state());
+            app.manage(Arc::new(ScriptsProvider::new(app_handle.clone())));
 
             let mut cluster_profile_registry =
                 cluster_profiles::ClusterProfileRegistry::new(app_handle.clone());
