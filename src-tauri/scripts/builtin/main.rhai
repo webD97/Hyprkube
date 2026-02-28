@@ -7,6 +7,13 @@ register_resource_contextmenu_section(
         items: |obj| {
             [
                 ActionButton(#{
+                    title: "Say hello",
+                    action: |obj| {
+                        print("Hello, world!");
+                        print_hello();
+                    }
+                }),
+                ActionButton(#{
                     title: "Delete",
                     dangerous: true,
                     action: |obj| {
@@ -19,16 +26,26 @@ register_resource_contextmenu_section(
                         kube::delete(api_version, kind, namespace, name);
                     }
                 }),
-                (),
-                (),
-                ActionButton(#{
-                    title: "Say hello",
-                    action: |obj| {
-                        print("Hello, world!");
-                        print_hello();
-                    }
-                }),
             ]
+        }
+    })
+);
+
+register_resource_contextmenu_section(
+    MenuSection(#{
+        title: "Containers",
+        matcher: |group, version, kind| kind == "Pod",
+        items: |obj| {
+            let containers = obj.spec?.containers?.map(|c| c.name) ?? [];
+
+            containers.map(|name| (
+                ActionButton(#{
+                    title: name,
+                    action: |obj| {
+                        print(`Hello, ${name}!`);
+                    }
+                })
+            ))
         }
     })
 );

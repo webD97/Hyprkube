@@ -8,7 +8,6 @@ import { deleteResource } from "../../api/deleteResource";
 import getDefaultNamespace from "../../api/getDefaultNamespace";
 import getResourceYaml from "../../api/getResourceYaml";
 import listResourceViews, { ResourceViewDef } from "../../api/listResourceViews";
-import { popupKubernetesResourceMenu } from "../../api/popupKubernetesResourceMenu";
 import setDefaultNamespace from "../../api/setDefaultNamespace";
 import LogPanel from "../../components/LogPanel";
 import ResourceList from "../../components/ResourceList";
@@ -246,6 +245,7 @@ const ResourceListInspector: React.FC<ResourceListInspectorProps> = (props) => {
             </div>
             <div className={classes.tableArea}>
                 <ResourceList
+                    contextSource={contextSource}
                     resourceNamePlural={resourceNamePlural}
                     gvk={gvk}
                     namespace={selectedNamespace}
@@ -253,12 +253,6 @@ const ResourceListInspector: React.FC<ResourceListInspectorProps> = (props) => {
                     resourceData={resources}
                     onResourceClicked={yamlViewerFactory()}
                     searchbarPortal={searchbarRef}
-                    onResourceContextMenu={(gvk, resourceUID, position) => {
-                        const { namespace, name } = resources[resourceUID];
-
-                        popupKubernetesResourceMenu(contextSource, tabIdentifier.toString(), namespace, name, gvk, position)
-                            .catch(e => console.log(e))
-                    }}
                     onSelectionChanged={setSelectedResources}
                 />
             </div>

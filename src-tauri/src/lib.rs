@@ -108,8 +108,9 @@ pub fn run() {
             frontend_commands::decode_secret_key,
             frontend_commands::list_secret_keys,
             resource_menu::popup_kubernetes_resource_menu,
-            crate::scripting::resource_context_menu_facade::create_resource_menustack,
-            crate::scripting::resource_context_menu_facade::call_menustack_action
+            crate::resource_menu::create_resource_menustack,
+            crate::resource_menu::drop_resource_menustack,
+            crate::resource_menu::call_menustack_action
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
