@@ -26,6 +26,7 @@ struct ContextMenuSection {
 }
 
 pub struct ResourceContextMenuFacade {
+    app: tauri::AppHandle,
     /// Handles scripts that render a resource context menu
     resource_contextmenu_engine: OnceLock<rhai::Engine>,
     registered_contextmenu_sections: RwLock<Vec<ContextMenuSection>>,
@@ -50,8 +51,9 @@ pub struct MenuStack {
 
 #[allow(dead_code)]
 impl ResourceContextMenuFacade {
-    pub fn new() -> Arc<Self> {
+    pub fn new(app: tauri::AppHandle) -> Arc<Self> {
         Arc::new(Self {
+            app,
             resource_contextmenu_engine: OnceLock::new(),
             registered_contextmenu_sections: RwLock::new(Vec::new()),
             resource_action_scripts: RwLock::new(HashMap::new()),
@@ -82,6 +84,10 @@ impl ResourceContextMenuFacade {
         engine.register_static_module(
             "kube",
             modules::kube::build_module(client, discovery).into(),
+        );
+        engine.register_static_module(
+            "clipboard",
+            modules::clipboard::build_module(facade.app.clone()).into(),
         );
         engine.register_static_module("base64", exported_module!(modules::base64_rhai).into());
 

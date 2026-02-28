@@ -62,6 +62,7 @@ pub enum InternalDiscoveryEvent {
 #[tauri::command]
 #[tracing::instrument(skip_all, fields(request_id = tracing::field::Empty))]
 pub async fn connect_cluster(
+    app: tauri::AppHandle,
     background_tasks: State<'_, JoinHandleStoreState>,
     repository: State<'_, Arc<Repository>>,
     clusters: State<'_, ClusterRegistryState>,
@@ -202,7 +203,7 @@ pub async fn connect_cluster(
 
         let result = CompletedDiscovery { resources, crds };
 
-        let facade = ResourceContextMenuFacade::new();
+        let facade = ResourceContextMenuFacade::new(app);
         // facade.register_user_script("/home/christian/Downloads/test.rhai".into());
         facade.initialize_engines(client.clone(), Arc::clone(kube_discovery.as_ref().unwrap()));
         facade.evaluate(&scripts_provider);
