@@ -35,7 +35,9 @@
       "providerShortName": null,
       "signingIdentity": null
     },
-    "resources": [],
+    "resources": {
+      "scripts/": "scripts/"
+    },
     "shortDescription": "",
     "linux": {
       "deb": {

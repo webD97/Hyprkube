@@ -15,6 +15,7 @@ use crate::{
     frontend_types::BackendError,
     scripting::{
         modules,
+        scripts_provider::ScriptsProvider,
         types::{self},
     },
 };
@@ -238,48 +239,43 @@ impl ResourceContextMenuFacade {
         action.fnptr.call::<()>(engine, &action.ast, ()).unwrap();
     }
 
-    /// Registers a script with its source code in some file system location for later use.
-    pub fn register_user_script(&self, source: PathBuf) {
-        self.resource_action_scripts
-            .write()
-            .expect("failed to lock Mutex")
-            .entry(source)
-            .insert_entry(UserScript { ast: None });
-    }
-
-    // Run a previously registered script
-    pub fn evaluate_all(&self) -> Result<(), Box<EvalAltResult>> {
+    pub fn evaluate(&self, scripts_provider: &ScriptsProvider) {
         let engine = self
             .resource_contextmenu_engine
             .get()
             .expect("Engine not initialized");
 
-        let paths: Vec<PathBuf> = {
-            let scripts = self.resource_action_scripts.read().unwrap();
-            scripts.keys().cloned().collect()
-        };
+        let builtins = scripts_provider.get_builtins_entrypoints().unwrap();
+        let extensions = scripts_provider.get_extensions_entrypoints().unwrap();
 
-        for path in paths {
+        for entrypoint in builtins.iter().chain(&extensions) {
+            tracing::info!("Evaluating {}", entrypoint.to_string_lossy());
+
+            if !std::fs::exists(entrypoint).unwrap() {
+                tracing::warn!("Entrypoint does not exist");
+                continue;
+            }
+
             let ast_arc = {
                 let mut scripts = self.resource_action_scripts.write().unwrap();
+
                 let script = scripts
-                    .get_mut(&path)
-                    .ok_or_else(|| format!("Unknown script: {}", path.display()))?;
+                    .entry(entrypoint.to_owned())
+                    .or_insert(UserScript { ast: None });
 
                 let ast_result = script
                     .ast
-                    .get_or_insert_with(|| engine.compile_file(path.clone()).map(Arc::new));
+                    .get_or_insert_with(|| engine.compile_file(entrypoint.clone()).map(Arc::new));
 
                 ast_result
                     .as_ref()
-                    .map_err(|e| format!("Compilation failed for {}: {e}", path.display()))?
+                    .map_err(|e| format!("Compilation failed for {}: {e}", entrypoint.display()))
+                    .unwrap()
                     .clone()
             };
 
-            engine.eval_ast::<()>(&ast_arc)?;
+            engine.eval_ast::<()>(&ast_arc).unwrap();
         }
-
-        Ok(())
     }
 }
 
@@ -368,62 +364,4 @@ pub async fn create_resource_menustack(
     println!("{blueprint:?}");
 
     Ok(blueprint)
-}
-
-#[cfg(test)]
-mod tests {
-    use kube::api::DynamicObject;
-
-    use super::*;
-
-    #[tokio::test(flavor = "multi_thread")]
-    pub async fn test() {
-        let client = kube::Client::try_default()
-            .await
-            .expect("Failed to create Kubernetes client");
-
-        let discovery = Arc::new(
-            kube::Discovery::new(client.clone())
-                .run_aggregated()
-                .await
-                .unwrap(),
-        );
-
-        let engine = ResourceContextMenuFacade::new();
-        engine.initialize_engines(client.clone(), Arc::clone(&discovery));
-
-        engine.register_user_script("/home/christian/Downloads/test.rhai".into());
-
-        if let Err(e) = engine.evaluate_all() {
-            eprintln!("Runtime error: {e}");
-        }
-
-        let (ar, _) = discovery.get("").unwrap().recommended_kind("Pod").unwrap();
-
-        let api: kube::Api<DynamicObject> =
-            kube::Api::namespaced_with(client, "monitoring-system", &ar);
-        let pod = api
-            .get("alertmanager-kube-prometheus-stack-alertmanager-0")
-            .await
-            .unwrap();
-
-        let blueprint = engine.create_resource_menustack(pod);
-        println!("{blueprint:?}");
-        let first_action = {
-            blueprint
-                .items
-                .iter()
-                .filter_map(|i: &FrontendMenuItem| match i {
-                    FrontendMenuItem::ActionButton(b) => Some(b.clone()),
-                    _ => None,
-                })
-                .collect::<Vec<FrontendActionButton>>()
-                .first()
-                .unwrap()
-                .action_ref
-                .clone()
-        };
-        engine.call_menustack_action(&blueprint.id, &first_action);
-        engine.drop_resource_menustack(&blueprint.id);
-    }
 }
