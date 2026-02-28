@@ -7,8 +7,8 @@ use kube::Api;
 use tauri::menu::{
     ContextMenu, Menu, MenuItemBuilder, MenuItemKind, PredefinedMenuItem, SubmenuBuilder,
 };
-use tauri::{LogicalPosition, Position, State, Window, Wry};
-use tracing::error;
+use tauri::{LogicalPosition, Manager as _, Position, State, Window, Wry};
+use tracing::{debug, error};
 
 use crate::cluster_discovery::ClusterRegistryState;
 use crate::frontend_commands::KubeContextSource;
@@ -18,6 +18,7 @@ use crate::resource_menu::{
     BasicResourceMenu, DataKeysResourceMenu, DynamicResourceMenuProvider,
     KubernetesResourceMenuState, PodResourceMenu, ResourceMenuContext, RolloutRestartResourceMenu,
 };
+use crate::scripting::resource_context_menu_facade::MenuBlueprint;
 
 #[allow(clippy::too_many_arguments)]
 #[tauri::command]
@@ -148,4 +149,74 @@ fn create_action_map(items: Vec<HyprkubeMenuItem>) -> HashMap<String, Box<dyn Me
     }
 
     actions
+}
+
+#[tauri::command]
+#[tracing::instrument(skip_all, fields(request_id = tracing::field::Empty))]
+pub async fn call_menustack_action(
+    app: tauri::AppHandle,
+    context_source: KubeContextSource,
+    menustack_id: &str,
+    action_ref: &str,
+) -> Result<(), BackendError> {
+    let clusters = app.state::<ClusterRegistryState>();
+    let facade = clusters.scripting_for(&context_source)?;
+    facade.call_menustack_action(menustack_id, action_ref);
+
+    Ok(())
+}
+
+#[tauri::command]
+#[tracing::instrument(skip_all, fields(request_id = tracing::field::Empty))]
+pub async fn create_resource_menustack(
+    app: tauri::AppHandle,
+    context_source: KubeContextSource,
+    gvk: kube::api::GroupVersionKind,
+    namespace: &str,
+    name: &str,
+) -> Result<MenuBlueprint, BackendError> {
+    crate::internal::tracing::set_span_request_id();
+
+    let clusters = app.state::<ClusterRegistryState>();
+    let facade = clusters.scripting_for(&context_source)?;
+    let discovery = clusters.discovery_cache_for(&context_source)?;
+    let client = clusters.client_for(&context_source)?;
+
+    let (api_resource, capabilities) = discovery
+        .resolve_gvk(&gvk)
+        .ok_or("GroupVersionKind not found")?;
+
+    let api = match capabilities.scope {
+        kube::discovery::Scope::Cluster => {
+            kube::Api::<DynamicObject>::all_with(client, &api_resource)
+        }
+        kube::discovery::Scope::Namespaced => match namespace {
+            "" => kube::Api::all_with(client, &api_resource),
+            namespace => kube::Api::namespaced_with(client, namespace, &api_resource),
+        },
+    };
+
+    let obj = api.get(name).await?;
+    let blueprint = facade.create_resource_menustack(obj);
+    debug!("Created menu stack {}", blueprint.id);
+
+    Ok(blueprint)
+}
+
+#[tauri::command]
+#[tracing::instrument(skip_all, fields(request_id = tracing::field::Empty))]
+pub async fn drop_resource_menustack(
+    app: tauri::AppHandle,
+    context_source: KubeContextSource,
+    menu_id: &str,
+) -> Result<(), BackendError> {
+    crate::internal::tracing::set_span_request_id();
+
+    let clusters = app.state::<ClusterRegistryState>();
+    let facade = clusters.scripting_for(&context_source)?;
+
+    facade.drop_resource_menustack(menu_id);
+    debug!("Dropped menu stack {menu_id}");
+
+    Ok(())
 }

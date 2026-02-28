@@ -1,44 +1,18 @@
 import { Dropdown } from "antd";
 import { ItemType, SubMenuType } from "antd/es/menu/interface";
-import { cloneElement, MouseEventHandler, ReactElement, useState } from "react";
+import { ReactNode, useState } from "react";
 
 export interface LazyDropdownProps {
-    items: ItemType[],
+    fetchItems: () => Promise<ItemType[]>,
     onSubmenuActivated: (key: React.Key) => Promise<ItemType[]>,
-    children: ReactElement<{ onContextMenu: MouseEventHandler }>
-}
-
-export function encodeItemKey(
-    { group, version, kind, namespace, name }: ResourceKey,
-    action: string,
-    args: string[] = []
-): string {
-    const encodedResource = btoa(JSON.stringify([group, version, kind, namespace, name]));
-    const encodedAction = btoa(action);
-    const encodedArgs = btoa(JSON.stringify(args));
-
-    return `${encodedResource}.${encodedAction}.${encodedArgs}`;
-}
-
-export function decodeItemKey(key: string): {
-    resource: ResourceKey,
-    action: string,
-    args: string[]
-} {
-    const [encodedResource, encodedAction, encodedArgs] = key.split('.');
-    const [group, version, kind, namespace, name] = JSON.parse(atob(encodedResource)) as string[];
-    const action = atob(encodedAction);
-    const args = JSON.parse(atob(encodedArgs)) as string[];
-
-    return {
-        resource: { group, version, kind, namespace, name }, action, args
-    };
+    children: ReactNode,
+    onClose?: () => void,
 }
 
 export default function LazyDropdown({
-    items, children: child, onSubmenuActivated: onLazyKeyActivated
+    fetchItems, children, onSubmenuActivated: onLazyKeyActivated, onClose
 }: LazyDropdownProps) {
-    const [realItems, setRealItems] = useState(items);
+    const [realItems, setRealItems] = useState<ItemType[]>([]);
 
     async function onSubmenuOpens(keys: React.Key[]) {
         const newItems = await onLazyKeyActivated(keys[keys.length - 1]);
@@ -58,9 +32,23 @@ export default function LazyDropdown({
                     if (getSubmenuItems(realItems, openKeys)?.length ?? 0 > 0) return;
                     void onSubmenuOpens(openKeys);
                 },
+                onClick(e) {
+                    e.domEvent.stopPropagation();
+                }
+            }}
+            onOpenChange={(open) => {
+                void (async () => {
+                    if (open) {
+                        setRealItems(await fetchItems());
+                    }
+                    else {
+                        setRealItems([]);
+                        onClose?.();
+                    }
+                })();
             }}
         >
-            {cloneElement(child, {})}
+            {children}
         </Dropdown>
     );
 }

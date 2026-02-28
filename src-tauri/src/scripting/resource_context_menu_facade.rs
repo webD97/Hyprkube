@@ -4,15 +4,12 @@ use std::{
     sync::{Arc, OnceLock, RwLock},
 };
 
-use kube::api::DynamicObject;
 use rhai::{exported_module, EvalAltResult};
 use serde::Serialize;
-use tauri::Manager;
+use serde_json::json;
 
 use crate::{
-    cluster_discovery::ClusterRegistryState,
-    frontend_commands::KubeContextSource,
-    frontend_types::BackendError,
+    internal::mini_id::random_id,
     scripting::{
         modules,
         scripts_provider::ScriptsProvider,
@@ -133,7 +130,11 @@ impl ResourceContextMenuFacade {
 
         let sections_defs = self.registered_contextmenu_sections.read().unwrap();
 
-        let mut sections: Vec<Vec<(types::MenuItem, Option<Arc<rhai::AST>>)>> = Vec::new();
+        type SectionItem = (types::MenuItem, Option<Arc<rhai::AST>>);
+        type SectionTitle = Option<String>;
+        type Section = (SectionTitle, Vec<SectionItem>);
+
+        let mut sections: Vec<Section> = Vec::new();
 
         let engine = self
             .resource_contextmenu_engine
@@ -148,7 +149,7 @@ impl ResourceContextMenuFacade {
                 .as_ref()
                 .map(|matcher| {
                     matcher
-                        .call::<bool>(engine, ast, ("", "", kind.clone()))
+                        .call::<bool>(engine, ast, ("", "", kind.clone())) // todo: fill in full gvk
                         .unwrap()
                 })
                 .unwrap_or(true);
@@ -177,22 +178,25 @@ impl ResourceContextMenuFacade {
                 })
                 .collect();
 
-            sections.push(items);
+            sections.push((section_def.title.clone(), items));
         }
 
-        let stack_id = generate_id(5);
-        // println!("{stack_id}: {sections:?}");
-
+        let stack_id = random_id(5);
         let mut items = Vec::new();
 
         {
             let mut menu_stack = MenuStack::default();
 
-            for section in sections {
+            for (title, section) in sections {
+                let mut section_items = FrontendMenuSection {
+                    title,
+                    items: Vec::new(),
+                };
+
                 for section_item in section {
-                    items.push(match section_item {
+                    section_items.items.push(match section_item {
                         (types::MenuItem::ActionButton(action_button), ast) => {
-                            let action_id = generate_id(5);
+                            let action_id = random_id(5);
                             menu_stack.actions.entry(action_id.clone()).insert_entry(
                                 FnPtrWithAst {
                                     fnptr: action_button.action,
@@ -200,16 +204,24 @@ impl ResourceContextMenuFacade {
                                 },
                             );
 
-                            FrontendMenuItem::ActionButton(FrontendActionButton {
-                                title: action_button.title,
-                                dangerous: action_button.dangerous,
-                                action_ref: action_id,
-                            })
+                            FrontendMenuItem {
+                                kind: FrontendMenuItemKind::ActionButton,
+                                data: Some(HashMap::from_iter([
+                                    ("title", json!(action_button.title)),
+                                    ("dangerous", json!(action_button.dangerous)),
+                                    ("actionRef", json!(action_id)),
+                                ])),
+                            }
                         }
                     });
                 }
 
-                items.push(FrontendMenuItem::Separator);
+                section_items.items.push(FrontendMenuItem {
+                    kind: FrontendMenuItemKind::Separator,
+                    data: None,
+                });
+
+                items.push(section_items);
             }
 
             let mut menu_stacks = self.menu_stacks.write().unwrap();
@@ -229,6 +241,7 @@ impl ResourceContextMenuFacade {
         menu_stacks.remove(id);
     }
 
+    // todo: error handling
     pub fn call_menustack_action(&self, menu_id: &str, action_ref: &str) {
         let menus = self.menu_stacks.read().unwrap();
         let menu = menus.get(menu_id).unwrap();
@@ -279,89 +292,26 @@ impl ResourceContextMenuFacade {
     }
 }
 
-fn generate_id(len: usize) -> String {
-    use rand::RngExt as _;
-
-    const CHARSET: &[u8] = b"abcdefghklmnpqrstuvwxyz123456789";
-    let mut rng = rand::rng();
-
-    (0..len)
-        .map(|_| {
-            let i = rng.random_range(0..32);
-            CHARSET[i] as char
-        })
-        .collect()
-}
-
 #[derive(Debug, Clone, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct FrontendActionButton {
-    title: String,
-    action_ref: String,
-    dangerous: bool,
-}
-
-#[derive(Debug, Clone, Serialize)]
-pub enum FrontendMenuItem {
-    ActionButton(FrontendActionButton),
+pub enum FrontendMenuItemKind {
+    ActionButton,
     Separator,
 }
 
 #[derive(Debug, Clone, Serialize)]
-pub struct MenuBlueprint {
-    id: String,
+pub struct FrontendMenuItem {
+    kind: FrontendMenuItemKind,
+    data: Option<HashMap<&'static str, serde_json::Value>>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct FrontendMenuSection {
+    title: Option<String>,
     items: Vec<FrontendMenuItem>,
 }
 
-#[tauri::command]
-#[tracing::instrument(skip_all, fields(request_id = tracing::field::Empty))]
-pub async fn call_menustack_action(
-    app: tauri::AppHandle,
-    context_source: KubeContextSource,
-    menustack_id: &str,
-    action_ref: &str,
-) -> Result<(), BackendError> {
-    let clusters = app.state::<ClusterRegistryState>();
-    let facade = clusters.scripting_for(&context_source)?;
-    facade.call_menustack_action(menustack_id, action_ref);
-
-    Ok(())
-}
-
-#[tauri::command]
-#[tracing::instrument(skip_all, fields(request_id = tracing::field::Empty))]
-pub async fn create_resource_menustack(
-    app: tauri::AppHandle,
-    context_source: KubeContextSource,
-    gvk: kube::api::GroupVersionKind,
-    namespace: &str,
-    name: &str,
-) -> Result<MenuBlueprint, BackendError> {
-    crate::internal::tracing::set_span_request_id();
-
-    let clusters = app.state::<ClusterRegistryState>();
-    let facade = clusters.scripting_for(&context_source)?;
-    let discovery = clusters.discovery_cache_for(&context_source)?;
-    let client = clusters.client_for(&context_source)?;
-
-    let (api_resource, capabilities) = discovery
-        .resolve_gvk(&gvk)
-        .ok_or("GroupVersionKind not found")?;
-
-    let api = match capabilities.scope {
-        kube::discovery::Scope::Cluster => {
-            kube::Api::<DynamicObject>::all_with(client, &api_resource)
-        }
-        kube::discovery::Scope::Namespaced => match namespace {
-            "" => kube::Api::all_with(client, &api_resource),
-            namespace => kube::Api::namespaced_with(client, namespace, &api_resource),
-        },
-    };
-
-    let obj = api.get(name).await?;
-    let blueprint = facade.create_resource_menustack(obj);
-
-    println!("{blueprint:?}");
-
-    Ok(blueprint)
+#[derive(Debug, Clone, Serialize)]
+pub struct MenuBlueprint {
+    pub id: String,
+    items: Vec<FrontendMenuSection>,
 }
