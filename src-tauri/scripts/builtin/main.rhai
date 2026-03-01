@@ -8,14 +8,14 @@ register_resource_contextmenu_section(
             [
                 ActionButton(#{
                     title: "Say hello",
-                    action: |obj| {
+                    action: || {
                         print("Hello, world!");
                         print_hello();
                     }
                 }),
                 ActionButton(#{
                     title: "Copy name",
-                    action: |obj| {
+                    action: || {
                         let name = obj.metadata?.name;
 
                         if name != () {
@@ -26,7 +26,7 @@ register_resource_contextmenu_section(
                 ActionButton(#{
                     title: "Delete",
                     dangerous: true,
-                    action: |obj| {
+                    action: || {
                         let api_version = obj.apiVersion;
                         let kind = obj.kind;
                         let namespace = obj.metadata?.namespace;
@@ -47,15 +47,63 @@ register_resource_contextmenu_section(
         matcher: |group, version, kind| kind == "Pod",
         items: |obj| {
             let containers = obj.spec?.containers?.map(|c| c.name) ?? [];
+            let init_containers = obj.spec?.initContainers?.map(|c| c.name) ?? [];
 
-            containers.map(|name| (
-                ActionButton(#{
+            let container_actions = containers.map(|name, idx| (
+                SubMenu(#{
                     title: name,
-                    action: |obj| {
-                        print(`Hello, ${name}!`);
-                    }
+                    items: [
+                        ActionButton(#{
+                            title: "Copy image name",
+                            action: || {
+                                let image = obj.spec.containers[idx].image;
+                                print(`Copying image name ${image}!`);
+                                clipboard::write_text(image);
+                            }
+                        }),
+                        ActionButton(#{
+                            title: "Attach shell",
+                            action: || {
+                                print(`Opening shell in container ${name}!`);
+                            }
+                        }),
+                        ActionButton(#{
+                            title: "Open logs",
+                            action: || {
+                                print(`Opening logs of container ${name}!`);
+                            }
+                        })
+                    ]
                 })
-            ))
+            ));
+
+            let init_container_actions = init_containers.map(|name, idx| (
+                SubMenu(#{
+                    title: name,
+                    items: [
+                        ActionButton(#{
+                            title: "Copy image name",
+                            action: || {
+                                clipboard::write_text(obj.spec.containers[idx].image);
+                            }
+                        }),
+                        ActionButton(#{
+                            title: "Attach shell",
+                            action: || {
+                                print(`Opening shell in container ${name}!`);
+                            }
+                        }),
+                        ActionButton(#{
+                            title: "Open logs",
+                            action: || {
+                                print(`Opening logs of container ${name}!`);
+                            }
+                        })
+                    ]
+                })
+            ));
+
+            init_container_actions + container_actions
         }
     })
 );
