@@ -1,7 +1,7 @@
 import { ItemType } from "antd/es/menu/interface";
 import { PropsWithChildren, useRef } from "react";
 import callMenustackAction from "../../api/callMenuStackAction";
-import createResourceMenustack from "../../api/createResourceMenustack";
+import createResourceMenustack, { MenuItem } from "../../api/createResourceMenustack";
 import dropResourceMenustack from "../../api/dropResourceMenustack";
 import { KubeContextSource } from "../../hooks/useContextDiscovery";
 import { Gvk } from "../../model/k8s";
@@ -26,16 +26,12 @@ export default function ResourceContextMenu({
         <LazyDropdown
             fetchItems={async () => {
                 const blueprint = await createResourceMenustack(contextSource, gvk, namespace, name);
-
                 menuIdRef.current = blueprint.id;
 
-                return blueprint.items.flatMap(({ title, items }, idx) => {
-                    const children: ItemType[] = items.map(({ kind, data }) => {
+                function make_menu_items(items: MenuItem[]): ItemType[] {
+                    return items.map(({ kind, data }) => {
                         switch (kind) {
                             case "Separator": {
-                                if (idx >= blueprint.items.length - 1) {
-                                    return undefined
-                                }
                                 return ({ type: "divider" }) satisfies ItemType;
                             }
                             case "ActionButton": {
@@ -50,8 +46,20 @@ export default function ResourceContextMenu({
                                     }
                                 }) satisfies ItemType;
                             }
+                            case "SubMenu": {
+                                return ({
+                                    type: "submenu",
+                                    key: data.title,
+                                    label: data.title,
+                                    children: make_menu_items(data.items)
+                                }) satisfies ItemType
+                            }
                         }
                     }).filter(i => i !== undefined);
+                }
+
+                return blueprint.items.flatMap(({ title, items }) => {
+                    const children: ItemType[] = make_menu_items(items);
 
                     // Sections without a title should not be wrapped in a group to avoid weird layout
                     if (!title) {

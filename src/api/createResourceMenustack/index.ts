@@ -12,9 +12,10 @@ export type MenuSection = {
     items: MenuItem[]
 }
 
+export type SubMenu = { kind: "SubMenu", data: { title: string, items: MenuItem[] } };
 export type ActionButton = { kind: "ActionButton", data: { title: string, dangerous: boolean, actionRef: string } };
 export type Separator = { kind: "Separator", data: undefined };
-export type MenuItem = ActionButton | Separator;
+export type MenuItem = ActionButton | SubMenu | Separator;
 
 export default function createResourceMenustack(contextSource: KubeContextSource, gvk: Gvk, namespace: string, name: string) {
     return invoke<MenuBlueprint>("create_resource_menustack", {

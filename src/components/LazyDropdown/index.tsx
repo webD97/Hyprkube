@@ -22,6 +22,8 @@ export default function LazyDropdown({
         });
     }
 
+    // console.log(JSON.stringify(realItems, undefined, 2));
+
     return (
         <Dropdown
             trigger={['contextMenu']}

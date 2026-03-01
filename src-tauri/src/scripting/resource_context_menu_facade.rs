@@ -4,12 +4,13 @@ use std::{
     sync::{Arc, OnceLock, RwLock},
 };
 
+use kube::api::GroupVersionKind;
 use rhai::{exported_module, EvalAltResult};
 use serde::Serialize;
 use serde_json::json;
 
 use crate::{
-    internal::mini_id::random_id,
+    internal::{gvk_extraction::GvkExtraction, mini_id::random_id},
     scripting::{
         modules,
         scripts_provider::ScriptsProvider,
@@ -23,6 +24,61 @@ struct ContextMenuSection {
     pub matcher: Option<rhai::FnPtr>,
     pub items: rhai::FnPtr,
     pub ast: Arc<rhai::AST>,
+}
+
+impl ContextMenuSection {
+    /// Calls the `matcher` function defined in the script. If no matcher is defined, we assume that this menu section
+    /// applies to every single Kubernetes resource. This is useful for general purpose actions like 'Delete'.
+    pub fn matches_gvk(
+        &self,
+        engine: &rhai::Engine,
+        ast: &rhai::AST,
+        gvk: GroupVersionKind,
+    ) -> Result<bool, Box<rhai::EvalAltResult>> {
+        self.matcher
+            .as_ref()
+            .map(|matcher| matcher.call::<bool>(engine, ast, (gvk.group, gvk.version, gvk.kind)))
+            .unwrap_or(Ok(true))
+    }
+
+    /// Calls the `items` function defined in the script with the given Kubernetes object. The script may inspect the
+    /// object to customize the items per resource. This is useful to render repeating elements like an action per
+    /// container within a Pod.
+    pub fn render_items_for(
+        &self,
+        engine: &rhai::Engine,
+        ast: &rhai::AST,
+        obj: rhai::Dynamic,
+    ) -> Result<Vec<types::MenuItem>, Box<rhai::EvalAltResult>> {
+        Ok(self
+            .items
+            .call::<rhai::Array>(engine, ast, (obj.clone(),))?
+            .into_iter()
+            .filter(|i| !i.is_unit())
+            .flat_map(|dynamic| {
+                let type_name = dynamic.type_name();
+                let something: Option<types::MenuItem> = dynamic
+                    .try_into()
+                    // .map(|something| {
+                    //     match something {
+                    //         types::MenuItem::ActionButton(mut btn) => {
+                    //             // Curry the callback with the object that we want to operate on when called later
+                    //             println!("Curry for {}", btn.title);
+                    //             btn.action = btn.action.add_curry(obj.clone()).to_owned();
+                    //             types::MenuItem::ActionButton(btn)
+                    //         }
+                    //         item => item,
+                    //     }
+                    // })
+                    .map_err(|_| {
+                        tracing::warn!("Unsupported menu item: {type_name}");
+                    })
+                    .ok();
+
+                something
+            })
+            .collect())
+    }
 }
 
 pub struct ResourceContextMenuFacade {
@@ -79,6 +135,7 @@ impl ResourceContextMenuFacade {
 
         engine.build_type::<types::ResourceRef>();
         engine.build_type::<types::ActionButton>();
+        engine.build_type::<types::SubMenu>();
         engine.build_type::<types::MenuSection>();
 
         engine.register_static_module(
@@ -128,117 +185,111 @@ impl ResourceContextMenuFacade {
         });
     }
 
-    #[allow(unused)]
     pub fn create_resource_menustack(&self, obj: kube::api::DynamicObject) -> MenuBlueprint {
-        let api_version = obj.types.as_ref().unwrap().api_version.to_owned();
-        let kind = obj.types.as_ref().unwrap().kind.to_owned();
+        let gvk = obj.types.as_ref().unwrap().gvk();
         let obj = rhai::serde::to_dynamic(obj).unwrap();
 
-        let sections_defs = self.registered_contextmenu_sections.read().unwrap();
-
-        type SectionItem = (types::MenuItem, Option<Arc<rhai::AST>>);
-        type SectionTitle = Option<String>;
-        type Section = (SectionTitle, Vec<SectionItem>);
-
-        let mut sections: Vec<Section> = Vec::new();
+        let mut menu_stack = MenuStack::default();
 
         let engine = self
             .resource_contextmenu_engine
             .get()
             .expect("engine must be initialized");
 
-        for section_def in sections_defs.iter() {
-            let ast = &section_def.ast;
+        fn transform_item(item: types::MenuItem) -> (FrontendMenuItem, Vec<(String, rhai::FnPtr)>) {
+            match item {
+                types::MenuItem::ActionButton(action_button) => {
+                    let action_id = random_id(5);
 
-            let matches = section_def
-                .matcher
-                .as_ref()
-                .map(|matcher| {
-                    matcher
-                        .call::<bool>(engine, ast, ("", "", kind.clone())) // todo: fill in full gvk
-                        .unwrap()
-                })
-                .unwrap_or(true);
+                    let frontend_item = FrontendMenuItem {
+                        kind: FrontendMenuItemKind::ActionButton,
+                        data: Some(HashMap::from_iter([
+                            ("title", json!(action_button.title)),
+                            ("dangerous", json!(action_button.dangerous)),
+                            ("actionRef", json!(action_id.clone())),
+                        ])),
+                    };
 
-            if !matches {
-                println!("Does not match");
-                continue;
-            }
-
-            let items = section_def
-                .items
-                .call::<rhai::Array>(engine, ast, (obj.clone(),))
-                .unwrap() // TODO: The callback might fail
-                .into_iter()
-                .filter(|i| !i.is_unit())
-                .flat_map(|dynamic| {
-                    let type_name = dynamic.type_name();
-                    if let Some(mut item) = dynamic.try_cast::<types::ActionButton>() {
-                        // Curry the callback with the object that we want to operate on when called later
-                        item.action = item.action.add_curry(obj.clone()).to_owned();
-                        Some((types::MenuItem::ActionButton(item), Some(Arc::clone(ast))))
-                    } else {
-                        tracing::warn!("Unsupported menu item: {type_name}");
-                        None
-                    }
-                })
-                .collect();
-
-            sections.push((section_def.title.clone(), items));
-        }
-
-        let stack_id = random_id(5);
-        let mut items = Vec::new();
-
-        {
-            let mut menu_stack = MenuStack::default();
-
-            for (title, section) in sections {
-                let mut section_items = FrontendMenuSection {
-                    title,
-                    items: Vec::new(),
-                };
-
-                for section_item in section {
-                    section_items.items.push(match section_item {
-                        (types::MenuItem::ActionButton(action_button), ast) => {
-                            let action_id = random_id(5);
-                            menu_stack.actions.entry(action_id.clone()).insert_entry(
-                                FnPtrWithAst {
-                                    fnptr: action_button.action,
-                                    ast: ast.expect("must be set"),
-                                },
-                            );
-
-                            FrontendMenuItem {
-                                kind: FrontendMenuItemKind::ActionButton,
-                                data: Some(HashMap::from_iter([
-                                    ("title", json!(action_button.title)),
-                                    ("dangerous", json!(action_button.dangerous)),
-                                    ("actionRef", json!(action_id)),
-                                ])),
-                            }
-                        }
-                    });
+                    (frontend_item, vec![(action_id, action_button.action)])
                 }
 
-                section_items.items.push(FrontendMenuItem {
-                    kind: FrontendMenuItemKind::Separator,
-                    data: None,
-                });
+                types::MenuItem::SubMenu(submenu) => {
+                    let (sub_items, actions): (Vec<_>, Vec<_>) =
+                        submenu.items.into_iter().map(transform_item).unzip();
 
-                items.push(section_items);
+                    let actions = actions.into_iter().flatten().collect();
+
+                    let frontend_item = FrontendMenuItem {
+                        kind: FrontendMenuItemKind::SubMenu,
+                        data: Some(HashMap::from_iter([
+                            ("title", json!(submenu.title)),
+                            ("items", json!(sub_items)),
+                        ])),
+                    };
+
+                    (frontend_item, actions)
+                }
             }
+        }
 
+        let frontend_sections: Vec<FrontendMenuSection> = {
+            let section_templates = self.registered_contextmenu_sections.read().unwrap();
+            section_templates
+                .iter()
+                .flat_map(|section_template| {
+                    let matches = section_template
+                        .matches_gvk(engine, &section_template.ast, gvk.clone())
+                        .expect("Call to `matcher` failed"); // todo: error handling
+
+                    if !matches {
+                        return None;
+                    }
+
+                    let items: Vec<types::MenuItem> = section_template
+                        .render_items_for(engine, &section_template.ast, obj.clone())
+                        .expect("Call to `items` failed"); // todo: error handling
+
+                    let mut section_items = FrontendMenuSection {
+                        title: section_template.title.clone(),
+                        items: Vec::new(),
+                    };
+
+                    for item in items {
+                        let (item, actions) = transform_item(item);
+                        section_items.items.push(item);
+
+                        for (action_id, action) in actions {
+                            menu_stack
+                                .actions
+                                .entry(action_id)
+                                .insert_entry(FnPtrWithAst {
+                                    fnptr: action,
+                                    ast: Arc::clone(&section_template.ast),
+                                });
+                        }
+                    }
+
+                    section_items.items.push(FrontendMenuItem {
+                        kind: FrontendMenuItemKind::Separator,
+                        data: None,
+                    });
+
+                    Some(section_items)
+                })
+                .collect()
+        };
+
+        let menu_stack_id = random_id(5);
+        {
             let mut menu_stacks = self.menu_stacks.write().unwrap();
             menu_stacks
-                .entry(stack_id.to_owned())
+                .entry(menu_stack_id.clone())
                 .insert_entry(menu_stack);
         }
 
         MenuBlueprint {
-            id: stack_id,
-            items,
+            id: menu_stack_id,
+            items: frontend_sections,
         }
     }
 
@@ -301,6 +352,7 @@ impl ResourceContextMenuFacade {
 #[derive(Debug, Clone, Serialize)]
 pub enum FrontendMenuItemKind {
     ActionButton,
+    SubMenu,
     Separator,
 }
 
