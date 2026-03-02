@@ -1,8 +1,9 @@
 import { ItemType } from "antd/es/menu/interface";
-import { PropsWithChildren, useRef } from "react";
+import { PropsWithChildren, use, useRef } from "react";
 import callMenustackAction from "../../api/callMenuStackAction";
 import createResourceMenustack, { MenuItem } from "../../api/createResourceMenustack";
 import dropResourceMenustack from "../../api/dropResourceMenustack";
+import { MegaTabContext } from "../../contexts/MegaTab";
 import { KubeContextSource } from "../../hooks/useContextDiscovery";
 import { Gvk } from "../../model/k8s";
 import LazyDropdown from "../LazyDropdown";
@@ -22,10 +23,12 @@ export default function ResourceContextMenu({
     const lockRef = useRef<Promise<void>>(null);
     const menuIdRef = useRef<string>(null);
 
+    const { tabIdentifier } = use(MegaTabContext)!;
+
     return (
         <LazyDropdown
             fetchItems={async () => {
-                const blueprint = await createResourceMenustack(contextSource, gvk, namespace, name);
+                const blueprint = await createResourceMenustack(contextSource, tabIdentifier.toString(), gvk, namespace, name);
                 menuIdRef.current = blueprint.id;
 
                 function make_menu_items(items: MenuItem[]): ItemType[] {

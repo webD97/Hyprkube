@@ -18,7 +18,6 @@ use crate::{
     },
 };
 
-#[allow(unused)]
 struct ContextMenuSection {
     pub title: Option<String>,
     pub matcher: Option<rhai::FnPtr>,
@@ -59,17 +58,6 @@ impl ContextMenuSection {
                 let type_name = dynamic.type_name();
                 let something: Option<types::MenuItem> = dynamic
                     .try_into()
-                    // .map(|something| {
-                    //     match something {
-                    //         types::MenuItem::ActionButton(mut btn) => {
-                    //             // Curry the callback with the object that we want to operate on when called later
-                    //             println!("Curry for {}", btn.title);
-                    //             btn.action = btn.action.add_curry(obj.clone()).to_owned();
-                    //             types::MenuItem::ActionButton(btn)
-                    //         }
-                    //         item => item,
-                    //     }
-                    // })
                     .map_err(|_| {
                         tracing::warn!("Unsupported menu item: {type_name}");
                     })
@@ -79,6 +67,12 @@ impl ContextMenuSection {
             })
             .collect())
     }
+}
+
+#[derive(Clone, Debug)]
+pub struct CallbackContext {
+    pub app_handle: tauri::AppHandle,
+    pub frontend_tab: String,
 }
 
 pub struct ResourceContextMenuFacade {
@@ -100,9 +94,19 @@ pub struct FnPtrWithAst {
     ast: Arc<rhai::AST>,
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct MenuStack {
+    context: Arc<CallbackContext>,
     actions: HashMap<String, FnPtrWithAst>,
+}
+
+impl MenuStack {
+    fn new(context: CallbackContext) -> Self {
+        Self {
+            context: Arc::new(context),
+            actions: HashMap::new(),
+        }
+    }
 }
 
 #[allow(dead_code)]
@@ -147,16 +151,20 @@ impl ResourceContextMenuFacade {
             modules::clipboard::build_module(facade.app.clone()).into(),
         );
         engine.register_static_module("base64", exported_module!(modules::base64_rhai).into());
+        engine.register_static_module("frontend", exported_module!(modules::frontend_rhai).into());
 
-        engine.register_fn(
-            "register_resource_contextmenu_section",
-            move |ctx: rhai::NativeCallContext, definition: types::MenuSection| {
-                let script = ctx
-                    .call_source()
-                    .expect("only file-based scripts supported");
-                facade.register_resource_contextmenu_section(definition, script);
-            },
-        );
+        {
+            let facade = Arc::clone(&facade);
+            engine.register_fn(
+                "register_resource_contextmenu_section",
+                move |ctx: rhai::NativeCallContext, definition: types::MenuSection| {
+                    let script = ctx
+                        .call_source()
+                        .expect("only file-based scripts supported");
+                    facade.register_resource_contextmenu_section(definition, script);
+                },
+            );
+        }
 
         engine.set_max_expr_depths(64, 32);
 
@@ -185,11 +193,18 @@ impl ResourceContextMenuFacade {
         });
     }
 
-    pub fn create_resource_menustack(&self, obj: kube::api::DynamicObject) -> MenuBlueprint {
+    pub fn create_resource_menustack(
+        &self,
+        obj: kube::api::DynamicObject,
+        tab_id: &str,
+    ) -> MenuBlueprint {
         let gvk = obj.types.as_ref().unwrap().gvk();
         let obj = rhai::serde::to_dynamic(obj).unwrap();
 
-        let mut menu_stack = MenuStack::default();
+        let mut menu_stack = MenuStack::new(CallbackContext {
+            app_handle: self.app.clone(),
+            frontend_tab: tab_id.to_owned(),
+        });
 
         let engine = self
             .resource_contextmenu_engine
@@ -302,11 +317,15 @@ impl ResourceContextMenuFacade {
     pub fn call_menustack_action(&self, menu_id: &str, action_ref: &str) {
         let menus = self.menu_stacks.read().unwrap();
         let menu = menus.get(menu_id).unwrap();
-        let action = menu.actions.get(action_ref).unwrap().clone();
+        let action = menu.actions.get(action_ref).unwrap();
 
         let engine = self.resource_contextmenu_engine.get().unwrap();
+        let ctx = Arc::clone(&menu.context);
 
-        action.fnptr.call::<()>(engine, &action.ast, ()).unwrap();
+        action
+            .fnptr
+            .call::<()>(engine, &action.ast, (ctx,))
+            .unwrap();
     }
 
     pub fn evaluate(&self, scripts_provider: &ScriptsProvider) {
