@@ -174,6 +174,7 @@ pub async fn create_resource_menustack(
     gvk: kube::api::GroupVersionKind,
     namespace: &str,
     name: &str,
+    tab_id: &str,
 ) -> Result<MenuBlueprint, BackendError> {
     crate::internal::tracing::set_span_request_id();
 
@@ -197,7 +198,7 @@ pub async fn create_resource_menustack(
     };
 
     let obj = api.get(name).await?;
-    let blueprint = facade.create_resource_menustack(obj);
+    let blueprint = facade.create_resource_menustack(obj, tab_id);
     debug!("Created menu stack {}", blueprint.id);
 
     Ok(blueprint)

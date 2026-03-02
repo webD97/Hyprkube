@@ -1,21 +1,16 @@
-fn print_hello() {
-    print("The print_hello function was called!");
-}
-
 register_resource_contextmenu_section(
     MenuSection(#{
         items: |obj| {
             [
                 ActionButton(#{
-                    title: "Say hello",
-                    action: || {
-                        print("Hello, world!");
-                        print_hello();
+                    title: "Edit YAML",
+                    action: |ctx| {
+                        frontend::open_resource_editor(ctx, ResourceRef(obj));
                     }
                 }),
                 ActionButton(#{
                     title: "Copy name",
-                    action: || {
+                    action: |ctx| {
                         let name = obj.metadata?.name;
 
                         if name != () {
@@ -26,7 +21,7 @@ register_resource_contextmenu_section(
                 ActionButton(#{
                     title: "Delete",
                     dangerous: true,
-                    action: || {
+                    action: |ctx| {
                         let api_version = obj.apiVersion;
                         let kind = obj.kind;
                         let namespace = obj.metadata?.namespace;
@@ -55,7 +50,7 @@ register_resource_contextmenu_section(
                     items: [
                         ActionButton(#{
                             title: "Copy image name",
-                            action: || {
+                            action: |ctx| {
                                 let image = obj.spec.containers[idx].image;
                                 print(`Copying image name ${image}!`);
                                 clipboard::write_text(image);
@@ -63,13 +58,13 @@ register_resource_contextmenu_section(
                         }),
                         ActionButton(#{
                             title: "Attach shell",
-                            action: || {
+                            action: |ctx| {
                                 print(`Opening shell in container ${name}!`);
                             }
                         }),
                         ActionButton(#{
                             title: "Open logs",
-                            action: || {
+                            action: |ctx| {
                                 print(`Opening logs of container ${name}!`);
                             }
                         })
@@ -83,19 +78,19 @@ register_resource_contextmenu_section(
                     items: [
                         ActionButton(#{
                             title: "Copy image name",
-                            action: || {
+                            action: |ctx| {
                                 clipboard::write_text(obj.spec.containers[idx].image);
                             }
                         }),
                         ActionButton(#{
                             title: "Attach shell",
-                            action: || {
+                            action: |ctx| {
                                 print(`Opening shell in container ${name}!`);
                             }
                         }),
                         ActionButton(#{
                             title: "Open logs",
-                            action: || {
+                            action: |ctx| {
                                 print(`Opening logs of container ${name}!`);
                             }
                         })
