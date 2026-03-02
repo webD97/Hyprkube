@@ -18,6 +18,14 @@ register_resource_contextmenu_section(
                         }
                     }
                 }),
+                if obj.metadata?.namespace == () { () } else {
+                    ActionButton(#{
+                        title: "Select namespace",
+                        action: |ctx| {
+                            frontend::pick_namespace(ctx, obj.metadata.namespace);
+                        }
+                    })
+                },
                 ActionButton(#{
                     title: "Delete",
                     dangerous: true,
