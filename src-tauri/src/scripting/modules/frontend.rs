@@ -11,6 +11,13 @@ struct FrontendTriggerResourceEdit {
     pub tab_id: String,
 }
 
+#[derive(Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+struct FrontendTriggerPickNamespace {
+    pub namespace: String,
+    pub tab_id: String,
+}
+
 #[export_module]
 pub mod frontend_rhai {
     use std::sync::Arc;
@@ -36,6 +43,23 @@ pub mod frontend_rhai {
                 gvk: GroupVersionKind::gvk(&gv.group, &gv.version, &resource.kind),
                 namespace: resource.namespace.unwrap_or_default(),
                 name: resource.name,
+                tab_id: frontend_tab,
+            },
+        )
+    }
+
+    #[rhai_fn(return_raw)]
+    pub fn pick_namespace(
+        ctx: Arc<CallbackContext>,
+        namespace: &str,
+    ) -> Result<(), Box<rhai::EvalAltResult>> {
+        let frontend_tab = ctx.frontend_tab.to_owned();
+
+        emit(
+            ctx,
+            "hyprkube:menu:resource:pick_namespace",
+            FrontendTriggerPickNamespace {
+                namespace: namespace.to_owned(),
                 tab_id: frontend_tab,
             },
         )
