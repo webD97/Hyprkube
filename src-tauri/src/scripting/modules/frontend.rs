@@ -18,6 +18,24 @@ struct FrontendTriggerPickNamespace {
     pub tab_id: String,
 }
 
+#[derive(Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+struct FrontendTriggerExec {
+    pub namespace: String,
+    pub name: String,
+    pub container: String,
+    pub tab_id: String,
+}
+
+#[derive(Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+struct FrontendTriggerLogView {
+    pub namespace: String,
+    pub name: String,
+    pub container: String,
+    pub tab_id: String,
+}
+
 #[export_module]
 pub mod frontend_rhai {
     use std::sync::Arc;
@@ -43,6 +61,48 @@ pub mod frontend_rhai {
                 gvk: GroupVersionKind::gvk(&gv.group, &gv.version, &resource.kind),
                 namespace: resource.namespace.unwrap_or_default(),
                 name: resource.name,
+                tab_id: frontend_tab,
+            },
+        )
+    }
+
+    #[rhai_fn(return_raw)]
+    pub fn exec_shell(
+        ctx: Arc<CallbackContext>,
+        namespace: &str,
+        name: &str,
+        container: &str,
+    ) -> Result<(), Box<rhai::EvalAltResult>> {
+        let frontend_tab = ctx.frontend_tab.to_owned();
+
+        emit(
+            ctx,
+            "hyprkube:menu:resource:trigger_exec",
+            FrontendTriggerExec {
+                namespace: namespace.to_owned(),
+                name: name.to_owned(),
+                container: container.to_owned(),
+                tab_id: frontend_tab,
+            },
+        )
+    }
+
+    #[rhai_fn(return_raw)]
+    pub fn open_logs(
+        ctx: Arc<CallbackContext>,
+        namespace: &str,
+        name: &str,
+        container: &str,
+    ) -> Result<(), Box<rhai::EvalAltResult>> {
+        let frontend_tab = ctx.frontend_tab.to_owned();
+
+        emit(
+            ctx,
+            "hyprkube:menu:resource:trigger_exec",
+            FrontendTriggerLogView {
+                namespace: namespace.to_owned(),
+                name: name.to_owned(),
+                container: container.to_owned(),
                 tab_id: frontend_tab,
             },
         )
