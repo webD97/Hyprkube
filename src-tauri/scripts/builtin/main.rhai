@@ -59,21 +59,19 @@ register_resource_contextmenu_section(
                         ActionButton(#{
                             title: "Copy image name",
                             action: |ctx| {
-                                let image = obj.spec.containers[idx].image;
-                                print(`Copying image name ${image}!`);
-                                clipboard::write_text(image);
+                                clipboard::write_text(obj.spec.containers[idx].image);
                             }
                         }),
                         ActionButton(#{
                             title: "Attach shell",
                             action: |ctx| {
-                                print(`Opening shell in container ${name}!`);
+                                frontend::exec_shell(ctx, obj.metadata?.namespace, obj.metadata?.name, name);
                             }
                         }),
                         ActionButton(#{
                             title: "Open logs",
                             action: |ctx| {
-                                print(`Opening logs of container ${name}!`);
+                                frontend::open_logs(ctx, obj.metadata?.namespace, obj.metadata?.name, name);
                             }
                         })
                     ]
