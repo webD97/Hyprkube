@@ -1,4 +1,4 @@
-use rhai::{CustomType, EvalAltResult, TypeBuilder};
+use rhai::{CustomType, Dynamic, EvalAltResult, TypeBuilder};
 
 #[derive(Clone, Debug, rhai::CustomType)]
 #[rhai_type(extra = Self::build_extra)]
@@ -8,6 +8,9 @@ pub struct ActionButton {
 
     #[rhai_type(readonly)]
     pub action: rhai::FnPtr,
+
+    #[rhai_type(readonly)]
+    pub confirm: Option<String>,
 
     #[rhai_type(readonly)]
     pub dangerous: bool,
@@ -37,6 +40,15 @@ impl TryFrom<rhai::Map> for ActionButton {
             .try_cast::<rhai::FnPtr>()
             .ok_or("ActionButton: `action` must be a function".to_owned())?;
 
+        let confirm = value
+            .get("confirm")
+            .map(|v| {
+                v.clone()
+                    .into_string()
+                    .map_err(|_| "ActionButton: `confirm` must be either string or ()")
+            })
+            .transpose()?;
+
         let dangerous = value
             .get("dangerous")
             .unwrap_or(&rhai::Dynamic::from_bool(false))
@@ -46,6 +58,7 @@ impl TryFrom<rhai::Map> for ActionButton {
 
         Ok(Self {
             title,
+            confirm,
             action,
             dangerous,
         })
@@ -61,12 +74,14 @@ mod tests {
         let map = rhai::Map::from_iter([
             ("title".into(), "Fancy button".into()),
             ("dangerous".into(), true.into()),
+            ("confirm".into(), "Are you sure?".into()),
             ("action".into(), rhai::FnPtr::new("x").unwrap().into()),
         ]);
 
         let button: ActionButton = map.try_into().unwrap();
 
         assert_eq!("Fancy button", button.title);
+        assert_eq!("Are you sure?", button.confirm.unwrap());
         assert!(button.dangerous);
     }
 
@@ -80,6 +95,7 @@ mod tests {
         let button: ActionButton = map.try_into().unwrap();
 
         assert!(!button.dangerous);
+        assert_eq!(None, button.confirm);
     }
 
     #[test]

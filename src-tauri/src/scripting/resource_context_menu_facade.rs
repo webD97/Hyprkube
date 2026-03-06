@@ -221,6 +221,7 @@ impl ResourceContextMenuFacade {
                         data: Some(HashMap::from_iter([
                             ("title", json!(action_button.title)),
                             ("dangerous", json!(action_button.dangerous)),
+                            ("confirm", json!(action_button.confirm)),
                             ("actionRef", json!(action_id.clone())),
                         ])),
                     };
