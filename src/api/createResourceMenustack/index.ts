@@ -13,7 +13,7 @@ export type MenuSection = {
 }
 
 export type SubMenu = { kind: "SubMenu", data: { title: string, items: MenuItem[] } };
-export type ActionButton = { kind: "ActionButton", data: { title: string, dangerous: boolean, actionRef: string } };
+export type ActionButton = { kind: "ActionButton", data: { title: string, dangerous: boolean, confirm?: string, actionRef: string } };
 export type Separator = { kind: "Separator", data: undefined };
 export type MenuItem = ActionButton | SubMenu | Separator;
 

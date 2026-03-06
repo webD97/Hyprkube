@@ -29,6 +29,7 @@ register_resource_contextmenu_section(
                 ActionButton(#{
                     title: "Delete",
                     dangerous: true,
+                    confirm: `Do you really want to delete ${obj.kind} ${obj.metadata.name}? This cannot be undone.`,
                     action: |ctx| {
                         let api_version = obj.apiVersion;
                         let kind = obj.kind;
