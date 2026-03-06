@@ -1,10 +1,13 @@
 use std::sync::Arc;
 
+use k8s_openapi::api::apps::v1::{DaemonSet, Deployment, StatefulSet};
 use kube::{
     api::{ApiResource, DeleteParams, DynamicObject, Patch, PatchParams},
     Api, Discovery,
 };
 use rhai::{FuncRegistration, Module};
+
+use crate::scripting::types::ResourceRef;
 
 pub fn build_module(client: kube::Client, discovery: Arc<kube::Discovery>) -> Module {
     let mut kube_module = Module::new();
@@ -99,6 +102,53 @@ pub fn build_module(client: kube::Client, discovery: Arc<kube::Discovery>) -> Mo
                     api.patch(name, &PatchParams::default(), &Patch::Merge(patch))
                         .await
                         .map_err(|e| e.to_string())?;
+
+                    Ok(())
+                })
+            },
+        );
+    }
+
+    {
+        let client = client.clone();
+
+        FuncRegistration::new("rollout_restart").set_into_module(
+            &mut kube_module,
+            move |resource_ref: ResourceRef| -> Result<(), Box<rhai::EvalAltResult>> {
+                block_on(async {
+                    match resource_ref.kind.as_str() {
+                        "Deployment" => {
+                            let api: Api<Deployment> = Api::namespaced(
+                                client.clone(),
+                                &resource_ref.namespace.unwrap_or_default(),
+                            );
+
+                            api.restart(&resource_ref.name)
+                                .await
+                                .map_err(|e| e.to_string())?;
+                        }
+                        "StatefulSet" => {
+                            let api: Api<StatefulSet> = Api::namespaced(
+                                client.clone(),
+                                &resource_ref.namespace.unwrap_or_default(),
+                            );
+
+                            api.restart(&resource_ref.name)
+                                .await
+                                .map_err(|e| e.to_string())?;
+                        }
+                        "DaemonSet" => {
+                            let api: Api<DaemonSet> = Api::namespaced(
+                                client.clone(),
+                                &resource_ref.namespace.unwrap_or_default(),
+                            );
+
+                            api.restart(&resource_ref.name)
+                                .await
+                                .map_err(|e| e.to_string())?;
+                        }
+                        _ => panic!(),
+                    };
 
                     Ok(())
                 })
