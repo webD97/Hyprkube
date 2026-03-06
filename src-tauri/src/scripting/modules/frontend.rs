@@ -98,7 +98,7 @@ pub mod frontend_rhai {
 
         emit(
             ctx,
-            "hyprkube:menu:resource:trigger_exec",
+            "hyprkube:menu:resource:trigger_logs",
             FrontendTriggerLogView {
                 namespace: namespace.to_owned(),
                 name: name.to_owned(),
