@@ -7,7 +7,6 @@ mod cluster_profiles;
 mod frontend_commands;
 mod frontend_types;
 mod internal;
-mod menus;
 mod persistence;
 mod resource_menu;
 mod resource_rendering;
@@ -23,8 +22,7 @@ use tracing_subscriber::{fmt, layer::SubscriberExt as _, util::SubscriberInitExt
 
 use crate::{
     cluster_discovery::ClusterRegistry, frontend_types::BackendPanic,
-    persistence::repository::Repository, resource_menu::ResourceMenuContext,
-    scripting::scripts_provider::ScriptsProvider,
+    persistence::repository::Repository, scripting::scripts_provider::ScriptsProvider,
 };
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -47,7 +45,6 @@ pub fn run() {
             app.manage(ChannelTasks::new_state(app_handle.clone()));
             app.manage(ExecSessions::new_state());
             app.manage(Arc::new(ClusterRegistry::new()));
-            app.manage(ResourceMenuContext::new_state());
             app.manage(Arc::new(ScriptsProvider::new(app_handle.clone())));
 
             let mut cluster_profile_registry =
@@ -70,8 +67,6 @@ pub fn run() {
                     reset_state(app_handle).await;
                 });
             });
-
-            app.on_menu_event(resource_menu::on_menu_event);
 
             Ok(())
         })
@@ -107,7 +102,6 @@ pub fn run() {
             crate::cluster_discovery::get_apiserver_gitversion,
             frontend_commands::decode_secret_key,
             frontend_commands::list_secret_keys,
-            resource_menu::popup_kubernetes_resource_menu,
             crate::resource_menu::create_resource_menustack,
             crate::resource_menu::drop_resource_menustack,
             crate::resource_menu::call_menustack_action
