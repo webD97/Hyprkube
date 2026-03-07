@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use rhai::{CustomType, Dynamic, EvalAltResult, Position, TypeBuilder};
 use serde::Serialize;
 
-use crate::scripting::types::{Properties, ViewComponent};
+use crate::scripting::types::{Properties, PresentationComponent};
 
 /// Displays a clickable hyperlink with a display text.
 #[derive(Clone, Serialize, CustomType)]
@@ -14,7 +14,7 @@ pub struct Hyperlink {
     pub properties: Option<Properties>,
 }
 
-impl From<Hyperlink> for ViewComponent {
+impl From<Hyperlink> for PresentationComponent {
     fn from(value: Hyperlink) -> Self {
         Self {
             kind: "Hyperlink",

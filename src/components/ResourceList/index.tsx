@@ -1,4 +1,4 @@
-import { ColumnDefinition, DisplayableResource, ResourceViewData, ViewComponent } from "../../hooks/useResourceWatch";
+import { ColumnDefinition, DisplayableResource, PresentationComponent, ResourcePresentationData } from "../../hooks/useResourceWatch";
 import EmojiHint from "../EmojiHint";
 
 import { useEffect, useMemo, useState } from "react";
@@ -27,12 +27,12 @@ import { CustomCell } from "./CustomCell";
 
 type _TData = [string, DisplayableResource];
 
-export interface ResourceViewProps {
+export interface ResourcePresentationProps {
     contextSource: KubeContextSource,
     namespace?: string,
     resourceNamePlural?: string,
     columnDefinitions: ColumnDefinition[],
-    resourceData: ResourceViewData,
+    resourceData: ResourcePresentationData,
     gvk: Gvk,
     onResourceClicked?: (gvk: Gvk, uid: string) => void,
     onSelectionChanged?: (rows: _TData[]) => void,
@@ -46,13 +46,13 @@ function createColumns(columnDefinitions: ColumnDefinition[]) {
             id: `${idx}_${title}`,
             header: () => title,
             sortingFn: (rowA, rowB, columnId) => {
-                const valueA = rowA.getValue<ViewComponent>(columnId).sortableValue;
-                const valueB = rowB.getValue<ViewComponent>(columnId).sortableValue;
+                const valueA = rowA.getValue<PresentationComponent>(columnId).sortableValue;
+                const valueB = rowB.getValue<PresentationComponent>(columnId).sortableValue;
 
                 return valueA.localeCompare(valueB, undefined, { numeric: true });
             },
             filterFn: (row, columnId, filterValue) => {
-                return row.getValue<ViewComponent>(columnId).sortableValue.includes(filterValue as string);
+                return row.getValue<PresentationComponent>(columnId).sortableValue.includes(filterValue as string);
             },
             enableColumnFilter: filterable,
             enableSorting: true, // TODO: View in backend should decide this
@@ -81,7 +81,7 @@ function createColumns(columnDefinitions: ColumnDefinition[]) {
     return [selectionColumn, ...dataColumns];
 }
 
-const ResourceList: React.FC<ResourceViewProps> = (props) => {
+const ResourceList: React.FC<ResourcePresentationProps> = (props) => {
     const {
         contextSource,
         namespace,

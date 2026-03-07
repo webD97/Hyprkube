@@ -19,11 +19,11 @@ mod column_template;
 mod colored_box;
 mod colored_boxes;
 mod hyperlink;
+mod presentation_component;
 mod properties;
 mod relative_time;
-mod resource_view_field;
+mod resource_presentation_field;
 mod text;
-mod view_component;
 
 #[allow(dead_code)]
 mod resource_presentation;
@@ -52,8 +52,8 @@ pub use column_template::*;
 pub use colored_box::*;
 pub use colored_boxes::*;
 pub use hyperlink::*;
+pub use presentation_component::*;
 pub use properties::*;
 pub use relative_time::*;
-pub use resource_view_field::*;
+pub use resource_presentation_field::*;
 pub use text::*;
-pub use view_component::*;

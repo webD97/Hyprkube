@@ -3,7 +3,7 @@ use kube::api::GroupVersionKind;
 
 use crate::{
     frontend_types::BackendError,
-    scripting::types::{RelativeTime, ResourceViewField, Text},
+    scripting::types::{RelativeTime, ResourcePresentationField, Text},
 };
 
 use super::ResourceRenderer;
@@ -41,17 +41,17 @@ impl ResourceRenderer for FallbackRenderer {
         _gvk: &GroupVersionKind,
         _crd: Option<&CustomResourceDefinition>,
         obj: &kube::api::DynamicObject,
-    ) -> Result<Vec<Result<ResourceViewField, String>>, BackendError> {
+    ) -> Result<Vec<Result<ResourcePresentationField, String>>, BackendError> {
         Ok(vec![
-            Ok(ResourceViewField::Text(Text {
+            Ok(ResourcePresentationField::Text(Text {
                 content: obj.metadata.clone().namespace.unwrap_or("".into()),
                 properties: None,
             })),
-            Ok(ResourceViewField::Text(Text {
+            Ok(ResourcePresentationField::Text(Text {
                 content: obj.metadata.clone().name.unwrap_or("".into()),
                 properties: None,
             })),
-            Ok(ResourceViewField::RelativeTime(RelativeTime {
+            Ok(ResourcePresentationField::RelativeTime(RelativeTime {
                 timestamp: obj
                     .metadata
                     .clone()

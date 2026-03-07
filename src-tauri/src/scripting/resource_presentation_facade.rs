@@ -19,7 +19,7 @@ use crate::{
         scripts_provider::{self, ScriptType, ScriptsProvider},
         types::{
             self, ColoredBox, ColoredBoxes, ColumnTemplate, Hyperlink, RelativeTime,
-            ResourceViewField, Text,
+            ResourcePresentationField, Text,
         },
     },
 };
@@ -162,7 +162,7 @@ impl ResourcePresentationFacade {
             .map(|presentation| presentation.title.clone())
             .chain({
                 crds.contains(gvk)
-                    .then(|| "Custom resource default view".to_owned())
+                    .then(|| "Custom resource default".to_owned())
                     .into_iter()
             })
             .chain(std::iter::once("Simple list".to_owned()))
@@ -174,34 +174,34 @@ impl ResourcePresentationFacade {
     pub async fn get_renderer(
         &self,
         _gvk: &GroupVersionKind,
-        view_name: &str,
+        presentation: &str,
     ) -> Box<dyn ResourceRenderer> {
         let generic_renderer = FallbackRenderer {};
         let crd_renderer = CrdRenderer {};
 
-        if view_name == generic_renderer.display_name() {
+        if presentation == generic_renderer.display_name() {
             return Box::new(generic_renderer) as Box<dyn ResourceRenderer>;
-        } else if view_name == crd_renderer.display_name() {
+        } else if presentation == crd_renderer.display_name() {
             return Box::new(crd_renderer) as Box<dyn ResourceRenderer>;
         }
 
         let registered_presentations = self.registered_presentations.read().unwrap();
 
-        let view = registered_presentations
+        let presentation = registered_presentations
             .iter()
-            .find(|p| p.title == view_name);
+            .find(|p| p.title == presentation);
 
-        if view.is_none() {
+        if presentation.is_none() {
             return Box::new(generic_renderer) as Box<dyn ResourceRenderer>;
         }
 
-        let view = view.unwrap();
+        let presentation = presentation.unwrap();
 
         Box::new(ScriptedRenderer {
-            title: view.title.clone(),
-            templates: view.columns.clone(),
+            title: presentation.title.clone(),
+            templates: presentation.columns.clone(),
             engine: Arc::clone(self.engine.get().unwrap()),
-            ast: Arc::clone(&view.ast),
+            ast: Arc::clone(&presentation.ast),
         }) as Box<dyn ResourceRenderer>
     }
 
@@ -301,7 +301,8 @@ impl ResourceRenderer for ScriptedRenderer {
         _gvk: &GroupVersionKind,
         _crd: Option<&CustomResourceDefinition>,
         obj: &kube::api::DynamicObject,
-    ) -> Result<Vec<Result<ResourceViewField, String>>, crate::frontend_types::BackendError> {
+    ) -> Result<Vec<Result<ResourcePresentationField, String>>, crate::frontend_types::BackendError>
+    {
         Ok(self
             .templates
             .iter()
@@ -314,26 +315,32 @@ impl ResourceRenderer for ScriptedRenderer {
                     .map_err(|e| e.to_string())
                     .map(|value| {
                         if value.is::<Text>() {
-                            return ResourceViewField::Text(value.cast::<Text>());
+                            return ResourcePresentationField::Text(value.cast::<Text>());
                         }
 
                         if value.is::<Hyperlink>() {
-                            return ResourceViewField::Hyperlink(value.cast::<Hyperlink>());
+                            return ResourcePresentationField::Hyperlink(value.cast::<Hyperlink>());
                         }
 
                         if value.is::<RelativeTime>() {
-                            return ResourceViewField::RelativeTime(value.cast::<RelativeTime>());
+                            return ResourcePresentationField::RelativeTime(
+                                value.cast::<RelativeTime>(),
+                            );
                         }
 
                         if value.is::<ColoredBox>() {
-                            return ResourceViewField::ColoredBox(value.cast::<ColoredBox>());
+                            return ResourcePresentationField::ColoredBox(
+                                value.cast::<ColoredBox>(),
+                            );
                         }
 
                         if value.is::<ColoredBoxes>() {
-                            return ResourceViewField::ColoredBoxes(value.cast::<ColoredBoxes>());
+                            return ResourcePresentationField::ColoredBoxes(
+                                value.cast::<ColoredBoxes>(),
+                            );
                         }
 
-                        ResourceViewField::Text(Text {
+                        ResourcePresentationField::Text(Text {
                             content: value.to_string(),
                             properties: None,
                         })

@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use rhai::{CustomType, Dynamic, EvalAltResult, Position, TypeBuilder};
 use serde::Serialize;
 
-use crate::scripting::types::{ColoredBox, Properties, ViewComponent};
+use crate::scripting::types::{ColoredBox, Properties, PresentationComponent};
 
 /// Displays one or more groups of colored boxes.
 #[derive(Clone, Serialize, CustomType)]
@@ -13,7 +13,7 @@ pub struct ColoredBoxes {
     pub properties: Option<Properties>,
 }
 
-impl From<ColoredBoxes> for ViewComponent {
+impl From<ColoredBoxes> for PresentationComponent {
     fn from(value: ColoredBoxes) -> Self {
         Self {
             kind: "ColoredBoxes",

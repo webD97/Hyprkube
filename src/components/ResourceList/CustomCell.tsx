@@ -2,13 +2,13 @@ import { CellContext } from "@tanstack/react-table";
 import { open } from '@tauri-apps/plugin-shell';
 import dayjs from "dayjs";
 import React from "react";
-import { DisplayableResource, ViewComponent } from "../../hooks/useResourceWatch";
+import { DisplayableResource, PresentationComponent } from "../../hooks/useResourceWatch";
 import RelativeTime from "../RelativeTime";
 import styles from './CustomCell.module.css';
 
 
 export const CustomCell: React.FC<CellContext<[string, DisplayableResource], unknown>> = (props) => {
-    const component = (props.getValue() as ViewComponent);
+    const component = (props.getValue() as PresentationComponent);
     const style = { color: component.properties?.color };
     const title = component.properties?.title;
     let inner = <>(Unhandled)</>;
