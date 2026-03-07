@@ -44,7 +44,7 @@ pub mod frontend_rhai {
     use serde::Serialize;
     use tauri::Emitter as _;
 
-    use crate::scripting::{resource_context_menu_facade::CallbackContext, types::ResourceRef};
+    use crate::scripting::{commons::CallbackContext, types::ResourceRef};
 
     #[rhai_fn(return_raw)]
     pub fn open_resource_editor(

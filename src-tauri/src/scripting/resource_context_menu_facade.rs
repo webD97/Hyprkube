@@ -5,12 +5,11 @@ use std::{
 };
 
 use rhai::exported_module;
-use serde_json::json;
 
 use crate::{
     internal::{gvk_extraction::GvkExtraction, mini_id::random_id},
     scripting::{
-        commons::{ContentScript, FnPtrWithAst},
+        commons::{CallbackContext, ContentScript, FnPtrWithAst},
         modules,
         resource_context_menu::{
             ContextMenuSection, FrontendMenuItem, FrontendMenuItemKind, FrontendMenuSection,
@@ -27,12 +26,6 @@ pub struct ResourceContextMenuFacade {
     registered_sections: RwLock<Vec<ContextMenuSection>>,
     scripts: RwLock<HashMap<PathBuf, ContentScript>>,
     menu_stacks: RwLock<HashMap<String, MenuStack>>,
-}
-
-#[derive(Clone, Debug)]
-pub struct CallbackContext {
-    pub app_handle: tauri::AppHandle,
-    pub frontend_tab: String,
 }
 
 #[derive(Debug, Clone)]
@@ -141,91 +134,53 @@ impl ResourceContextMenuFacade {
         let gvk = obj.types.as_ref().unwrap().gvk();
         let obj = rhai::serde::to_dynamic(obj).unwrap();
 
-        let mut menu_stack = MenuStack::new(CallbackContext {
-            app_handle: self.app.clone(),
-            frontend_tab: tab_id.to_owned(),
-        });
+        let mut menu_stack =
+            MenuStack::new(CallbackContext::new(self.app.clone(), tab_id.to_owned()));
 
         let engine = self.engine.get().expect("engine must be initialized");
 
-        fn transform_item(item: types::MenuItem) -> (FrontendMenuItem, Vec<(String, rhai::FnPtr)>) {
-            match item {
-                types::MenuItem::ActionButton(action_button) => {
-                    let action_id = random_id(5);
+        let frontend_sections: Vec<FrontendMenuSection> = {
+            let section_templates = self.registered_sections.read().unwrap();
+            section_templates
+                .iter()
+                .flat_map(|section_template| {
+                    let matches = section_template
+                        .matches_gvk(engine, &section_template.ast, gvk.clone())
+                        .expect("Call to `matcher` failed"); // todo: error handling
 
-                    let frontend_item = FrontendMenuItem::new(
-                        FrontendMenuItemKind::ActionButton,
-                        Some(HashMap::from_iter([
-                            ("title", json!(action_button.title)),
-                            ("dangerous", json!(action_button.dangerous)),
-                            ("confirm", json!(action_button.confirm)),
-                            ("actionRef", json!(action_id.clone())),
-                        ])),
-                    );
+                    if !matches {
+                        return None;
+                    }
 
-                    (frontend_item, vec![(action_id, action_button.action)])
-                }
+                    let items: Vec<types::MenuItem> = section_template
+                        .render_items_for(engine, &section_template.ast, obj.clone())
+                        .expect("Call to `items` failed"); // todo: error handling
 
-                types::MenuItem::SubMenu(submenu) => {
-                    let (sub_items, actions): (Vec<_>, Vec<_>) =
-                        submenu.items.into_iter().map(transform_item).unzip();
-
-                    let actions = actions.into_iter().flatten().collect();
-
-                    let frontend_item = FrontendMenuItem::new(
-                        FrontendMenuItemKind::SubMenu,
-                        Some(HashMap::from_iter([
-                            ("title", json!(submenu.title)),
-                            ("items", json!(sub_items)),
-                        ])),
-                    );
-
-                    (frontend_item, actions)
-                }
-            }
-        }
-
-        let frontend_sections: Vec<FrontendMenuSection> =
-            {
-                let section_templates = self.registered_sections.read().unwrap();
-                section_templates
-                    .iter()
-                    .flat_map(|section_template| {
-                        let matches = section_template
-                            .matches_gvk(engine, &section_template.ast, gvk.clone())
-                            .expect("Call to `matcher` failed"); // todo: error handling
-
-                        if !matches {
-                            return None;
-                        }
-
-                        let items: Vec<types::MenuItem> = section_template
-                            .render_items_for(engine, &section_template.ast, obj.clone())
-                            .expect("Call to `items` failed"); // todo: error handling
-
-                        let mut section_items =
-                            FrontendMenuSection::new(section_template.title.clone(), Vec::new());
-
-                        for item in items {
-                            let (item, actions) = transform_item(item);
-                            section_items.push_item(item);
+                    let frontend_items = items
+                        .into_iter()
+                        .map(|item| {
+                            let (item, actions) = types::MenuItem::transform_for_frontend(item);
 
                             for (action_id, action) in actions {
                                 menu_stack.actions.entry(action_id).insert_entry(
                                     FnPtrWithAst::new(action, Arc::clone(&section_template.ast)),
                                 );
                             }
-                        }
 
-                        section_items.push_item(FrontendMenuItem::new(
-                            FrontendMenuItemKind::Separator,
-                            None,
-                        ));
+                            item
+                        })
+                        .collect();
 
-                        Some(section_items)
-                    })
-                    .collect()
-            };
+                    let mut section_items =
+                        FrontendMenuSection::new(section_template.title.clone(), frontend_items);
+
+                    section_items
+                        .push_item(FrontendMenuItem::new(FrontendMenuItemKind::Separator, None));
+
+                    Some(section_items)
+                })
+                .collect()
+        };
 
         let menu_stack_id = random_id(5);
         {
