@@ -15,7 +15,7 @@ use crate::{
             ContextMenuSection, FrontendMenuItem, FrontendMenuItemKind, FrontendMenuSection,
             MenuBlueprint,
         },
-        scripts_provider::{self, ScriptsProvider},
+        scripts_provider::{self, ScriptType, ScriptsProvider},
         types::{self},
     },
 };
@@ -267,23 +267,12 @@ impl ResourceContextMenuFacade {
             .get()
             .ok_or(ResourceContextMenuError::EngineUninitialized)?;
 
-        let builtins = scripts_provider.get_builtins_entrypoints()?;
-        let extensions = scripts_provider.get_extensions_entrypoints()?;
+        let menu_scripts = scripts_provider
+            .get_scripts_for_type(ScriptType::Menu)
+            .unwrap();
 
-        for entrypoint in builtins.iter().chain(&extensions) {
+        for entrypoint in &menu_scripts {
             tracing::info!("Evaluating {}", entrypoint.to_string_lossy());
-
-            match std::fs::exists(entrypoint) {
-                Err(e) => {
-                    tracing::warn!("Failed to check if entrypoint exists: {e}");
-                    continue;
-                }
-                Ok(exists) if !exists => {
-                    tracing::warn!("Entrypoint does not exist");
-                    continue;
-                }
-                Ok(_) => {}
-            }
 
             let ast_arc = {
                 let mut scripts = self.scripts.write().unwrap();
