@@ -7,8 +7,7 @@ import { Button, Select } from "antd";
 import { deleteResource } from "../../api/deleteResource";
 import getDefaultNamespace from "../../api/getDefaultNamespace";
 import getResourceYaml from "../../api/getResourceYaml";
-import listResourceViews, { ResourceViewDef } from "../../api/listResourceViews";
-import { popupKubernetesResourceMenu } from "../../api/popupKubernetesResourceMenu";
+import listResourcePresentations, { ResourcePresentationDef } from "../../api/listResourcePresentations";
 import setDefaultNamespace from "../../api/setDefaultNamespace";
 import LogPanel from "../../components/LogPanel";
 import ResourceList from "../../components/ResourceList";
@@ -50,25 +49,25 @@ const ResourceListInspector: React.FC<ResourceListInspectorProps> = (props) => {
         onNamespaceChanged = () => undefined
     } = props;
 
-    const [availableViews, setAvailableViews] = useState<ResourceViewDef[]>([]);
-    const [selectedView, setSelectedView] = useState("");
+    const [availablePresentations, setAvailablePresentations] = useState<ResourcePresentationDef[]>([]);
+    const [selectedPresentation, setSelectedPresentation] = useState("");
     // const { discovery, lastError } = useClusterDiscovery(contextSource.source, contextSource.context);
     const allNamespaces = useClusterNamespaces(contextSource);
     const [selectedNamespace, setSelectedNamespace] = useState(preSelectedNamespace);
     const [resourceDefaultNamespace, setResourceDefaultNamespace] = useState('default');
     const [selectedResources, setSelectedResources] = useState<[string, DisplayableResource][]>([]);
-    const [columnDefinitions, resources] = useResourceWatch(contextSource, gvk, selectedView, selectedNamespace);
+    const [columnDefinitions, resources] = useResourceWatch(contextSource, gvk, selectedPresentation, selectedNamespace);
     const { tabIdentifier } = use(MegaTabContext)!;
 
     const searchbarRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        listResourceViews(contextSource, gvk)
-            .then(views => {
-                setAvailableViews(views);
+        listResourcePresentations(contextSource, gvk)
+            .then(presentations => {
+                setAvailablePresentations(presentations);
 
-                if (views.length > 0) {
-                    setSelectedView(views[0]);
+                if (presentations.length > 0) {
+                    setSelectedPresentation(presentations[0]);
                 }
             })
             .catch(e => alert(JSON.stringify(e)));
@@ -209,9 +208,9 @@ const ResourceListInspector: React.FC<ResourceListInspectorProps> = (props) => {
             <div className={classes.topBar}>
                 <h2>{resourceNamePlural}</h2>
                 <Select
-                    options={availableViews.map(v => ({ label: v, value: v }))}
-                    value={selectedView}
-                    onChange={(value) => setSelectedView(value)}
+                    options={availablePresentations.map(v => ({ label: v, value: v }))}
+                    value={selectedPresentation}
+                    onChange={(value) => setSelectedPresentation(value)}
                 />
                 {
                     resourceScope === 'cluster'
@@ -246,6 +245,7 @@ const ResourceListInspector: React.FC<ResourceListInspectorProps> = (props) => {
             </div>
             <div className={classes.tableArea}>
                 <ResourceList
+                    contextSource={contextSource}
                     resourceNamePlural={resourceNamePlural}
                     gvk={gvk}
                     namespace={selectedNamespace}
@@ -253,12 +253,6 @@ const ResourceListInspector: React.FC<ResourceListInspectorProps> = (props) => {
                     resourceData={resources}
                     onResourceClicked={yamlViewerFactory()}
                     searchbarPortal={searchbarRef}
-                    onResourceContextMenu={(gvk, resourceUID, position) => {
-                        const { namespace, name } = resources[resourceUID];
-
-                        popupKubernetesResourceMenu(contextSource, tabIdentifier.toString(), namespace, name, gvk, position)
-                            .catch(e => console.log(e))
-                    }}
                     onSelectionChanged={setSelectedResources}
                 />
             </div>

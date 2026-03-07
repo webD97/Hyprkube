@@ -20,11 +20,16 @@ use crate::{
     },
     frontend_commands::KubeContextSource,
     persistence::{discovery_cache_service::DiscoveryCacheService, repository::Repository},
+    scripting::{
+        resource_context_menu_facade::ResourceContextMenuFacade,
+        resource_presentation_facade::ResourcePresentationFacade,
+        scripts_provider::ScriptsProvider,
+    },
 };
 
 #[derive(Serialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
-pub enum DiscoveryEvent {
+pub enum FrontendDiscoveryEvent {
     /// A resource kind that was either discovered from the cluster or read from cache
     DiscoveredResource(DiscoveredResource),
     /// A resource kind that was previously cached but vanished from the cluster (i.e. CRD uninstall)
@@ -33,24 +38,50 @@ pub enum DiscoveryEvent {
     DiscoveryComplete(()),
 }
 
+impl From<&InternalDiscoveryEvent> for FrontendDiscoveryEvent {
+    fn from(value: &InternalDiscoveryEvent) -> Self {
+        match value {
+            InternalDiscoveryEvent::DiscoveredResource(resource) => {
+                FrontendDiscoveryEvent::DiscoveredResource(resource.clone())
+            }
+            InternalDiscoveryEvent::CustomResourceDefinition(inner) => {
+                FrontendDiscoveryEvent::CustomResourceDefinition(inner.clone())
+            }
+            InternalDiscoveryEvent::DiscoveryComplete(_) => {
+                FrontendDiscoveryEvent::DiscoveryComplete(())
+            }
+        }
+    }
+}
+
+pub enum InternalDiscoveryEvent {
+    /// A resource kind that was either discovered from the cluster or read from cache
+    DiscoveredResource(DiscoveredResource),
+    CustomResourceDefinition((GroupVersionKind, Box<CustomResourceDefinition>)),
+    DiscoveryComplete(kube::Discovery),
+}
+
 #[tauri::command]
 #[tracing::instrument(skip_all, fields(request_id = tracing::field::Empty))]
 pub async fn connect_cluster(
+    app: tauri::AppHandle,
     background_tasks: State<'_, JoinHandleStoreState>,
     repository: State<'_, Arc<Repository>>,
     clusters: State<'_, ClusterRegistryState>,
-    channel: tauri::ipc::Channel<DiscoveryEvent>,
+    scripts_provider: State<'_, Arc<ScriptsProvider>>,
+    channel: tauri::ipc::Channel<FrontendDiscoveryEvent>,
     context_source: KubeContextSource,
 ) -> Result<(), String> {
     crate::internal::tracing::set_span_request_id();
 
     let repository = Arc::clone(&repository);
     let clusters = Arc::clone(&clusters);
+    let scripts_provider = Arc::clone(&scripts_provider);
 
     let _ = background_tasks.submit(channel.id(), async move {
         // Fast path: If there is already a discovery, use its results
-        if let Some(ctx) = clusters.get(&context_source) {
-            match ctx.discovery {
+        if let Ok(discovery) = clusters.discovery_for(&context_source) {
+            match &*discovery {
                 ClusterDiscovery::Inflight(discovery) => {
                     tracing::info!("Attaching to inflight discovery");
 
@@ -63,12 +94,13 @@ pub async fn connect_cluster(
                     tracing::info!("Skipping discovery, serving in-memory results");
 
                     for resource in discovery.resources.values() {
-                        channel.send(DiscoveryEvent::DiscoveredResource(resource.clone()))?;
+                        channel
+                            .send(FrontendDiscoveryEvent::DiscoveredResource(resource.clone()))?;
                     }
                 }
             }
 
-            channel.send(DiscoveryEvent::DiscoveryComplete(()))?;
+            channel.send(FrontendDiscoveryEvent::DiscoveryComplete(()))?;
 
             return Ok(());
         }
@@ -83,7 +115,10 @@ pub async fn connect_cluster(
         clusters.manage(ClusterState {
             context_source: context_source.clone(),
             client: client.clone(),
-            discovery: ClusterDiscovery::Inflight(Arc::clone(&inflight)),
+            discovery: Arc::new(ClusterDiscovery::Inflight(Arc::clone(&inflight))),
+            kube_discovery: None,
+            context_menu_facade: None,
+            resource_presentation_facade: None,
         });
 
         // Cached part
@@ -97,8 +132,8 @@ pub async fn connect_cluster(
         });
 
         for cached in &previously_cached {
-            inflight.send(DiscoveryEvent::DiscoveredResource(cached.clone()));
-            channel.send(DiscoveryEvent::DiscoveredResource(cached.clone()))?;
+            inflight.send(FrontendDiscoveryEvent::DiscoveredResource(cached.clone()));
+            channel.send(FrontendDiscoveryEvent::DiscoveredResource(cached.clone()))?;
         }
 
         // Online part
@@ -110,30 +145,44 @@ pub async fn connect_cluster(
         let mut crds: HashMap<GroupVersionKind, CustomResourceDefinition> = HashMap::new();
 
         let mut discovery_stream = std::pin::pin!(online_discovery(client.clone()));
+        let mut kube_discovery: Option<Arc<kube::Discovery>> = None;
 
         while let Some(msg) = discovery_stream.next().await {
             let msg = msg?;
 
-            // Forward to inflight cache
-            inflight.send(msg.clone());
-
-            // Forward to frontend
-            channel.send(msg.clone())?;
-
             // Save
             match msg {
-                DiscoveryEvent::DiscoveredResource(resource) => {
+                InternalDiscoveryEvent::DiscoveredResource(resource) => {
                     confirmed_resources.insert(resource.clone());
 
                     let gvk =
                         GroupVersionKind::gvk(&resource.group, &resource.version, &resource.kind);
 
                     resources.entry(gvk).insert_entry(resource.clone());
+
+                    // Forward to inflight cache
+                    inflight.send(FrontendDiscoveryEvent::DiscoveredResource(resource.clone()));
+
+                    // Forward to frontend
+                    channel.send(FrontendDiscoveryEvent::DiscoveredResource(resource))?;
                 }
-                DiscoveryEvent::CustomResourceDefinition((gvk, crd)) => {
-                    crds.entry(gvk).insert_entry(*crd);
+                InternalDiscoveryEvent::CustomResourceDefinition((gvk, crd)) => {
+                    crds.entry(gvk.clone()).insert_entry(*crd.clone());
+                    // Forward to inflight cache
+                    inflight.send(FrontendDiscoveryEvent::CustomResourceDefinition((
+                        gvk.clone(),
+                        crd.clone(),
+                    )));
+
+                    // Forward to frontend
+                    channel.send(FrontendDiscoveryEvent::CustomResourceDefinition((
+                        gvk.clone(),
+                        crd.clone(),
+                    )))?;
                 }
-                _ => {}
+                InternalDiscoveryEvent::DiscoveryComplete(discovery) => {
+                    kube_discovery = Some(Arc::new(discovery))
+                }
             }
         }
 
@@ -145,7 +194,7 @@ pub async fn connect_cluster(
                 removed_resource.group
             );
 
-            let msg = DiscoveryEvent::RemovedResource(removed_resource.to_owned());
+            let msg = FrontendDiscoveryEvent::RemovedResource(removed_resource.to_owned());
 
             inflight.send(msg.clone());
             channel.send(msg)?;
@@ -157,13 +206,25 @@ pub async fn connect_cluster(
 
         let result = CompletedDiscovery { resources, crds };
 
+        let context_menu_facade = ResourceContextMenuFacade::new(app.clone());
+        context_menu_facade
+            .initialize_engines(client.clone(), Arc::clone(kube_discovery.as_ref().unwrap()));
+        context_menu_facade.evaluate(&scripts_provider)?;
+
+        let resource_presentation_facade = ResourcePresentationFacade::new(app);
+        resource_presentation_facade.initialize_engines();
+        resource_presentation_facade.evaluate(&scripts_provider)?;
+
         clusters.manage(ClusterState {
             context_source,
             client,
-            discovery: ClusterDiscovery::Completed(result),
+            discovery: Arc::new(ClusterDiscovery::Completed(result)),
+            kube_discovery,
+            context_menu_facade: Some(context_menu_facade),
+            resource_presentation_facade: Some(resource_presentation_facade),
         });
 
-        channel.send(DiscoveryEvent::DiscoveryComplete(()))?;
+        channel.send(FrontendDiscoveryEvent::DiscoveryComplete(()))?;
 
         Ok(())
     });
@@ -213,7 +274,9 @@ async fn make_client(context_source: &KubeContextSource) -> anyhow::Result<kube:
 ///
 /// The discovery will first try to discover builtin (i.e. non-crd) resources to optimize
 /// the user experience. CRD-based resources will be yielded after that.
-fn online_discovery(client: kube::Client) -> impl Stream<Item = anyhow::Result<DiscoveryEvent>> {
+fn online_discovery(
+    client: kube::Client,
+) -> impl Stream<Item = anyhow::Result<InternalDiscoveryEvent>> {
     async_stream::stream! {
         tracing::info!("Discovering builtins");
         let apigroups = &client.list_api_groups().await?;
@@ -248,7 +311,7 @@ fn online_discovery(client: kube::Client) -> impl Stream<Item = anyhow::Result<D
                         scope: capabilities.scope.into(),
                     };
 
-                    yield Ok(DiscoveryEvent::DiscoveredResource(resource.clone()));
+                    yield Ok(InternalDiscoveryEvent::DiscoveredResource(resource.clone()));
                 }
             }
         }
@@ -272,7 +335,7 @@ fn online_discovery(client: kube::Client) -> impl Stream<Item = anyhow::Result<D
                         scope: capabilities.scope.into(),
                     };
 
-                    yield Ok(DiscoveryEvent::DiscoveredResource(resource.clone()));
+                    yield Ok(InternalDiscoveryEvent::DiscoveredResource(resource.clone()));
                 }
             }
         }
@@ -290,7 +353,7 @@ fn online_discovery(client: kube::Client) -> impl Stream<Item = anyhow::Result<D
 
                 if let Some(latest) = latest {
                     let gvk = GroupVersionKind::gvk(&crd.spec.group, &latest.name, &crd.spec.names.kind);
-                    yield Ok(DiscoveryEvent::CustomResourceDefinition((gvk, Box::new(crd))));
+                    yield Ok(InternalDiscoveryEvent::CustomResourceDefinition((gvk, Box::new(crd))));
                 } else {
                     tracing::error!("CustomResourceDefinition {}.{} has no versions.", crd.spec.names.kind, crd.spec.group);
                     continue;
@@ -298,5 +361,7 @@ fn online_discovery(client: kube::Client) -> impl Stream<Item = anyhow::Result<D
             }
         }
         tracing::debug!("Finished caching of custom resource definitions");
+
+        yield Ok(InternalDiscoveryEvent::DiscoveryComplete(full_discovery));
     }
 }

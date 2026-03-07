@@ -15,7 +15,7 @@ pub async fn apply_resource_yaml(
     name: &str,
     new_yaml: &str,
 ) -> Result<String, BackendError> {
-    let client = clusters.get(&context_source).ok_or("not found")?.client;
+    let client = clusters.client_for(&context_source)?;
 
     let (api_resource, resource_capabilities) =
         kube::discovery::oneshot::pinned_kind(&client, &gvk).await?;

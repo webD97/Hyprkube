@@ -1,10 +1,7 @@
 use super::ResourceRenderer;
 use crate::{
     frontend_types::BackendError,
-    resource_rendering::scripting::{
-        components::{RelativeTime, Text},
-        types::{Properties, ResourceViewField},
-    },
+    scripting::types::{Properties, RelativeTime, ResourcePresentationField, Text},
 };
 use k8s_openapi::apiextensions_apiserver::pkg::apis::apiextensions::v1::CustomResourceDefinition;
 use kube::api::GroupVersionKind;
@@ -16,7 +13,7 @@ pub struct CrdRenderer {}
 
 impl ResourceRenderer for CrdRenderer {
     fn display_name(&self) -> &str {
-        "Custom resource default view"
+        "Custom resource default"
     }
 
     fn column_definitions(
@@ -64,7 +61,7 @@ impl ResourceRenderer for CrdRenderer {
         _gvk: &GroupVersionKind,
         crd: Option<&CustomResourceDefinition>,
         obj: &kube::api::DynamicObject,
-    ) -> Result<Vec<Result<ResourceViewField, String>>, BackendError> {
+    ) -> Result<Vec<Result<ResourcePresentationField, String>>, BackendError> {
         let crd = crd.expect("must pass a CustomResourceDefinition");
 
         let crd_version = crd
@@ -73,9 +70,9 @@ impl ResourceRenderer for CrdRenderer {
             .first()
             .ok_or(BackendError::from("CRD version not found"))?;
 
-        let mut values: Vec<Result<ResourceViewField, String>> = vec![];
+        let mut values: Vec<Result<ResourcePresentationField, String>> = vec![];
 
-        values.push(Ok(ResourceViewField::Text(Text {
+        values.push(Ok(ResourcePresentationField::Text(Text {
             content: obj
                 .metadata
                 .name
@@ -86,7 +83,7 @@ impl ResourceRenderer for CrdRenderer {
         })));
 
         if crd.spec.scope == "Namespaced" {
-            values.push(Ok(ResourceViewField::Text(Text {
+            values.push(Ok(ResourcePresentationField::Text(Text {
                 content: obj
                     .metadata
                     .namespace
@@ -124,7 +121,7 @@ impl ResourceRenderer for CrdRenderer {
                         });
 
                     match value {
-                        Err(e) => ResourceViewField::Text(Text {
+                        Err(e) => ResourcePresentationField::Text(Text {
                             content: e,
                             properties: Some(Properties {
                                 color: Some("red".into()),
@@ -133,13 +130,13 @@ impl ResourceRenderer for CrdRenderer {
                         }),
                         Ok(value) => {
                             if type_ == *"date" {
-                                return ResourceViewField::RelativeTime(RelativeTime {
+                                return ResourcePresentationField::RelativeTime(RelativeTime {
                                     timestamp: value.to_owned(),
                                     properties: None,
                                 });
                             }
 
-                            ResourceViewField::Text(Text {
+                            ResourcePresentationField::Text(Text {
                                 content: value.to_owned(),
                                 properties: None,
                             })
@@ -150,7 +147,7 @@ impl ResourceRenderer for CrdRenderer {
         }
 
         if !has_own_age_column {
-            values.push(Ok(ResourceViewField::RelativeTime(RelativeTime {
+            values.push(Ok(ResourcePresentationField::RelativeTime(RelativeTime {
                 timestamp: obj
                     .metadata
                     .creation_timestamp

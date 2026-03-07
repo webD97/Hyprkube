@@ -7,14 +7,14 @@ mod cluster_profiles;
 mod frontend_commands;
 mod frontend_types;
 mod internal;
-mod menus;
 mod persistence;
 mod resource_menu;
 mod resource_rendering;
+mod scripting;
 
 use std::sync::Arc;
 
-use app_state::{ChannelTasks, ExecSessions, JoinHandleStoreState, RendererRegistry};
+use app_state::{ChannelTasks, ExecSessions, JoinHandleStoreState};
 use persistence::cluster_profile_service::ClusterProfileService;
 use tauri::{async_runtime::spawn, Emitter as _, Listener, Manager};
 use tracing::{info, warn};
@@ -22,7 +22,7 @@ use tracing_subscriber::{fmt, layer::SubscriberExt as _, util::SubscriberInitExt
 
 use crate::{
     cluster_discovery::ClusterRegistry, frontend_types::BackendPanic,
-    persistence::repository::Repository, resource_menu::ResourceMenuContext,
+    persistence::repository::Repository, scripting::scripts_provider::ScriptsProvider,
 };
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -41,11 +41,10 @@ pub fn run() {
 
             setup_panic_handler(app_handle.clone());
 
-            app.manage(RendererRegistry::new_state(app_handle.clone()));
             app.manage(ChannelTasks::new_state(app_handle.clone()));
             app.manage(ExecSessions::new_state());
             app.manage(Arc::new(ClusterRegistry::new()));
-            app.manage(ResourceMenuContext::new_state());
+            app.manage(Arc::new(ScriptsProvider::new(app_handle.clone())));
 
             let mut cluster_profile_registry =
                 cluster_profiles::ClusterProfileRegistry::new(app_handle.clone());
@@ -68,29 +67,24 @@ pub fn run() {
                 });
             });
 
-            app.on_menu_event(resource_menu::on_menu_event);
-
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
             // frontend_commands::discover_kubernetes_cluster,
             frontend_commands::kube_stream_podlogs,
-            frontend_commands::watch_gvk_with_view,
+            frontend_commands::watch_gvk_with_presentation,
             frontend_commands::watch_namespaces,
             frontend_commands::cleanup_channel,
             frontend_commands::discover_contexts,
             frontend_commands::delete_resource,
-            frontend_commands::list_resource_views,
+            frontend_commands::list_resource_presentations,
             frontend_commands::pod_exec_start_session,
             frontend_commands::pod_exec_write_stdin,
             frontend_commands::pod_exec_abort_session,
             frontend_commands::pod_exec_resize_terminal,
-            frontend_commands::list_pod_container_names,
             frontend_commands::get_resource_yaml,
             frontend_commands::apply_resource_yaml,
             cluster_profiles::list_cluster_profiles,
-            frontend_commands::restart_deployment,
-            frontend_commands::restart_statefulset,
             cluster_profiles::cluster_profile_add_pinned_gvk,
             cluster_profiles::cluster_profile_remove_pinned_gvk,
             cluster_profiles::cluster_profile_list_pinned_gvks,
@@ -102,9 +96,9 @@ pub fn run() {
             frontend_commands::log_stdout,
             crate::cluster_discovery::connect_cluster,
             crate::cluster_discovery::get_apiserver_gitversion,
-            frontend_commands::decode_secret_key,
-            frontend_commands::list_secret_keys,
-            resource_menu::popup_kubernetes_resource_menu
+            crate::resource_menu::create_resource_menustack,
+            crate::resource_menu::drop_resource_menustack,
+            crate::resource_menu::call_menustack_action
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

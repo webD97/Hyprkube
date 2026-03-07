@@ -21,7 +21,7 @@ pub async fn delete_resource(
 ) -> Result<(), BackendError> {
     info!("Deleting {:?} in namespace {}", gvk, namespace);
 
-    let client = clusters.get(&context_source).ok_or("not found")?.client;
+    let client = clusters.client_for(&context_source)?;
 
     // todo: Avoid discovery and use what we already have in cache
     let (api_resource, resource_capabilities) =

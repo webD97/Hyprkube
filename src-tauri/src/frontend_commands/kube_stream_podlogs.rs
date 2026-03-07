@@ -33,7 +33,7 @@ pub async fn kube_stream_podlogs(
     container: &str,
     channel: tauri::ipc::Channel<LogStreamEvent>,
 ) -> Result<(), BackendError> {
-    let client = clusters.get(&context_source).ok_or("not found")?.client;
+    let client = clusters.client_for(&context_source)?;
 
     let namespace = namespace.to_string();
     let name = name.to_string();
