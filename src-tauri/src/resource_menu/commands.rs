@@ -16,7 +16,7 @@ pub async fn call_menustack_action(
     action_ref: &str,
 ) -> Result<(), BackendError> {
     let clusters = app.state::<ClusterRegistryState>();
-    let facade = clusters.scripting_for(&context_source)?;
+    let facade = clusters.contextmenu_scripting_for(&context_source)?;
     facade.call_menustack_action(menustack_id, action_ref)?;
 
     Ok(())
@@ -35,7 +35,7 @@ pub async fn create_resource_menustack(
     crate::internal::tracing::set_span_request_id();
 
     let clusters = app.state::<ClusterRegistryState>();
-    let facade = clusters.scripting_for(&context_source)?;
+    let facade = clusters.contextmenu_scripting_for(&context_source)?;
     let discovery = clusters.discovery_cache_for(&context_source)?;
     let client = clusters.client_for(&context_source)?;
 
@@ -69,7 +69,7 @@ pub async fn drop_resource_menustack(
     crate::internal::tracing::set_span_request_id();
 
     let clusters = app.state::<ClusterRegistryState>();
-    let facade = clusters.scripting_for(&context_source)?;
+    let facade = clusters.contextmenu_scripting_for(&context_source)?;
 
     facade.drop_resource_menustack(menu_id)?;
     debug!("Dropped menu stack {menu_id}");

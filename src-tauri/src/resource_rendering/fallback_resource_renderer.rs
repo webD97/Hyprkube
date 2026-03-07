@@ -3,10 +3,7 @@ use kube::api::GroupVersionKind;
 
 use crate::{
     frontend_types::BackendError,
-    resource_rendering::scripting::{
-        components::{RelativeTime, Text},
-        types::ResourceViewField,
-    },
+    scripting::types::{RelativeTime, ResourceViewField, Text},
 };
 
 use super::ResourceRenderer;

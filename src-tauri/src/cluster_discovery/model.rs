@@ -10,8 +10,12 @@ use serde::{Deserialize, Serialize};
 use tokio::sync::broadcast;
 
 use crate::{
-    cluster_discovery::FrontendDiscoveryEvent, frontend_commands::KubeContextSource,
-    scripting::resource_context_menu_facade::ResourceContextMenuFacade,
+    cluster_discovery::FrontendDiscoveryEvent,
+    frontend_commands::KubeContextSource,
+    scripting::{
+        resource_context_menu_facade::ResourceContextMenuFacade,
+        resource_presentation_facade::ResourcePresentationFacade,
+    },
 };
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
@@ -65,7 +69,8 @@ pub struct ClusterState {
     pub client: kube::Client,
     pub discovery: Arc<ClusterDiscovery>,
     pub kube_discovery: Option<Arc<kube::Discovery>>,
-    pub script_facade: Option<Arc<ResourceContextMenuFacade>>,
+    pub context_menu_facade: Option<Arc<ResourceContextMenuFacade>>,
+    pub resource_presentation_facade: Option<Arc<ResourcePresentationFacade>>,
 }
 
 #[derive(Clone)]

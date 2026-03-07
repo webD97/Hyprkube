@@ -1,18 +1,13 @@
 mod crd_renderer;
 mod fallback_resource_renderer;
-mod resource_view_definition;
-mod scripted_resource_renderer;
-pub mod scripting;
 
-use crate::{
-    frontend_types::BackendError, resource_rendering::scripting::types::ResourceViewField,
-};
 pub use crd_renderer::*;
 pub use fallback_resource_renderer::*;
 use k8s_openapi::apiextensions_apiserver::pkg::apis::apiextensions::v1::CustomResourceDefinition;
 use kube::api::GroupVersionKind;
-pub use scripted_resource_renderer::*;
 use serde::Serialize;
+
+use crate::{frontend_types::BackendError, scripting::types::ResourceViewField};
 
 #[derive(Clone, Serialize)]
 pub struct ResourceColumnDefinition {

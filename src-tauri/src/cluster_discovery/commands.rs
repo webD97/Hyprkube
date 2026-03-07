@@ -21,7 +21,9 @@ use crate::{
     frontend_commands::KubeContextSource,
     persistence::{discovery_cache_service::DiscoveryCacheService, repository::Repository},
     scripting::{
-        resource_context_menu_facade::ResourceContextMenuFacade, scripts_provider::ScriptsProvider,
+        resource_context_menu_facade::ResourceContextMenuFacade,
+        resource_presentation_facade::ResourcePresentationFacade,
+        scripts_provider::ScriptsProvider,
     },
 };
 
@@ -115,7 +117,8 @@ pub async fn connect_cluster(
             client: client.clone(),
             discovery: Arc::new(ClusterDiscovery::Inflight(Arc::clone(&inflight))),
             kube_discovery: None,
-            script_facade: None,
+            context_menu_facade: None,
+            resource_presentation_facade: None,
         });
 
         // Cached part
@@ -203,17 +206,22 @@ pub async fn connect_cluster(
 
         let result = CompletedDiscovery { resources, crds };
 
-        let facade = ResourceContextMenuFacade::new(app);
-        // facade.register_user_script("/home/christian/Downloads/test.rhai".into());
-        facade.initialize_engines(client.clone(), Arc::clone(kube_discovery.as_ref().unwrap()));
-        facade.evaluate(&scripts_provider)?;
+        let context_menu_facade = ResourceContextMenuFacade::new(app.clone());
+        context_menu_facade
+            .initialize_engines(client.clone(), Arc::clone(kube_discovery.as_ref().unwrap()));
+        context_menu_facade.evaluate(&scripts_provider)?;
+
+        let resource_presentation_facade = ResourcePresentationFacade::new(app);
+        resource_presentation_facade.initialize_engines();
+        resource_presentation_facade.evaluate(&scripts_provider)?;
 
         clusters.manage(ClusterState {
             context_source,
             client,
             discovery: Arc::new(ClusterDiscovery::Completed(result)),
             kube_discovery,
-            script_facade: Some(facade),
+            context_menu_facade: Some(context_menu_facade),
+            resource_presentation_facade: Some(resource_presentation_facade),
         });
 
         channel.send(FrontendDiscoveryEvent::DiscoveryComplete(()))?;

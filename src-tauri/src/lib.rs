@@ -14,7 +14,7 @@ mod scripting;
 
 use std::sync::Arc;
 
-use app_state::{ChannelTasks, ExecSessions, JoinHandleStoreState, RendererRegistry};
+use app_state::{ChannelTasks, ExecSessions, JoinHandleStoreState};
 use persistence::cluster_profile_service::ClusterProfileService;
 use tauri::{async_runtime::spawn, Emitter as _, Listener, Manager};
 use tracing::{info, warn};
@@ -41,7 +41,6 @@ pub fn run() {
 
             setup_panic_handler(app_handle.clone());
 
-            app.manage(RendererRegistry::new_state(app_handle.clone()));
             app.manage(ChannelTasks::new_state(app_handle.clone()));
             app.manage(ExecSessions::new_state());
             app.manage(Arc::new(ClusterRegistry::new()));

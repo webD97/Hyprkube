@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use rhai::{CustomType, Dynamic, EvalAltResult, Position, TypeBuilder};
 use serde::Serialize;
 
-use crate::resource_rendering::scripting::types::{Properties, ViewComponent};
+use crate::scripting::types::{Properties, ViewComponent};
 
 /// Displays a single colored box.
 #[derive(Clone, Serialize, CustomType)]

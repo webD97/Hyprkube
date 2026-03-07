@@ -1,10 +1,7 @@
 use super::ResourceRenderer;
 use crate::{
     frontend_types::BackendError,
-    resource_rendering::scripting::{
-        components::{RelativeTime, Text},
-        types::{Properties, ResourceViewField},
-    },
+    scripting::types::{Properties, RelativeTime, ResourceViewField, Text},
 };
 use k8s_openapi::apiextensions_apiserver::pkg::apis::apiextensions::v1::CustomResourceDefinition;
 use kube::api::GroupVersionKind;
