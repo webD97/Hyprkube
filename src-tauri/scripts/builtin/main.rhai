@@ -24,7 +24,7 @@ register_resource_contextmenu_section(
                         let name = obj.metadata?.name;
 
                         if name != () {
-                            clipboard::write_text(name);
+                            clipboard::write_text(ctx, name);
                         }
                     }
                 }),
@@ -115,7 +115,7 @@ register_resource_contextmenu_section(
                         ActionButton(#{
                             title: "Copy image name",
                             action: |ctx| {
-                                clipboard::write_text(obj.spec.containers[idx].image);
+                                clipboard::write_text(ctx, obj.spec.containers[idx].image);
                             }
                         }),
                         ActionButton(#{
@@ -141,7 +141,7 @@ register_resource_contextmenu_section(
                         ActionButton(#{
                             title: "Copy image name",
                             action: |ctx| {
-                                clipboard::write_text(obj.spec.containers[idx].image);
+                                clipboard::write_text(ctx, obj.spec.containers[idx].image);
                             }
                         }),
                         ActionButton(#{
@@ -186,7 +186,7 @@ register_resource_contextmenu_section(
                                     data = base64::decode(data);
                                 }
 
-                                clipboard::write_text(data);
+                                clipboard::write_text(ctx, data);
                             }
                         })
                     })
