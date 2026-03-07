@@ -24,3 +24,18 @@ impl FnPtrWithAst {
         Self { fnptr, ast }
     }
 }
+
+#[derive(Clone, Debug)]
+pub struct CallbackContext {
+    pub app_handle: tauri::AppHandle,
+    pub frontend_tab: String,
+}
+
+impl CallbackContext {
+    pub fn new(app_handle: tauri::AppHandle, frontend_tab: String) -> Self {
+        Self {
+            app_handle,
+            frontend_tab,
+        }
+    }
+}

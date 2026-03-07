@@ -3,7 +3,7 @@ use std::sync::Arc;
 use rhai::{FuncRegistration, Module};
 use tauri_plugin_clipboard_manager::ClipboardExt as _;
 
-use crate::scripting::resource_context_menu_facade::CallbackContext;
+use crate::scripting::commons::CallbackContext;
 
 pub fn build_module(app: tauri::AppHandle) -> Module {
     let mut clipboard_module = Module::new();
