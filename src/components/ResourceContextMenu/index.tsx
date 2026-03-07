@@ -41,20 +41,28 @@ export default function ResourceContextMenu({
     };
 
     function blueprintToMenuItems(blueprint: Awaited<ReturnType<typeof createResourceMenustack>>): ItemType[] {
-        return blueprint.items.flatMap(({ title, items }) => {
-            const children = make_menu_items({
-                items,
-                onClick: (data) => runAction(blueprint.id, data)
-            });
+        return blueprint.items
+            .flatMap(({ title, items }, idx) => {
+                const isLastSection = idx === blueprint.items.length - 1;
+                const Separator: ItemType | undefined = isLastSection ? undefined : ({ type: "divider" });
 
-            if (!title) return children;
+                const children = make_menu_items({
+                    items,
+                    onClick: (data) => runAction(blueprint.id, data)
+                });
 
-            return [{
-                type: "group",
-                label: title,
-                children
-            } satisfies ItemType];
-        });
+                if (!title) return [...children, Separator];
+
+                return [
+                    {
+                        type: "group",
+                        label: title,
+                        children
+                    },
+                    Separator
+                ] as ItemType | undefined[];
+            })
+            .filter(i => i !== undefined);
     }
 
     async function loadTopLevelBlueprint(gvk: Gvk, ns: string, n: string) {

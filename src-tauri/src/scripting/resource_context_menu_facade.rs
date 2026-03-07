@@ -11,10 +11,7 @@ use crate::{
     scripting::{
         commons::{CallbackContext, ContentScript, FnPtrWithAst},
         modules,
-        resource_context_menu::{
-            ContextMenuSection, FrontendMenuItem, FrontendMenuItemKind, FrontendMenuSection,
-            MenuBlueprint,
-        },
+        resource_context_menu::{ContextMenuSection, FrontendMenuSection, MenuBlueprint},
         scripts_provider::{self, ScriptType, ScriptsProvider},
         types::{self},
     },
@@ -192,11 +189,8 @@ impl ResourceContextMenuFacade {
                         })
                         .collect();
 
-                    let mut section_items =
+                    let section_items =
                         FrontendMenuSection::new(section_template.title.clone(), frontend_items);
-
-                    section_items
-                        .push_item(FrontendMenuItem::new(FrontendMenuItemKind::Separator, None));
 
                     Ok(Some(section_items))
                 })
@@ -207,7 +201,7 @@ impl ResourceContextMenuFacade {
                 })
                 .filter_map(Result::transpose)
                 .filter(|section| match section {
-                    Ok(section) => section.len() > 1,
+                    Ok(section) => section.len() > 0,
                     Err(_) => true,
                 })
                 .collect()

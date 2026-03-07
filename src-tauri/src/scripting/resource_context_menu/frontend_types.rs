@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use serde::Serialize;
 
 #[derive(Debug, Clone, Serialize)]
+#[allow(unused)]
 pub enum FrontendMenuItemKind {
     ActionButton,
     SubMenu,
@@ -34,10 +35,6 @@ pub struct FrontendMenuSection {
 impl FrontendMenuSection {
     pub fn new(title: Option<String>, items: Vec<FrontendMenuItem>) -> Self {
         Self { title, items }
-    }
-
-    pub fn push_item(&mut self, item: FrontendMenuItem) {
-        self.items.push(item);
     }
 
     pub fn len(&self) -> usize {
