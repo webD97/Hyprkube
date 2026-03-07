@@ -1,6 +1,7 @@
 use crate::{
     app_state::Rejected, cluster_discovery::ClusterRegistryError,
     persistence::discovery_cache_service, resource_rendering::ResourceViewError,
+    scripting::resource_context_menu_facade::ResourceContextMenuError,
 };
 
 #[derive(thiserror::Error, Debug)]
@@ -25,6 +26,9 @@ pub enum BackendError {
 
     #[error(transparent)]
     ClusterRegistry(#[from] ClusterRegistryError),
+
+    #[error(transparent)]
+    ResourceContextMenu(#[from] ResourceContextMenuError),
 
     #[error("{0}")]
     Generic(String),
