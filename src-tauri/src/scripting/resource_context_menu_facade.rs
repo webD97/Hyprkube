@@ -15,7 +15,7 @@ use crate::{
             ContextMenuSection, FrontendMenuItem, FrontendMenuItemKind, FrontendMenuSection,
             MenuBlueprint,
         },
-        scripts_provider::ScriptsProvider,
+        scripts_provider::{self, ScriptsProvider},
         types::{self},
     },
 };
@@ -93,8 +93,11 @@ impl ResourceContextMenuFacade {
                 move |ctx: rhai::NativeCallContext, definition: types::MenuSection| {
                     let script = ctx
                         .call_source()
-                        .expect("only file-based scripts supported");
-                    facade.register_resource_contextmenu_section(definition, script);
+                        .ok_or("only file-based scripts supported")?;
+
+                    facade
+                        .register_resource_contextmenu_section(definition, script)
+                        .map_err(|e| e.to_string())
                 },
             );
         }
@@ -104,7 +107,11 @@ impl ResourceContextMenuFacade {
         engine
     }
 
-    fn register_resource_contextmenu_section(&self, section: types::MenuSection, script: &str) {
+    fn register_resource_contextmenu_section(
+        &self,
+        section: types::MenuSection,
+        script: &str,
+    ) -> Result<(), ResourceContextMenuError> {
         let script: PathBuf = script.into();
 
         let ast = self.scripts.read().unwrap();
@@ -113,31 +120,37 @@ impl ResourceContextMenuFacade {
             .unwrap()
             .ast
             .as_ref()
-            .expect("already compiled")
+            .ok_or(ResourceContextMenuError::PendingCompilation)?
             .as_ref()
-            .expect("compiled without errors");
+            .map_err(|_| ResourceContextMenuError::CompilationError)?;
 
         let mut sections = self.registered_sections.write().unwrap();
+
         sections.push(ContextMenuSection {
             title: section.title,
             matcher: section.matcher,
             items: section.items,
             ast: Arc::clone(ast),
         });
+
+        Ok(())
     }
 
     pub fn create_resource_menustack(
         &self,
         obj: kube::api::DynamicObject,
         tab_id: &str,
-    ) -> MenuBlueprint {
+    ) -> Result<MenuBlueprint, ResourceContextMenuError> {
         let gvk = obj.types.as_ref().unwrap().gvk();
-        let obj = rhai::serde::to_dynamic(obj).unwrap();
+        let obj = rhai::serde::to_dynamic(obj)?;
 
         let mut menu_stack =
             MenuStack::new(CallbackContext::new(self.app.clone(), tab_id.to_owned()));
 
-        let engine = self.engine.get().expect("engine must be initialized");
+        let engine = self
+            .engine
+            .get()
+            .ok_or(ResourceContextMenuError::EngineUninitialized)?;
 
         let frontend_sections: Vec<FrontendMenuSection> = {
             let section_templates = self.registered_sections.read().unwrap();
@@ -190,41 +203,69 @@ impl ResourceContextMenuFacade {
                 .insert_entry(menu_stack);
         }
 
-        MenuBlueprint::new(menu_stack_id, frontend_sections)
+        Ok(MenuBlueprint::new(menu_stack_id, frontend_sections))
     }
 
-    pub fn drop_resource_menustack(&self, id: &str) {
+    pub fn drop_resource_menustack(&self, id: &str) -> Result<(), ResourceContextMenuError> {
         let mut menu_stacks = self.menu_stacks.write().unwrap();
         menu_stacks.remove(id);
+
+        Ok(())
     }
 
-    // todo: error handling
-    pub fn call_menustack_action(&self, menu_id: &str, action_ref: &str) {
+    pub fn call_menustack_action(
+        &self,
+        menu_id: &str,
+        action_ref: &str,
+    ) -> Result<(), ResourceContextMenuError> {
         let menus = self.menu_stacks.read().unwrap();
-        let menu = menus.get(menu_id).unwrap();
-        let action = menu.actions.get(action_ref).unwrap();
 
-        let engine = self.engine.get().unwrap();
+        let menu = menus
+            .get(menu_id)
+            .ok_or_else(|| ResourceContextMenuError::NoSuchMenuStack(menu_id.to_owned()))?;
+
+        let action = menu
+            .actions
+            .get(action_ref)
+            .ok_or_else(|| ResourceContextMenuError::NoSuchMenuAction(action_ref.to_owned()))?;
+
+        let engine = self
+            .engine
+            .get()
+            .ok_or(ResourceContextMenuError::EngineUninitialized)?;
+
         let ctx = Arc::clone(&menu.context);
 
-        action
-            .fnptr
-            .call::<()>(engine, &action.ast, (ctx,))
-            .unwrap();
+        action.fnptr.call::<()>(engine, &action.ast, (ctx,))?;
+
+        Ok(())
     }
 
-    pub fn evaluate(&self, scripts_provider: &ScriptsProvider) {
-        let engine = self.engine.get().expect("Engine not initialized");
+    pub fn evaluate(
+        &self,
+        scripts_provider: &ScriptsProvider,
+    ) -> Result<(), ResourceContextMenuError> {
+        let engine = self
+            .engine
+            .get()
+            .ok_or(ResourceContextMenuError::EngineUninitialized)?;
 
-        let builtins = scripts_provider.get_builtins_entrypoints().unwrap();
-        let extensions = scripts_provider.get_extensions_entrypoints().unwrap();
+        let builtins = scripts_provider.get_builtins_entrypoints()?;
+        let extensions = scripts_provider.get_extensions_entrypoints()?;
 
         for entrypoint in builtins.iter().chain(&extensions) {
             tracing::info!("Evaluating {}", entrypoint.to_string_lossy());
 
-            if !std::fs::exists(entrypoint).unwrap() {
-                tracing::warn!("Entrypoint does not exist");
-                continue;
+            match std::fs::exists(entrypoint) {
+                Err(e) => {
+                    tracing::warn!("Failed to check if entrypoint exists: {e}");
+                    continue;
+                }
+                Ok(exists) if !exists => {
+                    tracing::warn!("Entrypoint does not exist");
+                    continue;
+                }
+                Ok(_) => {}
             }
 
             let ast_arc = {
@@ -247,5 +288,31 @@ impl ResourceContextMenuFacade {
 
             engine.eval_ast::<()>(&ast_arc).unwrap();
         }
+
+        Ok(())
     }
+}
+
+#[derive(thiserror::Error, Debug)]
+pub enum ResourceContextMenuError {
+    #[error("No MenuStack with id {0}")]
+    NoSuchMenuStack(String),
+
+    #[error("No menu action with id {0}")]
+    NoSuchMenuAction(String),
+
+    #[error("Scripting engine has not been initialized")]
+    EngineUninitialized,
+
+    #[error("Error evaluating script: {0}")]
+    EvaluationResult(#[from] Box<rhai::EvalAltResult>),
+
+    #[error("The script has not yet been compiled")]
+    PendingCompilation,
+
+    #[error("The script has a compilation error")]
+    CompilationError,
+
+    #[error(transparent)]
+    ScriptDirectoryResolution(#[from] scripts_provider::Error),
 }

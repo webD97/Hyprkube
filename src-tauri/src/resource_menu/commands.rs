@@ -17,7 +17,7 @@ pub async fn call_menustack_action(
 ) -> Result<(), BackendError> {
     let clusters = app.state::<ClusterRegistryState>();
     let facade = clusters.scripting_for(&context_source)?;
-    facade.call_menustack_action(menustack_id, action_ref);
+    facade.call_menustack_action(menustack_id, action_ref)?;
 
     Ok(())
 }
@@ -54,7 +54,7 @@ pub async fn create_resource_menustack(
     };
 
     let obj = api.get(name).await?;
-    let blueprint = facade.create_resource_menustack(obj, tab_id);
+    let blueprint = facade.create_resource_menustack(obj, tab_id)?;
 
     Ok(blueprint)
 }
@@ -71,7 +71,7 @@ pub async fn drop_resource_menustack(
     let clusters = app.state::<ClusterRegistryState>();
     let facade = clusters.scripting_for(&context_source)?;
 
-    facade.drop_resource_menustack(menu_id);
+    facade.drop_resource_menustack(menu_id)?;
     debug!("Dropped menu stack {menu_id}");
 
     Ok(())

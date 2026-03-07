@@ -206,7 +206,7 @@ pub async fn connect_cluster(
         let facade = ResourceContextMenuFacade::new(app);
         // facade.register_user_script("/home/christian/Downloads/test.rhai".into());
         facade.initialize_engines(client.clone(), Arc::clone(kube_discovery.as_ref().unwrap()));
-        facade.evaluate(&scripts_provider);
+        facade.evaluate(&scripts_provider)?;
 
         clusters.manage(ClusterState {
             context_source,
