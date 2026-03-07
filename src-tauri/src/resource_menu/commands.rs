@@ -27,6 +27,7 @@ pub async fn call_menustack_action(
 pub async fn create_resource_menustack(
     app: tauri::AppHandle,
     context_source: KubeContextSource,
+    parent_menu: Option<&str>,
     gvk: kube::api::GroupVersionKind,
     namespace: &str,
     name: &str,
@@ -54,7 +55,7 @@ pub async fn create_resource_menustack(
     };
 
     let obj = api.get(name).await?;
-    let blueprint = facade.create_resource_menustack(obj, tab_id)?;
+    let blueprint = facade.create_resource_menustack(parent_menu, obj, tab_id)?;
 
     Ok(blueprint)
 }

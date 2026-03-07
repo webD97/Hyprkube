@@ -17,12 +17,9 @@ export default function LazyDropdown({
     async function onSubmenuOpens(keys: React.Key[]) {
         const newItems = await onLazyKeyActivated(keys[keys.length - 1]);
         setRealItems(items => {
-            console.log(`Appending ${newItems.length} items to key ${keys.join(' -> ')}`);
             return populateSubmenu(items, keys, newItems);
         });
     }
-
-    // console.log(JSON.stringify(realItems, undefined, 2));
 
     return (
         <Dropdown

@@ -1,7 +1,9 @@
 use rhai::{CustomType, Dynamic, EvalAltResult, TypeBuilder};
+use serde::Serialize;
 
-#[derive(Clone, Debug, rhai::CustomType)]
+#[derive(Clone, Debug, rhai::CustomType, Serialize)]
 #[rhai_type(extra = Self::build_extra)]
+#[serde(rename_all = "camelCase")]
 pub struct ResourceRef {
     #[rhai_type(readonly)]
     pub api_version: String,

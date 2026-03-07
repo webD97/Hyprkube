@@ -6,6 +6,7 @@ use serde::Serialize;
 pub enum FrontendMenuItemKind {
     ActionButton,
     SubMenu,
+    ResourceSubMenu,
     Separator,
 }
 
@@ -37,6 +38,10 @@ impl FrontendMenuSection {
 
     pub fn push_item(&mut self, item: FrontendMenuItem) {
         self.items.push(item);
+    }
+
+    pub fn len(&self) -> usize {
+        self.items.len()
     }
 }
 
