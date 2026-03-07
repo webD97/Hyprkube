@@ -48,6 +48,9 @@ prevents undesirable side effects if a scripts tries to do things that it should
         └── bundle.rhai
 ```
 
+For scripting examples, patterns and best practices, refer to the bundled scripts powering the out-of-box experience in
+[./src-tauri/scripts/core](./src-tauri/scripts/core/).
+
 ### Custom resource context menus
 Scripts in the `menus` subdirectory can be used to extend the context menus of Kubernetes resources. The following
 Rhai modules are available:
