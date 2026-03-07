@@ -4,8 +4,7 @@ fn is_restartable(kind) {
 
 fn has_supported_owner_reference(obj) {
     let owner_references = obj.metadata?.ownerReferences ?? [];
-
-    owner_references.some(|ref| ref.kind == "ReplicaSet")
+    owner_references.some(|ref| ref.kind == "ReplicaSet" || is_restartable(ref.kind))
 }
 
 register_resource_contextmenu_section(
@@ -54,12 +53,10 @@ register_resource_contextmenu_section(
                         });
                     }
                     else if owner_references[0]?.kind == "ReplicaSet" {
-                        print("Deployment");
                         let replica_set = owner_references[0];
                         let replica_set = kube::get(replica_set.apiVersion, replica_set.kind, obj.metadata.namespace, replica_set.name);
 
                         let owner = replica_set.metadata?.ownerReferences[0];
-                        print(owner);
 
                         restartee = ResourceRef(#{
                             api_version: owner.apiVersion,
@@ -175,7 +172,7 @@ register_resource_contextmenu_section(
 
             [
                 SubMenu(#{
-                title: "Copy data",
+                    title: "Copy data",
                     items: data_keys.map(|key| {
                         ActionButton(#{
                             title: key,
