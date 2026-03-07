@@ -90,14 +90,16 @@ impl ResourceContextMenuFacade {
             let facade = Arc::clone(&facade);
             engine.register_fn(
                 "register_resource_contextmenu_section",
-                move |ctx: rhai::NativeCallContext, definition: types::MenuSection| {
+                move |ctx: rhai::NativeCallContext,
+                      definition: types::MenuSection|
+                      -> Result<(), Box<rhai::EvalAltResult>> {
                     let script = ctx
                         .call_source()
                         .ok_or("only file-based scripts supported")?;
 
                     facade
                         .register_resource_contextmenu_section(definition, script)
-                        .map_err(|e| e.to_string())
+                        .map_err(|e| e.to_string().into())
                 },
             );
         }
@@ -152,22 +154,22 @@ impl ResourceContextMenuFacade {
             .get()
             .ok_or(ResourceContextMenuError::EngineUninitialized)?;
 
-        let frontend_sections: Vec<FrontendMenuSection> = {
+        let frontend_sections: Vec<Result<FrontendMenuSection, ResourceContextMenuError>> = {
             let section_templates = self.registered_sections.read().unwrap();
             section_templates
                 .iter()
-                .flat_map(|section_template| {
+                .map(|section_template| {
                     let matches = section_template
                         .matches_gvk(engine, &section_template.ast, gvk.clone())
-                        .expect("Call to `matcher` failed"); // todo: error handling
+                        .map_err(ResourceContextMenuError::Matcher)?;
 
                     if !matches {
-                        return None;
+                        return Ok(None);
                     }
 
                     let items: Vec<types::MenuItem> = section_template
                         .render_items_for(engine, &section_template.ast, obj.clone())
-                        .expect("Call to `items` failed"); // todo: error handling
+                        .map_err(ResourceContextMenuError::Items)?;
 
                     let frontend_items = items
                         .into_iter()
@@ -190,8 +192,14 @@ impl ResourceContextMenuFacade {
                     section_items
                         .push_item(FrontendMenuItem::new(FrontendMenuItemKind::Separator, None));
 
-                    Some(section_items)
+                    Ok(Some(section_items))
                 })
+                .filter(|i| match i {
+                    Ok(Some(_)) => true,
+                    Ok(None) => false,
+                    Err(_) => true,
+                })
+                .filter_map(Result::transpose)
                 .collect()
         };
 
@@ -203,7 +211,16 @@ impl ResourceContextMenuFacade {
                 .insert_entry(menu_stack);
         }
 
-        Ok(MenuBlueprint::new(menu_stack_id, frontend_sections))
+        let (oks, errs): (Vec<_>, Vec<_>) = frontend_sections.into_iter().partition(Result::is_ok);
+
+        for err in errs.into_iter().map(Result::unwrap_err) {
+            tracing::warn!("Error building MenuBlueprint: {err}");
+        }
+
+        Ok(MenuBlueprint::new(
+            menu_stack_id,
+            oks.into_iter().map(Result::unwrap).collect(),
+        ))
     }
 
     pub fn drop_resource_menustack(&self, id: &str) -> Result<(), ResourceContextMenuError> {
@@ -281,12 +298,11 @@ impl ResourceContextMenuFacade {
 
                 ast_result
                     .as_ref()
-                    .map_err(|e| format!("Compilation failed for {}: {e}", entrypoint.display()))
-                    .unwrap()
+                    .map_err(|_| ResourceContextMenuError::CompilationError)?
                     .clone()
             };
 
-            engine.eval_ast::<()>(&ast_arc).unwrap();
+            engine.eval_ast::<()>(&ast_arc)?;
         }
 
         Ok(())
@@ -315,4 +331,10 @@ pub enum ResourceContextMenuError {
 
     #[error(transparent)]
     ScriptDirectoryResolution(#[from] scripts_provider::Error),
+
+    #[error("Call to matcher failed: {0}")]
+    Matcher(Box<rhai::EvalAltResult>),
+
+    #[error("Call to items failed: {0}")]
+    Items(Box<rhai::EvalAltResult>),
 }
