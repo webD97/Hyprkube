@@ -6,7 +6,7 @@ use crate::{
     internal::mini_id::random_id,
     scripting::{
         resource_context_menu::{FrontendMenuItem, FrontendMenuItemKind},
-        types::{ActionButton, SubMenu},
+        types::{ActionButton, ResourceSubMenu, SubMenu},
     },
 };
 
@@ -14,6 +14,7 @@ use crate::{
 pub enum MenuItem {
     ActionButton(ActionButton),
     SubMenu(SubMenu),
+    ResourceSubMenu(ResourceSubMenu),
 }
 
 impl From<ActionButton> for MenuItem {
@@ -28,6 +29,12 @@ impl From<SubMenu> for MenuItem {
     }
 }
 
+impl From<ResourceSubMenu> for MenuItem {
+    fn from(value: ResourceSubMenu) -> Self {
+        MenuItem::ResourceSubMenu(value)
+    }
+}
+
 impl TryFrom<rhai::Dynamic> for MenuItem {
     type Error = ();
 
@@ -38,6 +45,9 @@ impl TryFrom<rhai::Dynamic> for MenuItem {
         } else if value.is::<SubMenu>() {
             let item = value.cast::<SubMenu>();
             Ok(MenuItem::SubMenu(item))
+        } else if value.is::<ResourceSubMenu>() {
+            let item = value.cast::<ResourceSubMenu>();
+            Ok(MenuItem::ResourceSubMenu(item))
         } else {
             Err(())
         }
@@ -67,7 +77,6 @@ impl MenuItem {
 
                 (frontend_item, vec![(action_id, action_button.action)])
             }
-
             Self::SubMenu(submenu) => {
                 let (sub_items, actions): (Vec<_>, Vec<_>) = submenu
                     .items
@@ -86,6 +95,17 @@ impl MenuItem {
                 );
 
                 (frontend_item, actions)
+            }
+            Self::ResourceSubMenu(submenu) => {
+                let frontend_item = FrontendMenuItem::new(
+                    FrontendMenuItemKind::ResourceSubMenu,
+                    Some(HashMap::from_iter([
+                        ("title", json!(submenu.title)),
+                        ("resourceRef", json!(submenu.resource_ref)),
+                    ])),
+                );
+
+                (frontend_item, vec![])
             }
         }
     }

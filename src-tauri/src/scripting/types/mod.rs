@@ -23,6 +23,7 @@ mod presentation_component;
 mod properties;
 mod relative_time;
 mod resource_presentation_field;
+mod resource_submenu;
 mod text;
 
 #[allow(dead_code)]
@@ -56,4 +57,5 @@ pub use presentation_component::*;
 pub use properties::*;
 pub use relative_time::*;
 pub use resource_presentation_field::*;
+pub use resource_submenu::*;
 pub use text::*;

@@ -32,6 +32,9 @@ pub struct ResourceContextMenuFacade {
 struct MenuStack {
     context: Arc<CallbackContext>,
     actions: HashMap<String, FnPtrWithAst>,
+
+    /// List of children menu IDs to drop together with this stack
+    children: Vec<String>,
 }
 
 impl MenuStack {
@@ -39,6 +42,7 @@ impl MenuStack {
         Self {
             context: Arc::new(context),
             actions: HashMap::new(),
+            children: Vec::new(),
         }
     }
 }
@@ -74,6 +78,7 @@ impl ResourceContextMenuFacade {
         engine.build_type::<types::ActionButton>();
         engine.build_type::<types::SubMenu>();
         engine.build_type::<types::MenuSection>();
+        engine.build_type::<types::ResourceSubMenu>();
 
         engine.register_static_module(
             "kube",
@@ -140,6 +145,7 @@ impl ResourceContextMenuFacade {
 
     pub fn create_resource_menustack(
         &self,
+        parent_menu: Option<&str>,
         obj: kube::api::DynamicObject,
         tab_id: &str,
     ) -> Result<MenuBlueprint, ResourceContextMenuError> {
@@ -200,12 +206,23 @@ impl ResourceContextMenuFacade {
                     Err(_) => true,
                 })
                 .filter_map(Result::transpose)
+                .filter(|section| match section {
+                    Ok(section) => section.len() > 1,
+                    Err(_) => true,
+                })
                 .collect()
         };
 
         let menu_stack_id = random_id(5);
         {
             let mut menu_stacks = self.menu_stacks.write().unwrap();
+
+            if let Some(parent_menu) = parent_menu {
+                if let Some(parent) = menu_stacks.get_mut(parent_menu) {
+                    parent.children.push(menu_stack_id.clone());
+                }
+            }
+
             menu_stacks
                 .entry(menu_stack_id.clone())
                 .insert_entry(menu_stack);
@@ -225,7 +242,12 @@ impl ResourceContextMenuFacade {
 
     pub fn drop_resource_menustack(&self, id: &str) -> Result<(), ResourceContextMenuError> {
         let mut menu_stacks = self.menu_stacks.write().unwrap();
-        menu_stacks.remove(id);
+
+        if let Some(menu) = menu_stacks.remove(id) {
+            for child in menu.children {
+                menu_stacks.remove(&child);
+            }
+        }
 
         Ok(())
     }
