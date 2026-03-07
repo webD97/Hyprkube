@@ -1,4 +1,4 @@
-use std::{collections::HashMap, sync::Arc};
+use std::collections::HashMap;
 
 use futures::StreamExt as _;
 use k8s_openapi::apiextensions_apiserver::pkg::apis::apiextensions::v1::CustomResourceDefinition;
@@ -8,12 +8,13 @@ use tauri::State;
 use tracing::{error, info};
 
 use crate::{
-    app_state::{JoinHandleStoreState, RendererRegistry},
+    app_state::JoinHandleStoreState,
     cluster_discovery::{ClusterDiscovery, ClusterRegistryState},
     frontend_commands::KubeContextSource,
     frontend_types::BackendError,
     internal::resources::ResourceWatchStreamEvent,
-    resource_rendering::{scripting::types::ViewComponent, ResourceColumnDefinition},
+    resource_rendering::ResourceColumnDefinition,
+    scripting::types::ViewComponent,
 };
 
 #[derive(Clone, Serialize)]
@@ -42,7 +43,7 @@ pub enum ResourceEvent {
 pub async fn watch_gvk_with_view(
     clusters: State<'_, ClusterRegistryState>,
     join_handle_store: State<'_, JoinHandleStoreState>,
-    views: State<'_, Arc<RendererRegistry>>,
+    // views: State<'_, Arc<RendererRegistry>>,
     context_source: KubeContextSource,
     gvk: kube::api::GroupVersionKind,
     view_name: String,
@@ -70,7 +71,8 @@ pub async fn watch_gvk_with_view(
         },
     };
 
-    let views = Arc::clone(&views);
+    // let views = Arc::clone(&views);
+    let views = clusters.presentation_scripting_for(&context_source)?;
 
     let stream = async move {
         let view = views.get_renderer(&gvk, view_name.as_str()).await;

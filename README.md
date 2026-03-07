@@ -41,8 +41,11 @@ prevents undesirable side effects if a scripts tries to do things that it should
 │       ├── 000-my-shortcuts.rhai
 │       └── 100-extras.rhai
 └── fleet
-    └── menus
-        └── 000-gitrepo.rhai
+    ├── menus
+    │   └── 000-gitrepo.rhai
+    └── presentations
+        ├── gitrepo.rhai
+        └── bundle.rhai
 ```
 
 ### Custom resource context menus
@@ -53,3 +56,10 @@ Rhai modules are available:
 - `kube`
 - `frontend`
 - `clipboard`
+
+### Custom resource presentations
+Scripts in the `presentations` subdirectory can be used to configure specialized presentations of resources when
+Hyprkube displays a resource table. The script has access to the full Kubernetes resource and can display any data
+it finds useful.
+
+No additional modules are available.

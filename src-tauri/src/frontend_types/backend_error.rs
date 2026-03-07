@@ -1,6 +1,6 @@
 use crate::{
     app_state::Rejected, cluster_discovery::ClusterRegistryError,
-    persistence::discovery_cache_service, resource_rendering::ResourceViewError,
+    persistence::discovery_cache_service,
     scripting::resource_context_menu_facade::ResourceContextMenuError,
 };
 
@@ -11,9 +11,6 @@ pub enum BackendError {
 
     #[error(transparent)]
     KubeconfigError(#[from] kube::config::KubeconfigError),
-
-    #[error(transparent)]
-    ResourceViewError(#[from] ResourceViewError),
 
     #[error(transparent)]
     TauriError(#[from] tauri::Error),

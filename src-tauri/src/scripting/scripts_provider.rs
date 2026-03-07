@@ -3,10 +3,18 @@ use std::{io::ErrorKind, path::PathBuf};
 use scan_dir::ScanDir;
 use tauri::Manager as _;
 
+const DIR_NAME_MENUS: &str = "menus";
+const DIR_NAME_PRESENTATIONS: &str = "presentations";
+
 /// A ScriptType determines which capabilties are available in the scripting engine
 /// at runtime. This avoids unexpected side-effects of poorly-written scripts.
+#[derive(Debug)]
 pub enum ScriptType {
+    /// A script that contributes to a Kubernetes resource context menu
     Menu,
+
+    // A script that provides a custom column-based presentation of a Kubernetes resource
+    Presentation,
 }
 
 pub struct ScriptsProvider {
@@ -21,7 +29,7 @@ impl ScriptsProvider {
     fn list_packages_in(&self, dir: &PathBuf) -> Vec<PathBuf> {
         let mut packages: Vec<PathBuf> = Vec::new();
 
-        let result = ScanDir::dirs().walk(dir, |iter| {
+        let result = ScanDir::dirs().read(dir, |iter| {
             let mut entrypoints = iter
                 .map(|(entry, _)| entry.path())
                 .collect::<Vec<PathBuf>>();
@@ -29,14 +37,11 @@ impl ScriptsProvider {
             packages.append(&mut entrypoints);
         });
 
-        if let Err(errors) = result {
-            let errors = errors.into_iter().filter(|e| match e {
-                scan_dir::Error::Io(e, _) => e.kind() != ErrorKind::NotFound,
-                scan_dir::Error::Decode(_) => true,
-            });
-
-            for e in errors {
-                tracing::warn!("{e}");
+        if let Err(e) = result {
+            if let scan_dir::Error::Io(err, _) = &e {
+                if err.kind() != ErrorKind::NotFound {
+                    tracing::warn!("{e}");
+                }
             }
         }
 
@@ -74,10 +79,11 @@ impl ScriptsProvider {
         let mut scripts: Vec<PathBuf> = Vec::new();
 
         match script_type {
-            ScriptType::Menu => package_path.push("menus"),
+            ScriptType::Menu => package_path.push(DIR_NAME_MENUS),
+            ScriptType::Presentation => package_path.push(DIR_NAME_PRESENTATIONS),
         }
 
-        let result = ScanDir::files().walk(package_path, |iter| {
+        let result = ScanDir::files().read(&package_path, |iter| {
             let mut entrypoints = iter
                 .filter(|(_, name)| name.ends_with(".rhai"))
                 .map(|(ref entry, _)| entry.path())
@@ -86,14 +92,11 @@ impl ScriptsProvider {
             scripts.append(&mut entrypoints);
         });
 
-        if let Err(errors) = result {
-            let errors = errors.into_iter().filter(|e| match e {
-                scan_dir::Error::Io(e, _) => e.kind() != ErrorKind::NotFound,
-                scan_dir::Error::Decode(_) => true,
-            });
-
-            for e in errors {
-                tracing::warn!("{e}");
+        if let Err(e) = result {
+            if let scan_dir::Error::Io(err, _) = &e {
+                if err.kind() != ErrorKind::NotFound {
+                    tracing::warn!("{e}");
+                }
             }
         }
 

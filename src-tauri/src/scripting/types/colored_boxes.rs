@@ -3,10 +3,7 @@ use std::collections::HashMap;
 use rhai::{CustomType, Dynamic, EvalAltResult, Position, TypeBuilder};
 use serde::Serialize;
 
-use crate::resource_rendering::scripting::{
-    components::ColoredBox,
-    types::{Properties, ViewComponent},
-};
+use crate::scripting::types::{ColoredBox, Properties, ViewComponent};
 
 /// Displays one or more groups of colored boxes.
 #[derive(Clone, Serialize, CustomType)]
