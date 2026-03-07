@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use rhai::{CustomType, Dynamic, EvalAltResult, Position, TypeBuilder};
 use serde::Serialize;
 
-use crate::scripting::types::{Properties, ViewComponent};
+use crate::scripting::types::{PresentationComponent, Properties};
 
 /// Displays plain text from a string.
 #[derive(Clone, Serialize, CustomType)]
@@ -34,7 +34,7 @@ impl Text {
     }
 }
 
-impl From<Text> for ViewComponent {
+impl From<Text> for PresentationComponent {
     fn from(value: Text) -> Self {
         Self {
             kind: "Text",

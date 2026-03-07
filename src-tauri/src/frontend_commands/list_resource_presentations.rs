@@ -7,7 +7,7 @@ use crate::{
 };
 
 #[tauri::command]
-pub async fn list_resource_views(
+pub async fn list_resource_presentations(
     clusters: State<'_, ClusterRegistryState>,
     context_source: KubeContextSource,
     group: &str,

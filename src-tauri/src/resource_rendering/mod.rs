@@ -7,7 +7,7 @@ use k8s_openapi::apiextensions_apiserver::pkg::apis::apiextensions::v1::CustomRe
 use kube::api::GroupVersionKind;
 use serde::Serialize;
 
-use crate::{frontend_types::BackendError, scripting::types::ResourceViewField};
+use crate::{frontend_types::BackendError, scripting::types::ResourcePresentationField};
 
 #[derive(Clone, Serialize)]
 pub struct ResourceColumnDefinition {
@@ -29,5 +29,5 @@ pub trait ResourceRenderer: Send + Sync {
         gvk: &GroupVersionKind,
         crd: Option<&CustomResourceDefinition>,
         obj: &kube::api::DynamicObject,
-    ) -> Result<Vec<Result<ResourceViewField, String>>, BackendError>;
+    ) -> Result<Vec<Result<ResourcePresentationField, String>>, BackendError>;
 }

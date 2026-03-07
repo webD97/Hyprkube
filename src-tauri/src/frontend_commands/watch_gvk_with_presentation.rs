@@ -14,7 +14,7 @@ use crate::{
     frontend_types::BackendError,
     internal::resources::ResourceWatchStreamEvent,
     resource_rendering::ResourceColumnDefinition,
-    scripting::types::ViewComponent,
+    scripting::types::PresentationComponent,
 };
 
 #[derive(Clone, Serialize)]
@@ -28,7 +28,7 @@ pub enum ResourceEvent {
         uid: String,
         namespace: String,
         name: String,
-        columns: Vec<Result<ViewComponent, String>>,
+        columns: Vec<Result<PresentationComponent, String>>,
     },
     Deleted {
         uid: String,
@@ -40,13 +40,12 @@ pub enum ResourceEvent {
 #[allow(clippy::too_many_arguments)]
 #[tauri::command]
 #[tracing::instrument(skip_all, fields(request_id = tracing::field::Empty))]
-pub async fn watch_gvk_with_view(
+pub async fn watch_gvk_with_presentation(
     clusters: State<'_, ClusterRegistryState>,
     join_handle_store: State<'_, JoinHandleStoreState>,
-    // views: State<'_, Arc<RendererRegistry>>,
     context_source: KubeContextSource,
     gvk: kube::api::GroupVersionKind,
-    view_name: String,
+    presentation_name: String,
     channel: tauri::ipc::Channel<ResourceEvent>,
     namespace: &str,
 ) -> Result<(), BackendError> {
@@ -75,7 +74,7 @@ pub async fn watch_gvk_with_view(
     let views = clusters.presentation_scripting_for(&context_source)?;
 
     let stream = async move {
-        let view = views.get_renderer(&gvk, view_name.as_str()).await;
+        let view = views.get_renderer(&gvk, presentation_name.as_str()).await;
 
         let crds: HashMap<GroupVersionKind, CustomResourceDefinition> = match &*discovery {
             ClusterDiscovery::Inflight(inflight) => inflight.block_until_done().await.unwrap().crds,

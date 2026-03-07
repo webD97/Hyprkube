@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use rhai::{CustomType, Dynamic, EvalAltResult, Position, TypeBuilder};
 use serde::Serialize;
 
-use crate::scripting::types::{Properties, ViewComponent};
+use crate::scripting::types::{PresentationComponent, Properties};
 
 /// Displays a relative time from a timestamp, e.g. "1h15m".
 #[derive(Clone, Serialize, CustomType)]
@@ -34,7 +34,7 @@ impl RelativeTime {
     }
 }
 
-impl From<RelativeTime> for ViewComponent {
+impl From<RelativeTime> for PresentationComponent {
     fn from(value: RelativeTime) -> Self {
         Self {
             kind: "RelativeTime",
