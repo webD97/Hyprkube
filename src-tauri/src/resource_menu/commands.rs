@@ -5,7 +5,7 @@ use tracing::debug;
 use crate::cluster_discovery::ClusterRegistryState;
 use crate::frontend_commands::KubeContextSource;
 use crate::frontend_types::BackendError;
-use crate::scripting::resource_context_menu_facade::MenuBlueprint;
+use crate::scripting::resource_context_menu::MenuBlueprint;
 
 #[tauri::command]
 #[tracing::instrument(skip_all, fields(request_id = tracing::field::Empty))]
@@ -55,7 +55,6 @@ pub async fn create_resource_menustack(
 
     let obj = api.get(name).await?;
     let blueprint = facade.create_resource_menustack(obj, tab_id);
-    debug!("Created menu stack {}", blueprint.id);
 
     Ok(blueprint)
 }
