@@ -1,5 +1,9 @@
+use std::sync::Arc;
+
 use rhai::{FuncRegistration, Module};
 use tauri_plugin_clipboard_manager::ClipboardExt as _;
+
+use crate::scripting::resource_context_menu_facade::CallbackContext;
 
 pub fn build_module(app: tauri::AppHandle) -> Module {
     let mut clipboard_module = Module::new();
@@ -9,7 +13,7 @@ pub fn build_module(app: tauri::AppHandle) -> Module {
 
         FuncRegistration::new("write_text").set_into_module(
             &mut clipboard_module,
-            move |data: &str| -> Result<(), Box<rhai::EvalAltResult>> {
+            move |_: Arc<CallbackContext>, data: &str| -> Result<(), Box<rhai::EvalAltResult>> {
                 app.clipboard()
                     .write_text(data)
                     .map_err(|e| e.to_string())?;
