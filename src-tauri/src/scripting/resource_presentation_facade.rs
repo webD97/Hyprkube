@@ -9,7 +9,8 @@ use kube::api::GroupVersionKind;
 use tauri::Manager as _;
 
 use crate::{
-    cluster_discovery::{ClusterDiscovery, ClusterRegistryState},
+    app_state::ClusterStateRegistry,
+    cluster_discovery::ClusterDiscovery,
     frontend_commands::KubeContextSource,
     resource_rendering::{
         CrdRenderer, FallbackRenderer, ResourceColumnDefinition, ResourceRenderer,
@@ -124,7 +125,7 @@ impl ResourcePresentationFacade {
         context_source: &KubeContextSource,
         gvk: &GroupVersionKind,
     ) -> Result<Vec<String>, ResourcePresentationError> {
-        let clusters = self.app.state::<ClusterRegistryState>();
+        let clusters = self.app.state::<Arc<ClusterStateRegistry>>();
         let discovery = clusters.discovery_for(context_source).unwrap();
 
         let registered_presentations = self.registered_presentations.read().unwrap();

@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 
 use futures::StreamExt as _;
 use k8s_openapi::apiextensions_apiserver::pkg::apis::apiextensions::v1::CustomResourceDefinition;
@@ -8,8 +8,8 @@ use tauri::State;
 use tracing::{error, info};
 
 use crate::{
-    app_state::JoinHandleStoreState,
-    cluster_discovery::{ClusterDiscovery, ClusterRegistryState},
+    app_state::{ClusterStateRegistry, JoinHandleStoreState},
+    cluster_discovery::ClusterDiscovery,
     frontend_commands::KubeContextSource,
     frontend_types::BackendError,
     internal::resources::ResourceWatchStreamEvent,
@@ -41,7 +41,7 @@ pub enum ResourceEvent {
 #[tauri::command]
 #[tracing::instrument(skip_all, fields(request_id = tracing::field::Empty))]
 pub async fn watch_gvk_with_presentation(
-    clusters: State<'_, ClusterRegistryState>,
+    clusters: State<'_, Arc<ClusterStateRegistry>>,
     join_handle_store: State<'_, JoinHandleStoreState>,
     context_source: KubeContextSource,
     gvk: kube::api::GroupVersionKind,

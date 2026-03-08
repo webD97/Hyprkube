@@ -21,7 +21,7 @@ use tracing::{info, warn};
 use tracing_subscriber::{fmt, layer::SubscriberExt as _, util::SubscriberInitExt as _, EnvFilter};
 
 use crate::{
-    cluster_discovery::ClusterRegistry, frontend_types::BackendPanic,
+    app_state::ClusterStateRegistry, frontend_types::BackendPanic,
     persistence::repository::Repository, scripting::scripts_provider::ScriptsProvider,
 };
 
@@ -43,7 +43,7 @@ pub fn run() {
 
             app.manage(ChannelTasks::new_state(app_handle.clone()));
             app.manage(ExecSessions::new_state());
-            app.manage(Arc::new(ClusterRegistry::new()));
+            app.manage(Arc::new(ClusterStateRegistry::new()));
             app.manage(Arc::new(ScriptsProvider::new(app_handle.clone())));
 
             let mut cluster_profile_registry =

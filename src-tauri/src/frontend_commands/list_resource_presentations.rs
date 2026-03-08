@@ -1,14 +1,16 @@
+use std::sync::Arc;
+
 use kube::api::GroupVersionKind;
 use tauri::State;
 
 use crate::{
-    cluster_discovery::ClusterRegistryState, frontend_commands::KubeContextSource,
+    app_state::ClusterStateRegistry, frontend_commands::KubeContextSource,
     frontend_types::BackendError,
 };
 
 #[tauri::command]
 pub async fn list_resource_presentations(
-    clusters: State<'_, ClusterRegistryState>,
+    clusters: State<'_, Arc<ClusterStateRegistry>>,
     context_source: KubeContextSource,
     group: &str,
     version: &str,

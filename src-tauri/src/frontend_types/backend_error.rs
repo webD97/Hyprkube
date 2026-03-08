@@ -1,5 +1,5 @@
 use crate::{
-    app_state::Rejected, cluster_discovery::ClusterRegistryError,
+    app_state::Rejected, frontend_commands::KubeContextSource,
     persistence::discovery_cache_service,
     scripting::resource_context_menu_facade::ResourceContextMenuError,
 };
@@ -21,8 +21,11 @@ pub enum BackendError {
     #[error(transparent)]
     DiscoveryCacheServiceError(#[from] discovery_cache_service::Error),
 
-    #[error(transparent)]
-    ClusterRegistry(#[from] ClusterRegistryError),
+    #[error("Cluster with KubeContextSource {0} is not managed")]
+    Unmanaged(KubeContextSource),
+
+    #[error("Cluster with KubeContextSource {0} has not been fully initialized yet")]
+    IncompleteClusterDiscovery(KubeContextSource),
 
     #[error(transparent)]
     ResourceContextMenu(#[from] ResourceContextMenuError),

@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use kube::{
     api::{DeleteParams, DynamicObject},
     Api,
@@ -6,13 +8,13 @@ use tauri::State;
 use tracing::info;
 
 use crate::{
-    cluster_discovery::ClusterRegistryState, frontend_commands::KubeContextSource,
+    app_state::ClusterStateRegistry, frontend_commands::KubeContextSource,
     frontend_types::BackendError,
 };
 
 #[tauri::command]
 pub async fn delete_resource(
-    clusters: State<'_, ClusterRegistryState>,
+    clusters: State<'_, Arc<ClusterStateRegistry>>,
     context_source: KubeContextSource,
     gvk: kube::api::GroupVersionKind,
     namespace: &str,

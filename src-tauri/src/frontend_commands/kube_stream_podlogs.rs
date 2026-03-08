@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use k8s_openapi::api::core::v1::Pod;
 use serde::Serialize;
 use tauri::State;
@@ -6,8 +8,9 @@ use tokio_util::compat::FuturesAsyncReadCompatExt;
 use tracing::info;
 
 use crate::{
-    app_state::JoinHandleStoreState, cluster_discovery::ClusterRegistryState,
-    frontend_commands::KubeContextSource, frontend_types::BackendError,
+    app_state::{ClusterStateRegistry, JoinHandleStoreState},
+    frontend_commands::KubeContextSource,
+    frontend_types::BackendError,
 };
 
 #[derive(Clone, Serialize)]
@@ -25,7 +28,7 @@ pub enum LogStreamEvent {
 
 #[tauri::command]
 pub async fn kube_stream_podlogs(
-    clusters: State<'_, ClusterRegistryState>,
+    clusters: State<'_, Arc<ClusterStateRegistry>>,
     context_source: KubeContextSource,
     join_handle_store: State<'_, JoinHandleStoreState>,
     namespace: &str,

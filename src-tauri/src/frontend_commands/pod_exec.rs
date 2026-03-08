@@ -1,9 +1,11 @@
 use core::str;
-use std::io::Read;
+use std::{io::Read, sync::Arc};
 
 use crate::{
-    app_state::{ExecSessionError, ExecSessionId, ExecSessionsState, JoinHandleStoreState},
-    cluster_discovery::ClusterRegistryState,
+    app_state::{
+        ClusterStateRegistry, ExecSessionError, ExecSessionId, ExecSessionsState,
+        JoinHandleStoreState,
+    },
     frontend_commands::KubeContextSource,
     frontend_types::BackendError,
 };
@@ -65,7 +67,7 @@ pub async fn pod_exec_resize_terminal(
 #[allow(clippy::too_many_arguments)]
 #[tauri::command]
 pub async fn pod_exec_start_session(
-    clusters: State<'_, ClusterRegistryState>,
+    clusters: State<'_, Arc<ClusterStateRegistry>>,
     context_source: KubeContextSource,
     join_handle_store: State<'_, JoinHandleStoreState>,
     consoles_state: State<'_, ExecSessionsState>,
