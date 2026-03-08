@@ -22,6 +22,7 @@ use tracing_subscriber::{fmt, layer::SubscriberExt as _, util::SubscriberInitExt
 
 use crate::{
     app_state::{ClusterStateRegistry, ManagedState},
+    cluster_profiles::ClusterProfileRegistry,
     frontend_types::BackendPanic,
     persistence::repository::Repository,
     scripting::scripts_provider::ScriptsProvider,
@@ -48,11 +49,12 @@ pub fn run() {
             app.manage(ClusterStateRegistry::build(app_handle.clone()));
             app.manage(ScriptsProvider::build(app_handle.clone()));
 
-            let mut cluster_profile_registry =
-                cluster_profiles::ClusterProfileRegistry::new(app_handle.clone());
-            cluster_profile_registry.ensure_default_profile().unwrap();
-            cluster_profile_registry.scan_profiles();
-            app.manage(Arc::new(cluster_profile_registry));
+            app.manage({
+                let cluster_profile_registry = ClusterProfileRegistry::build(app_handle.clone());
+                cluster_profile_registry.ensure_default_profile().unwrap();
+                cluster_profile_registry.scan_profiles();
+                cluster_profile_registry
+            });
 
             let repo = Arc::new(Repository::new(app.handle().clone()));
             app.manage(repo.clone());
