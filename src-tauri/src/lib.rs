@@ -7,6 +7,8 @@ mod cluster_profiles;
 mod frontend_commands;
 mod frontend_types;
 mod internal;
+mod logging;
+mod panic_handler;
 mod persistence;
 mod resource_menu;
 mod resource_rendering;
@@ -14,21 +16,19 @@ mod scripting;
 
 use app_state::{ChannelTasks, ExecSessions};
 use persistence::cluster_profile_service::ClusterProfileService;
-use tauri::{async_runtime::spawn, Emitter as _, Listener, Manager as _};
-use tracing::{info, warn};
-use tracing_subscriber::{fmt, layer::SubscriberExt as _, util::SubscriberInitExt as _, EnvFilter};
+use tauri::{async_runtime::spawn, Listener, Manager as _};
+use tracing::info;
 
 use crate::{
     app_state::{ClusterStateRegistry, ManagedState},
     cluster_profiles::ClusterProfileRegistry,
-    frontend_types::BackendPanic,
     persistence::repository::Repository,
     scripting::scripts_provider::ScriptsProvider,
 };
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    setup_tracing();
+    logging::setup().expect("failed to configure logging");
 
     info!("Hyprkube is starting.");
 
@@ -40,13 +40,14 @@ pub fn run() {
         .setup(|app| {
             let app_handle = app.handle().clone();
 
-            setup_panic_handler(app_handle.clone());
+            panic_handler::setup(app_handle.clone());
 
             app.manage(ChannelTasks::build(app_handle.clone()));
             app.manage(ExecSessions::build(app_handle.clone()));
             app.manage(ClusterStateRegistry::build(app_handle.clone()));
             app.manage(ScriptsProvider::build(app_handle.clone()));
-
+            app.manage(Repository::build(app_handle.clone()));
+            app.manage(ClusterProfileService::build(app.handle().clone()));
             app.manage({
                 let cluster_profile_registry = ClusterProfileRegistry::build(app_handle.clone());
                 cluster_profile_registry.ensure_default_profile().unwrap();
@@ -54,11 +55,7 @@ pub fn run() {
                 cluster_profile_registry
             });
 
-            app.manage(Repository::build(app_handle.clone()));
-            app.manage(ClusterProfileService::build(app.handle().clone()));
-
             app.listen("frontend-onbeforeunload", move |_event| {
-                warn!("ONBEFOREUNLOAD");
                 let app_handle = app_handle.clone();
                 spawn(async move {
                     reset_state(app_handle).await;
@@ -68,7 +65,6 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
-            // frontend_commands::discover_kubernetes_cluster,
             frontend_commands::kube_stream_podlogs,
             frontend_commands::watch_gvk_with_presentation,
             frontend_commands::watch_namespaces,
@@ -105,49 +101,6 @@ pub fn run() {
 async fn reset_state(app_handle: tauri::AppHandle) {
     use crate::app_state::StateFacade;
 
-    let join_handle_store = StateFacade::state::<ChannelTasks>(&app_handle);
-    join_handle_store.abort_all();
-}
-
-fn setup_tracing() {
-    let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
-
-    tracing_subscriber::registry()
-        .with(fmt::layer())
-        .with(filter)
-        .try_init()
-        .expect("tracing-subscriber setup failed");
-}
-
-fn setup_panic_handler(app_handle: tauri::AppHandle) {
-    use std::panic;
-
-    let default_hook = panic::take_hook();
-
-    panic::set_hook(Box::new(move |info| {
-        default_hook(info);
-
-        let panic_msg = info
-            .payload()
-            .downcast_ref::<&str>()
-            .map(|s| (*s).to_string())
-            .or_else(|| info.payload().downcast_ref::<String>().cloned());
-
-        let frontend_panic_info = BackendPanic {
-            thread: std::thread::current().name().map(|s| s.to_owned()),
-            location: info.location().map(|location| {
-                format!(
-                    "{}:{}:{}",
-                    location.file(),
-                    location.line(),
-                    location.column(),
-                )
-            }),
-            message: panic_msg,
-        };
-
-        if let Err(e) = app_handle.emit("background_task_panic", frontend_panic_info) {
-            eprintln!("Failed to emit panic event to frontend: {e}");
-        }
-    }));
+    let channel_tasks = StateFacade::state::<ChannelTasks>(&app_handle);
+    channel_tasks.abort_all();
 }
