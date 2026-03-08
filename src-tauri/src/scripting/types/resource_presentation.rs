@@ -72,7 +72,15 @@ mod tests {
         let map = rhai::Map::from_iter([
             ("title".into(), "My presentation".into()),
             ("matcher".into(), rhai::FnPtr::new("x").unwrap().into()),
-            ("columns".into(), rhai::FnPtr::new("y").unwrap().into()),
+            (
+                "columns".into(),
+                [ColumnTemplate {
+                    title: "My column".into(),
+                    render: rhai::FnPtr::new("y").unwrap(),
+                }]
+                .to_vec()
+                .into(),
+            ),
         ]);
 
         let section: ResourcePresentation = map.try_into().unwrap();
@@ -85,7 +93,7 @@ mod tests {
     pub fn test_optional_keys_defaults() {
         let map = rhai::Map::from_iter([
             ("title".into(), "My presentation".into()),
-            ("columns".into(), rhai::FnPtr::new("y").unwrap().into()),
+            ("columns".into(), rhai::Array::new().into()),
         ]);
 
         let section: ResourcePresentation = map.try_into().unwrap();
