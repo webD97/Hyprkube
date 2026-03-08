@@ -107,6 +107,10 @@ pub async fn connect_cluster(
 
         tracing::info!("Starting discovery for cluster {}", context_source);
 
+        let resource_presentation_facade = ResourcePresentationFacade::new(app.clone());
+        resource_presentation_facade.initialize_engines();
+        resource_presentation_facade.evaluate(&scripts_provider)?;
+
         let client = make_client(&context_source).await?;
 
         // Attachable stuff
@@ -118,7 +122,7 @@ pub async fn connect_cluster(
             discovery: Arc::new(ClusterDiscovery::Inflight(Arc::clone(&inflight))),
             kube_discovery: None,
             context_menu_facade: None,
-            resource_presentation_facade: None,
+            resource_presentation_facade: Some(resource_presentation_facade),
         });
 
         // Cached part
@@ -211,18 +215,15 @@ pub async fn connect_cluster(
             .initialize_engines(client.clone(), Arc::clone(kube_discovery.as_ref().unwrap()));
         context_menu_facade.evaluate(&scripts_provider)?;
 
-        let resource_presentation_facade = ResourcePresentationFacade::new(app);
-        resource_presentation_facade.initialize_engines();
-        resource_presentation_facade.evaluate(&scripts_provider)?;
-
-        clusters.manage(ClusterState {
-            context_source,
-            client,
+        // Ugly but works for now
+        let previous_state = clusters.unmanage(&context_source).unwrap();
+        let next_state = ClusterState {
+            context_menu_facade: Some(context_menu_facade),
             discovery: Arc::new(ClusterDiscovery::Completed(result)),
             kube_discovery,
-            context_menu_facade: Some(context_menu_facade),
-            resource_presentation_facade: Some(resource_presentation_facade),
-        });
+            ..previous_state
+        };
+        clusters.manage(next_state);
 
         channel.send(FrontendDiscoveryEvent::DiscoveryComplete(()))?;
 

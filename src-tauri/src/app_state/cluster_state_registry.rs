@@ -110,4 +110,17 @@ impl ClusterStateRegistry {
             .entry(state.context_source.clone())
             .insert_entry(Arc::new(state));
     }
+
+    pub fn unmanage(
+        &self,
+        context_source: &KubeContextSource,
+    ) -> Result<ClusterState, BackendError> {
+        let mut contexts = self.clusters.write().unwrap();
+
+        let x = contexts
+            .remove(context_source)
+            .ok_or_else(|| BackendError::Unmanaged(context_source.to_owned()))?;
+
+        Ok(Arc::into_inner(x).expect("must be the only reference"))
+    }
 }
