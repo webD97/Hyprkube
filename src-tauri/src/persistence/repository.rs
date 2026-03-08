@@ -4,7 +4,7 @@ use serde::Serialize;
 use tauri::{AppHandle, Wry};
 use tauri_plugin_store::{Store, StoreExt};
 
-use crate::cluster_profiles;
+use crate::{app_state::ManagedState, cluster_profiles};
 
 #[allow(dead_code)]
 pub enum Context {
@@ -17,11 +17,15 @@ pub struct Repository {
     app: AppHandle,
 }
 
-impl Repository {
-    pub fn new(app: AppHandle) -> Self {
-        Self { app }
-    }
+impl ManagedState for Repository {
+    type WrappedState = Arc<Repository>;
 
+    fn build(app: tauri::AppHandle) -> Self::WrappedState {
+        Arc::new(Self { app })
+    }
+}
+
+impl Repository {
     pub fn read_key(
         &self,
         context: &Context,

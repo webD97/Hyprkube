@@ -56,7 +56,7 @@ pub fn run() {
                 cluster_profile_registry
             });
 
-            let repo = Arc::new(Repository::new(app.handle().clone()));
+            let repo = Repository::build(app_handle.clone());
             app.manage(repo.clone());
 
             let pinned_cluster_profile_service =

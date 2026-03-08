@@ -10,7 +10,6 @@ use kube::{
     config::{KubeConfigOptions, Kubeconfig},
 };
 use serde::Serialize;
-use tauri::State;
 
 use crate::{
     app_state::{ChannelTasks, ClusterStateRegistry, StateFacade},
@@ -65,7 +64,6 @@ pub enum InternalDiscoveryEvent {
 #[tracing::instrument(skip_all, fields(request_id = tracing::field::Empty))]
 pub async fn connect_cluster(
     app: tauri::AppHandle,
-    repository: State<'_, Arc<Repository>>,
     channel: tauri::ipc::Channel<FrontendDiscoveryEvent>,
     context_source: KubeContextSource,
 ) -> Result<(), String> {
@@ -74,6 +72,7 @@ pub async fn connect_cluster(
     let clusters = app.state::<ClusterStateRegistry>();
     let background_tasks = Arc::clone(&app.state::<ChannelTasks>());
     let scripts_provider = app.state::<ScriptsProvider>();
+    let repository = app.state::<Repository>();
 
     let repository = Arc::clone(&repository);
     let clusters = Arc::clone(&clusters);
