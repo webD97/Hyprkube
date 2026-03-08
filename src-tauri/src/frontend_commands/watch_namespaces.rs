@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use futures::StreamExt as _;
 use k8s_openapi::api::core::v1::Namespace;
 use serde::Serialize;
@@ -7,7 +5,7 @@ use tauri::State;
 use tracing::{error, info};
 
 use crate::{
-    app_state::{ClusterStateRegistry, JoinHandleStoreState},
+    app_state::{ClusterStateRegistry, JoinHandleStoreState, StateFacade as _},
     frontend_commands::KubeContextSource,
     frontend_types::BackendError,
     internal::resources::ResourceWatchStreamEvent,
@@ -23,12 +21,14 @@ pub enum WatchNamespacesEvent {
 #[tauri::command]
 #[tracing::instrument(skip_all, fields(request_id = tracing::field::Empty))]
 pub async fn watch_namespaces(
-    clusters: State<'_, Arc<ClusterStateRegistry>>,
+    app: tauri::AppHandle,
     context_source: KubeContextSource,
     join_handle_store: State<'_, JoinHandleStoreState>,
     channel: tauri::ipc::Channel<WatchNamespacesEvent>,
 ) -> Result<(), BackendError> {
     crate::internal::tracing::set_span_request_id();
+
+    let clusters = app.state::<ClusterStateRegistry>();
 
     let channel_id = channel.id();
     info!("Streaming namespaces to channel {channel_id}");

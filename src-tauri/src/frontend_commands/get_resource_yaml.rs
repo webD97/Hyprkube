@@ -1,21 +1,20 @@
-use std::sync::Arc;
-
 use kube::api::DynamicObject;
-use tauri::State;
 
 use crate::{
-    app_state::ClusterStateRegistry, frontend_commands::KubeContextSource,
+    app_state::{ClusterStateRegistry, StateFacade as _},
+    frontend_commands::KubeContextSource,
     frontend_types::BackendError,
 };
 
 #[tauri::command]
 pub async fn get_resource_yaml(
-    clusters: State<'_, Arc<ClusterStateRegistry>>,
+    app: tauri::AppHandle,
     context_source: KubeContextSource,
     gvk: kube::api::GroupVersionKind,
     namespace: &str,
     name: &str,
 ) -> Result<String, BackendError> {
+    let clusters = app.state::<ClusterStateRegistry>();
     let client = clusters.client_for(&context_source)?;
 
     let (api_resource, resource_capabilities) =

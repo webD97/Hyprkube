@@ -4,6 +4,7 @@ use std::{
 };
 
 use crate::{
+    app_state::ManagedState,
     cluster_discovery::{ClusterDiscovery, ClusterState},
     frontend_commands::KubeContextSource,
     frontend_types::BackendError,
@@ -15,6 +16,14 @@ use crate::{
 
 pub struct ClusterStateRegistry {
     clusters: RwLock<HashMap<KubeContextSource, Arc<ClusterState>>>,
+}
+
+impl ManagedState for ClusterStateRegistry {
+    type WrappedState = Arc<ClusterStateRegistry>;
+
+    fn build(_: tauri::AppHandle) -> Self::WrappedState {
+        Arc::new(ClusterStateRegistry::new())
+    }
 }
 
 impl ClusterStateRegistry {

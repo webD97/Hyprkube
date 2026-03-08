@@ -6,10 +6,9 @@ use std::{
 
 use k8s_openapi::apiextensions_apiserver::pkg::apis::apiextensions::v1::CustomResourceDefinition;
 use kube::api::GroupVersionKind;
-use tauri::Manager as _;
 
 use crate::{
-    app_state::ClusterStateRegistry,
+    app_state::{ClusterStateRegistry, StateFacade as _},
     cluster_discovery::ClusterDiscovery,
     frontend_commands::KubeContextSource,
     resource_rendering::{
@@ -125,7 +124,7 @@ impl ResourcePresentationFacade {
         context_source: &KubeContextSource,
         gvk: &GroupVersionKind,
     ) -> Result<Vec<String>, ResourcePresentationError> {
-        let clusters = self.app.state::<Arc<ClusterStateRegistry>>();
+        let clusters = self.app.state::<ClusterStateRegistry>();
         let discovery = clusters.discovery_for(context_source).unwrap();
 
         let registered_presentations = self.registered_presentations.read().unwrap();

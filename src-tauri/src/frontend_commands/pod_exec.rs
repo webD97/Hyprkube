@@ -1,10 +1,10 @@
 use core::str;
-use std::{io::Read, sync::Arc};
+use std::io::Read;
 
 use crate::{
     app_state::{
         ClusterStateRegistry, ExecSessionError, ExecSessionId, ExecSessionsState,
-        JoinHandleStoreState,
+        JoinHandleStoreState, StateFacade as _,
     },
     frontend_commands::KubeContextSource,
     frontend_types::BackendError,
@@ -67,7 +67,7 @@ pub async fn pod_exec_resize_terminal(
 #[allow(clippy::too_many_arguments)]
 #[tauri::command]
 pub async fn pod_exec_start_session(
-    clusters: State<'_, Arc<ClusterStateRegistry>>,
+    app: tauri::AppHandle,
     context_source: KubeContextSource,
     join_handle_store: State<'_, JoinHandleStoreState>,
     consoles_state: State<'_, ExecSessionsState>,
@@ -76,6 +76,7 @@ pub async fn pod_exec_start_session(
     container: &str,
     session_event_channel: Channel<ExecSessionEvent>,
 ) -> Result<ExecSessionId, BackendError> {
+    let clusters = app.state::<ClusterStateRegistry>();
     let client = clusters.client_for(&context_source)?;
 
     let pods: kube::Api<Pod> = kube::Api::namespaced(client, pod_namespace);

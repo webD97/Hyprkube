@@ -13,7 +13,7 @@ use serde::Serialize;
 use tauri::State;
 
 use crate::{
-    app_state::{ClusterStateRegistry, JoinHandleStoreState},
+    app_state::{ClusterStateRegistry, JoinHandleStoreState, StateFacade},
     cluster_discovery::{
         ApiGroupSource, ClusterDiscovery, ClusterState, CompletedDiscovery, DiscoveredResource,
         InflightDiscovery,
@@ -67,12 +67,13 @@ pub async fn connect_cluster(
     app: tauri::AppHandle,
     background_tasks: State<'_, JoinHandleStoreState>,
     repository: State<'_, Arc<Repository>>,
-    clusters: State<'_, Arc<ClusterStateRegistry>>,
     scripts_provider: State<'_, Arc<ScriptsProvider>>,
     channel: tauri::ipc::Channel<FrontendDiscoveryEvent>,
     context_source: KubeContextSource,
 ) -> Result<(), String> {
     crate::internal::tracing::set_span_request_id();
+
+    let clusters = app.state::<ClusterStateRegistry>();
 
     let repository = Arc::clone(&repository);
     let clusters = Arc::clone(&clusters);

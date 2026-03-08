@@ -21,8 +21,10 @@ use tracing::{info, warn};
 use tracing_subscriber::{fmt, layer::SubscriberExt as _, util::SubscriberInitExt as _, EnvFilter};
 
 use crate::{
-    app_state::ClusterStateRegistry, frontend_types::BackendPanic,
-    persistence::repository::Repository, scripting::scripts_provider::ScriptsProvider,
+    app_state::{ClusterStateRegistry, ManagedState},
+    frontend_types::BackendPanic,
+    persistence::repository::Repository,
+    scripting::scripts_provider::ScriptsProvider,
 };
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -43,7 +45,7 @@ pub fn run() {
 
             app.manage(ChannelTasks::new_state(app_handle.clone()));
             app.manage(ExecSessions::new_state());
-            app.manage(Arc::new(ClusterStateRegistry::new()));
+            app.manage(ClusterStateRegistry::build(app_handle.clone()));
             app.manage(Arc::new(ScriptsProvider::new(app_handle.clone())));
 
             let mut cluster_profile_registry =
