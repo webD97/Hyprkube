@@ -66,7 +66,6 @@ pub enum InternalDiscoveryEvent {
 pub async fn connect_cluster(
     app: tauri::AppHandle,
     repository: State<'_, Arc<Repository>>,
-    scripts_provider: State<'_, Arc<ScriptsProvider>>,
     channel: tauri::ipc::Channel<FrontendDiscoveryEvent>,
     context_source: KubeContextSource,
 ) -> Result<(), String> {
@@ -74,6 +73,7 @@ pub async fn connect_cluster(
 
     let clusters = app.state::<ClusterStateRegistry>();
     let background_tasks = Arc::clone(&app.state::<ChannelTasks>());
+    let scripts_provider = app.state::<ScriptsProvider>();
 
     let repository = Arc::clone(&repository);
     let clusters = Arc::clone(&clusters);

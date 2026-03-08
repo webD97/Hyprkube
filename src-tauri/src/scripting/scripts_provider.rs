@@ -1,7 +1,9 @@
-use std::{io::ErrorKind, path::PathBuf};
+use std::{io::ErrorKind, path::PathBuf, sync::Arc};
 
 use scan_dir::ScanDir;
 use tauri::Manager as _;
+
+use crate::app_state::ManagedState;
 
 const DIR_NAME_MENUS: &str = "menus";
 const DIR_NAME_PRESENTATIONS: &str = "presentations";
@@ -21,11 +23,15 @@ pub struct ScriptsProvider {
     app: tauri::AppHandle,
 }
 
-impl ScriptsProvider {
-    pub fn new(app: tauri::AppHandle) -> Self {
-        ScriptsProvider { app }
-    }
+impl ManagedState for ScriptsProvider {
+    type WrappedState = Arc<ScriptsProvider>;
 
+    fn build(app: tauri::AppHandle) -> Self::WrappedState {
+        Arc::new(ScriptsProvider { app })
+    }
+}
+
+impl ScriptsProvider {
     fn list_packages_in(&self, dir: &PathBuf) -> Vec<PathBuf> {
         let mut packages: Vec<PathBuf> = Vec::new();
 

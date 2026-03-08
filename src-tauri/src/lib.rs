@@ -46,7 +46,7 @@ pub fn run() {
             app.manage(ChannelTasks::build(app_handle.clone()));
             app.manage(ExecSessions::build(app_handle.clone()));
             app.manage(ClusterStateRegistry::build(app_handle.clone()));
-            app.manage(Arc::new(ScriptsProvider::new(app_handle.clone())));
+            app.manage(ScriptsProvider::build(app_handle.clone()));
 
             let mut cluster_profile_registry =
                 cluster_profiles::ClusterProfileRegistry::new(app_handle.clone());
