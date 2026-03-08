@@ -2,8 +2,8 @@ use std::io::Read;
 
 use crate::{
     app_state::{
-        ChannelTasks, ClusterStateRegistry, ExecSessionError, ExecSessionId, ExecSessionsState,
-        StateFacade as _,
+        ChannelTasks, ClusterStateRegistry, ExecSessionError, ExecSessionId, ExecSessions,
+        StateFacade,
     },
     frontend_commands::KubeContextSource,
     frontend_types::BackendError,
@@ -12,7 +12,7 @@ use futures::TryStreamExt as _;
 use k8s_openapi::api::core::v1::Pod;
 use kube::api::{AttachParams, TerminalSize};
 use serde::Serialize;
-use tauri::{ipc::Channel, State};
+use tauri::ipc::Channel;
 use tokio::{io::AsyncWriteExt, sync::mpsc};
 use tokio_util::io::ReaderStream;
 use tracing::info;
@@ -32,10 +32,11 @@ pub enum ExecSessionRequest {
 
 #[tauri::command]
 pub async fn pod_exec_write_stdin(
-    consoles_state: State<'_, ExecSessionsState>,
+    app: tauri::AppHandle,
     exec_session_id: ExecSessionId,
     buf: Vec<u8>,
 ) -> Result<(), ExecSessionError> {
+    let consoles_state = app.state::<ExecSessions>();
     consoles_state
         .send(&exec_session_id, ExecSessionRequest::Input(buf))
         .await
@@ -43,9 +44,10 @@ pub async fn pod_exec_write_stdin(
 
 #[tauri::command]
 pub async fn pod_exec_abort_session(
-    consoles_state: State<'_, ExecSessionsState>,
+    app: tauri::AppHandle,
     exec_session_id: ExecSessionId,
 ) -> Result<(), ExecSessionError> {
+    let consoles_state = app.state::<ExecSessions>();
     consoles_state
         .send(&exec_session_id, ExecSessionRequest::Abort)
         .await
@@ -53,11 +55,12 @@ pub async fn pod_exec_abort_session(
 
 #[tauri::command]
 pub async fn pod_exec_resize_terminal(
-    consoles_state: State<'_, ExecSessionsState>,
+    app: tauri::AppHandle,
     exec_session_id: ExecSessionId,
     columns: u16,
     rows: u16,
 ) -> Result<(), ExecSessionError> {
+    let consoles_state = app.state::<ExecSessions>();
     consoles_state
         .send(&exec_session_id, ExecSessionRequest::Resize(columns, rows))
         .await
@@ -68,7 +71,6 @@ pub async fn pod_exec_resize_terminal(
 pub async fn pod_exec_start_session(
     app: tauri::AppHandle,
     context_source: KubeContextSource,
-    consoles_state: State<'_, ExecSessionsState>,
     pod_namespace: &str,
     pod_name: &str,
     container: &str,
@@ -76,6 +78,7 @@ pub async fn pod_exec_start_session(
 ) -> Result<ExecSessionId, BackendError> {
     let clusters = app.state::<ClusterStateRegistry>();
     let channel_tasks = app.state::<ChannelTasks>();
+    let consoles_state = app.state::<ExecSessions>();
     let client = clusters.client_for(&context_source)?;
 
     let pods: kube::Api<Pod> = kube::Api::namespaced(client, pod_namespace);

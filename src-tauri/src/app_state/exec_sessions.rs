@@ -3,10 +3,9 @@ use std::{collections::HashMap, sync::Arc};
 use tokio::sync::{mpsc::Sender, Mutex};
 use uuid::Uuid;
 
-use crate::frontend_commands::ExecSessionRequest;
+use crate::{app_state::ManagedState, frontend_commands::ExecSessionRequest};
 
 pub type ExecSessionId = Uuid;
-pub type ExecSessionsState = Arc<ExecSessions>;
 
 #[derive(thiserror::Error, Debug)]
 pub enum ExecSessionError {
@@ -30,11 +29,15 @@ pub struct ExecSessions {
     senders: Mutex<HashMap<Uuid, Sender<ExecSessionRequest>>>,
 }
 
-impl ExecSessions {
-    pub fn new_state() -> ExecSessionsState {
+impl ManagedState for ExecSessions {
+    type WrappedState = Arc<ExecSessions>;
+
+    fn build(_: tauri::AppHandle) -> Self::WrappedState {
         Arc::new(Self::default())
     }
+}
 
+impl ExecSessions {
     pub async fn register(&self, sender: Sender<ExecSessionRequest>) -> ExecSessionId {
         let uuid = Uuid::new_v4();
 

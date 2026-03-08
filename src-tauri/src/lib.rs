@@ -44,7 +44,7 @@ pub fn run() {
             setup_panic_handler(app_handle.clone());
 
             app.manage(ChannelTasks::build(app_handle.clone()));
-            app.manage(ExecSessions::new_state());
+            app.manage(ExecSessions::build(app_handle.clone()));
             app.manage(ClusterStateRegistry::build(app_handle.clone()));
             app.manage(Arc::new(ScriptsProvider::new(app_handle.clone())));
 
