@@ -12,8 +12,6 @@ mod resource_menu;
 mod resource_rendering;
 mod scripting;
 
-use std::sync::Arc;
-
 use app_state::{ChannelTasks, ExecSessions};
 use persistence::cluster_profile_service::ClusterProfileService;
 use tauri::{async_runtime::spawn, Emitter as _, Listener, Manager as _};
@@ -56,12 +54,8 @@ pub fn run() {
                 cluster_profile_registry
             });
 
-            let repo = Repository::build(app_handle.clone());
-            app.manage(repo.clone());
-
-            let pinned_cluster_profile_service =
-                ClusterProfileService::new(app.handle().clone(), repo.clone());
-            app.manage(pinned_cluster_profile_service);
+            app.manage(Repository::build(app_handle.clone()));
+            app.manage(ClusterProfileService::build(app.handle().clone()));
 
             app.listen("frontend-onbeforeunload", move |_event| {
                 warn!("ONBEFOREUNLOAD");

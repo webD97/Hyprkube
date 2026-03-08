@@ -1,10 +1,11 @@
-use std::{collections::HashMap, sync::Arc};
+use std::collections::HashMap;
 
 use kube::api::GroupVersionKind;
 use serde::Serialize;
 use tauri::{AppHandle, Emitter as _};
 
 use crate::{
+    app_state::{ManagedState, StateFacade},
     cluster_profiles::ClusterProfileId,
     persistence::repository::{self, Repository},
 };
@@ -13,7 +14,14 @@ use super::ToFlatString as _;
 
 pub struct ClusterProfileService {
     app: AppHandle,
-    repository: Arc<Repository>,
+}
+
+impl ManagedState for ClusterProfileService {
+    type WrappedState = Self;
+
+    fn build(app: tauri::AppHandle) -> Self::WrappedState {
+        Self { app }
+    }
 }
 
 const PERISTENCE_KEY_PINNED_GVKS: &str = "pinned_gvks";
@@ -21,10 +29,6 @@ const PERISTENCE_KEY_HIDDEN_GVKS: &str = "hidden_gvks";
 const PERISTENCE_KEY_DEFAULT_NAMESPACES: &str = "default_namespaces";
 
 impl ClusterProfileService {
-    pub fn new(app: AppHandle, repository: Arc<Repository>) -> Self {
-        Self { app, repository }
-    }
-
     pub fn list_pinned_gvks(
         &self,
         profile: &ClusterProfileId,
@@ -120,8 +124,9 @@ impl ClusterProfileService {
         profile: &ClusterProfileId,
         gvk: &GroupVersionKind,
     ) -> Result<String, self::Error> {
-        Ok(self
-            .repository
+        let repository = self.app.state::<Repository>();
+
+        Ok(repository
             .read_key(
                 &repository::Context::PerClusterProfile(profile.clone()),
                 PERISTENCE_KEY_DEFAULT_NAMESPACES,
@@ -141,8 +146,8 @@ impl ClusterProfileService {
         gvk: &GroupVersionKind,
         namespace: &str,
     ) -> Result<(), self::Error> {
-        let mut defaults = self
-            .repository
+        let repository = self.app.state::<Repository>();
+        let mut defaults = repository
             .read_key(
                 &repository::Context::PerClusterProfile(profile.clone()),
                 PERISTENCE_KEY_DEFAULT_NAMESPACES,
@@ -154,7 +159,7 @@ impl ClusterProfileService {
 
         defaults.insert(gvk.to_flat_string(), namespace.to_owned());
 
-        self.repository
+        repository
             .set_key(
                 &repository::Context::PerClusterProfile(profile.clone()),
                 PERISTENCE_KEY_DEFAULT_NAMESPACES,
@@ -168,7 +173,8 @@ impl ClusterProfileService {
         profile: &ClusterProfileId,
         persistence_key: &str,
     ) -> Result<Vec<GroupVersionKind>, self::Error> {
-        let items = self.repository.read_key(
+        let repository = self.app.state::<Repository>();
+        let items = repository.read_key(
             &repository::Context::PerClusterProfile(profile.clone()),
             persistence_key,
         )?;
@@ -188,6 +194,7 @@ impl ClusterProfileService {
         gvk: GroupVersionKind,
         persistence_key: &str,
     ) -> Result<Vec<GroupVersionKind>, self::Error> {
+        let repository = self.app.state::<Repository>();
         let mut pinned = self.list_gvks(profile, persistence_key)?;
 
         if pinned.contains(&gvk) {
@@ -196,7 +203,7 @@ impl ClusterProfileService {
 
         pinned.push(gvk.clone());
 
-        self.repository.set_key(
+        repository.set_key(
             &repository::Context::PerClusterProfile(profile.clone()),
             persistence_key,
             serde_json::to_value(pinned.clone())?,
@@ -211,6 +218,7 @@ impl ClusterProfileService {
         gvk: &GroupVersionKind,
         persistence_key: &str,
     ) -> Result<Vec<GroupVersionKind>, self::Error> {
+        let repository = self.app.state::<Repository>();
         let mut pinned = self.list_gvks(profile, persistence_key)?;
 
         if !pinned.contains(gvk) {
@@ -219,7 +227,7 @@ impl ClusterProfileService {
 
         pinned.retain(|g| g != gvk);
 
-        self.repository.set_key(
+        repository.set_key(
             &repository::Context::PerClusterProfile(profile.clone()),
             persistence_key,
             serde_json::to_value(pinned.clone())?,
