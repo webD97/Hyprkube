@@ -1,5 +1,5 @@
 use crate::{
-    app_state::StateFacade, cluster_profiles::ClusterProfileRegistry, frontend_types::BackendError,
+    app_state::ManagerExt, cluster_profiles::ClusterProfileRegistry, frontend_types::BackendError,
 };
 
 use super::cluster_profile_registry::ClusterProfileId;

@@ -1,7 +1,7 @@
 use kube::api::GroupVersionKind;
 
 use crate::{
-    app_state::StateFacade,
+    app_state::ManagerExt,
     persistence::cluster_profile_service::{self, ClusterProfileService},
 };
 

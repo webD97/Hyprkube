@@ -3,7 +3,7 @@ use std::io::Read;
 use crate::{
     app_state::{
         ChannelTasks, ClusterStateRegistry, ExecSessionError, ExecSessionId, ExecSessions,
-        StateFacade,
+        ManagerExt,
     },
     frontend_commands::KubeContextSource,
     frontend_types::BackendError,

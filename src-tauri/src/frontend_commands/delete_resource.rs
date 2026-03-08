@@ -5,7 +5,7 @@ use kube::{
 use tracing::info;
 
 use crate::{
-    app_state::{ClusterStateRegistry, StateFacade as _},
+    app_state::{ClusterStateRegistry, ManagerExt as _},
     frontend_commands::KubeContextSource,
     frontend_types::BackendError,
 };

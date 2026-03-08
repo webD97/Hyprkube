@@ -7,7 +7,7 @@ use serde::Serialize;
 use tracing::{error, info};
 
 use crate::{
-    app_state::{ChannelTasks, ClusterStateRegistry, StateFacade},
+    app_state::{ChannelTasks, ClusterStateRegistry, ManagerExt},
     cluster_discovery::ClusterDiscovery,
     frontend_commands::KubeContextSource,
     frontend_types::BackendError,

@@ -8,7 +8,7 @@ use k8s_openapi::apiextensions_apiserver::pkg::apis::apiextensions::v1::CustomRe
 use kube::api::GroupVersionKind;
 
 use crate::{
-    app_state::{ClusterStateRegistry, StateFacade as _},
+    app_state::{ClusterStateRegistry, ManagerExt as _},
     cluster_discovery::ClusterDiscovery,
     frontend_commands::KubeContextSource,
     resource_rendering::{

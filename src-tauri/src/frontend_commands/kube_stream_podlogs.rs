@@ -5,7 +5,7 @@ use tokio_util::compat::FuturesAsyncReadCompatExt;
 use tracing::info;
 
 use crate::{
-    app_state::{ChannelTasks, ClusterStateRegistry, StateFacade as _},
+    app_state::{ChannelTasks, ClusterStateRegistry, ManagerExt as _},
     frontend_commands::KubeContextSource,
     frontend_types::BackendError,
 };

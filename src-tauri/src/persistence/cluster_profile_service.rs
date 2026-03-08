@@ -5,7 +5,7 @@ use serde::Serialize;
 use tauri::{AppHandle, Emitter as _};
 
 use crate::{
-    app_state::{ManagedState, StateFacade},
+    app_state::{ManagedState, ManagerExt},
     cluster_profiles::ClusterProfileId,
     persistence::repository::{self, Repository},
 };

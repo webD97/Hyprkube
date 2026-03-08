@@ -12,7 +12,7 @@ use kube::{
 use serde::Serialize;
 
 use crate::{
-    app_state::{ChannelTasks, ClusterStateRegistry, StateFacade},
+    app_state::{ChannelTasks, ClusterStateRegistry, ManagerExt},
     cluster_discovery::{
         ApiGroupSource, ClusterDiscovery, ClusterState, CompletedDiscovery, DiscoveredResource,
         InflightDiscovery,

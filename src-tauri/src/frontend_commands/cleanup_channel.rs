@@ -1,5 +1,5 @@
 use crate::{
-    app_state::{ChannelTasks, StateFacade},
+    app_state::{ChannelTasks, ManagerExt},
     frontend_types::BackendError,
 };
 

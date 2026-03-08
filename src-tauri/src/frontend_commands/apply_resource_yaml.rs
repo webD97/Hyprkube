@@ -1,7 +1,7 @@
 use kube::api::DynamicObject;
 
 use crate::{
-    app_state::{ClusterStateRegistry, StateFacade},
+    app_state::{ClusterStateRegistry, ManagerExt},
     frontend_commands::KubeContextSource,
     frontend_types::BackendError,
 };

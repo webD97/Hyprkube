@@ -99,8 +99,8 @@ pub fn run() {
 }
 
 async fn reset_state(app_handle: tauri::AppHandle) {
-    use crate::app_state::StateFacade;
+    use crate::app_state::ManagerExt;
 
-    let channel_tasks = StateFacade::state::<ChannelTasks>(&app_handle);
+    let channel_tasks = ManagerExt::state::<ChannelTasks>(&app_handle);
     channel_tasks.abort_all();
 }

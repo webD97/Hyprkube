@@ -1,7 +1,7 @@
 use kube::api::DynamicObject;
 use tracing::debug;
 
-use crate::app_state::{ClusterStateRegistry, StateFacade as _};
+use crate::app_state::{ClusterStateRegistry, ManagerExt as _};
 use crate::frontend_commands::KubeContextSource;
 use crate::frontend_types::BackendError;
 use crate::scripting::resource_context_menu::MenuBlueprint;
