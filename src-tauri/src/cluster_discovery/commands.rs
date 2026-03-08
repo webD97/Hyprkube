@@ -13,7 +13,7 @@ use serde::Serialize;
 use tauri::State;
 
 use crate::{
-    app_state::{ClusterStateRegistry, JoinHandleStoreState, StateFacade},
+    app_state::{ChannelTasks, ClusterStateRegistry, StateFacade},
     cluster_discovery::{
         ApiGroupSource, ClusterDiscovery, ClusterState, CompletedDiscovery, DiscoveredResource,
         InflightDiscovery,
@@ -65,7 +65,6 @@ pub enum InternalDiscoveryEvent {
 #[tracing::instrument(skip_all, fields(request_id = tracing::field::Empty))]
 pub async fn connect_cluster(
     app: tauri::AppHandle,
-    background_tasks: State<'_, JoinHandleStoreState>,
     repository: State<'_, Arc<Repository>>,
     scripts_provider: State<'_, Arc<ScriptsProvider>>,
     channel: tauri::ipc::Channel<FrontendDiscoveryEvent>,
@@ -74,6 +73,7 @@ pub async fn connect_cluster(
     crate::internal::tracing::set_span_request_id();
 
     let clusters = app.state::<ClusterStateRegistry>();
+    let background_tasks = Arc::clone(&app.state::<ChannelTasks>());
 
     let repository = Arc::clone(&repository);
     let clusters = Arc::clone(&clusters);

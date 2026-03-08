@@ -10,12 +10,20 @@ use tauri::{async_runtime::spawn, Emitter};
 use tracing::{debug, error};
 use tracing_futures::Instrument;
 
-pub type JoinHandleStoreState = Arc<ChannelTasks>;
+use crate::app_state::ManagedState;
 
 pub struct ChannelTasks {
     handles: Arc<RwLock<HashMap<u32, AbortHandle>>>,
     to_kill: RwLock<Vec<u32>>,
     app_handle: Arc<tauri::AppHandle>,
+}
+
+impl ManagedState for ChannelTasks {
+    type WrappedState = Arc<ChannelTasks>;
+
+    fn build(app: tauri::AppHandle) -> Self::WrappedState {
+        Arc::new(ChannelTasks::new(app))
+    }
 }
 
 #[derive(Serialize, Clone)]
@@ -58,10 +66,6 @@ impl BackgroundTaskOutput for () {
 }
 
 impl ChannelTasks {
-    pub fn new_state(app_handle: tauri::AppHandle) -> JoinHandleStoreState {
-        Arc::new(ChannelTasks::new(app_handle))
-    }
-
     pub fn new(app_handle: tauri::AppHandle) -> Self {
         Self {
             handles: Arc::new(RwLock::new(HashMap::default())),

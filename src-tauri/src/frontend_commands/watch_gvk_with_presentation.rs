@@ -4,11 +4,10 @@ use futures::StreamExt as _;
 use k8s_openapi::apiextensions_apiserver::pkg::apis::apiextensions::v1::CustomResourceDefinition;
 use kube::api::{DynamicObject, GroupVersionKind};
 use serde::Serialize;
-use tauri::State;
 use tracing::{error, info};
 
 use crate::{
-    app_state::{ClusterStateRegistry, JoinHandleStoreState, StateFacade},
+    app_state::{ChannelTasks, ClusterStateRegistry, StateFacade},
     cluster_discovery::ClusterDiscovery,
     frontend_commands::KubeContextSource,
     frontend_types::BackendError,
@@ -42,7 +41,6 @@ pub enum ResourceEvent {
 #[tracing::instrument(skip_all, fields(request_id = tracing::field::Empty))]
 pub async fn watch_gvk_with_presentation(
     app: tauri::AppHandle,
-    join_handle_store: State<'_, JoinHandleStoreState>,
     context_source: KubeContextSource,
     gvk: kube::api::GroupVersionKind,
     presentation_name: String,
@@ -52,6 +50,7 @@ pub async fn watch_gvk_with_presentation(
     crate::internal::tracing::set_span_request_id();
 
     let clusters = app.state::<ClusterStateRegistry>();
+    let channel_tasks = app.state::<ChannelTasks>();
 
     let channel_id = channel.id();
     info!("Streaming {gvk:?} in namespace {namespace} to channel {channel_id}");
@@ -120,7 +119,7 @@ pub async fn watch_gvk_with_presentation(
             .await;
     };
 
-    join_handle_store.submit(channel_id, stream)?;
+    channel_tasks.submit(channel_id, stream)?;
 
     Ok(())
 }

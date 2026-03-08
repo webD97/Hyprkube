@@ -1,10 +1,9 @@
-use core::str;
 use std::io::Read;
 
 use crate::{
     app_state::{
-        ClusterStateRegistry, ExecSessionError, ExecSessionId, ExecSessionsState,
-        JoinHandleStoreState, StateFacade as _,
+        ChannelTasks, ClusterStateRegistry, ExecSessionError, ExecSessionId, ExecSessionsState,
+        StateFacade as _,
     },
     frontend_commands::KubeContextSource,
     frontend_types::BackendError,
@@ -69,7 +68,6 @@ pub async fn pod_exec_resize_terminal(
 pub async fn pod_exec_start_session(
     app: tauri::AppHandle,
     context_source: KubeContextSource,
-    join_handle_store: State<'_, JoinHandleStoreState>,
     consoles_state: State<'_, ExecSessionsState>,
     pod_namespace: &str,
     pod_name: &str,
@@ -77,6 +75,7 @@ pub async fn pod_exec_start_session(
     session_event_channel: Channel<ExecSessionEvent>,
 ) -> Result<ExecSessionId, BackendError> {
     let clusters = app.state::<ClusterStateRegistry>();
+    let channel_tasks = app.state::<ChannelTasks>();
     let client = clusters.client_for(&context_source)?;
 
     let pods: kube::Api<Pod> = kube::Api::namespaced(client, pod_namespace);
@@ -144,7 +143,7 @@ pub async fn pod_exec_start_session(
         session_event_channel.send(ExecSessionEvent::End).unwrap();
     };
 
-    join_handle_store.submit(channel_id, exec_task)?;
+    channel_tasks.submit(channel_id, exec_task)?;
 
     Ok(exec_session_id)
 }

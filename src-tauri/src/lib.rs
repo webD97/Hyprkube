@@ -14,9 +14,9 @@ mod scripting;
 
 use std::sync::Arc;
 
-use app_state::{ChannelTasks, ExecSessions, JoinHandleStoreState};
+use app_state::{ChannelTasks, ExecSessions};
 use persistence::cluster_profile_service::ClusterProfileService;
-use tauri::{async_runtime::spawn, Emitter as _, Listener, Manager};
+use tauri::{async_runtime::spawn, Emitter as _, Listener, Manager as _};
 use tracing::{info, warn};
 use tracing_subscriber::{fmt, layer::SubscriberExt as _, util::SubscriberInitExt as _, EnvFilter};
 
@@ -43,7 +43,7 @@ pub fn run() {
 
             setup_panic_handler(app_handle.clone());
 
-            app.manage(ChannelTasks::new_state(app_handle.clone()));
+            app.manage(ChannelTasks::build(app_handle.clone()));
             app.manage(ExecSessions::new_state());
             app.manage(ClusterStateRegistry::build(app_handle.clone()));
             app.manage(Arc::new(ScriptsProvider::new(app_handle.clone())));
@@ -107,7 +107,9 @@ pub fn run() {
 }
 
 async fn reset_state(app_handle: tauri::AppHandle) {
-    let join_handle_store = app_handle.state::<JoinHandleStoreState>();
+    use crate::app_state::StateFacade;
+
+    let join_handle_store = StateFacade::state::<ChannelTasks>(&app_handle);
     join_handle_store.abort_all();
 }
 
