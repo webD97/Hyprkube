@@ -76,6 +76,7 @@ impl ResourceContextMenuFacade {
         engine.build_type::<types::SubMenu>();
         engine.build_type::<types::MenuSection>();
         engine.build_type::<types::ResourceSubMenu>();
+        engine.build_type::<types::ResourceKind>();
 
         engine.register_static_module(
             "kube",

@@ -51,7 +51,6 @@ const ResourceListInspector: React.FC<ResourceListInspectorProps> = (props) => {
 
     const [availablePresentations, setAvailablePresentations] = useState<ResourcePresentationDef[]>([]);
     const [selectedPresentation, setSelectedPresentation] = useState("");
-    // const { discovery, lastError } = useClusterDiscovery(contextSource.source, contextSource.context);
     const allNamespaces = useClusterNamespaces(contextSource);
     const [selectedNamespace, setSelectedNamespace] = useState(preSelectedNamespace);
     const [resourceDefaultNamespace, setResourceDefaultNamespace] = useState('default');

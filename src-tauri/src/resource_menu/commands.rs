@@ -16,7 +16,9 @@ pub async fn call_menustack_action(
 ) -> Result<(), BackendError> {
     let clusters = app.state::<ClusterStateRegistry>();
     let facade = clusters.contextmenu_scripting_for(&context_source)?;
-    facade.call_menustack_action(menustack_id, action_ref)?;
+    facade
+        .call_menustack_action(menustack_id, action_ref)
+        .unwrap(); // todo: error should appear in some kind of "scripting console"
 
     Ok(())
 }

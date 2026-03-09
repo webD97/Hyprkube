@@ -1,3 +1,4 @@
+import { EventCallback } from '@tauri-apps/api/event';
 import { Splitter } from 'antd';
 import { use, useCallback, useState } from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
@@ -11,10 +12,13 @@ import MegaTabsContext from '../../contexts/MegaTabs';
 import { DiscoveryResult, useClusterDiscovery } from '../../hooks/useClusterDiscovery';
 import useClusterProfiles from '../../hooks/useClusterProfiles';
 import { KubeContextSource } from '../../hooks/useContextDiscovery';
+import { useTauriEventListener } from '../../hooks/useTauriEventListener';
 import { Gvk } from '../../model/k8s';
 import { capitalizeFirstLetter } from '../../utils/strings';
 import Sidebar from './Sidebar';
 import classes from './styles.module.css';
+
+type FrontendTriggerPickGvk = { tabId: string, gvk: Gvk };
 
 export interface ClusterViewProps {
     contextSource: KubeContextSource,
@@ -70,6 +74,12 @@ const ClusterView: React.FC<ClusterViewProps> = ({ contextSource, preSelectedGvk
             );
         }
     }
+
+    const onTriggerPickGvk = useCallback<EventCallback<FrontendTriggerPickGvk>>((event) => {
+        setActiveGvk(event.payload.gvk);
+    }, []);
+
+    useTauriEventListener<FrontendTriggerPickGvk>('hyprkube:menu:resource:pick_gvk', tabIdentifier.toString(), onTriggerPickGvk);
 
     if (!clusterProfiles[0]?.[0]) {
         return null;

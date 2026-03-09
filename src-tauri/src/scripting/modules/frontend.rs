@@ -20,6 +20,13 @@ struct FrontendTriggerPickNamespace {
 
 #[derive(Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
+struct FrontendTriggerPickGvk {
+    pub gvk: GroupVersionKind,
+    pub tab_id: String,
+}
+
+#[derive(Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
 struct FrontendTriggerExec {
     pub namespace: String,
     pub name: String,
@@ -44,7 +51,10 @@ pub mod frontend_rhai {
     use serde::Serialize;
     use tauri::Emitter as _;
 
-    use crate::scripting::{commons::CallbackContext, types::ResourceRef};
+    use crate::scripting::{
+        commons::CallbackContext,
+        types::{ResourceKind, ResourceRef},
+    };
 
     #[rhai_fn(return_raw)]
     pub fn open_resource_editor(
@@ -120,6 +130,25 @@ pub mod frontend_rhai {
             "hyprkube:menu:resource:pick_namespace",
             FrontendTriggerPickNamespace {
                 namespace: namespace.to_owned(),
+                tab_id: frontend_tab,
+            },
+        )
+    }
+
+    #[rhai_fn(return_raw)]
+    pub fn pick_kind(
+        ctx: Arc<CallbackContext>,
+        kind: ResourceKind,
+    ) -> Result<(), Box<rhai::EvalAltResult>> {
+        let frontend_tab = ctx.frontend_tab.to_owned();
+
+        emit(
+            ctx,
+            "hyprkube:menu:resource:pick_gvk",
+            FrontendTriggerPickGvk {
+                gvk: kind
+                    .try_into()
+                    .map_err(|e: kube::core::gvk::ParseGroupVersionError| e.to_string())?,
                 tab_id: frontend_tab,
             },
         )
