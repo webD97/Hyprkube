@@ -1,6 +1,6 @@
 use rhai::{CustomType, EvalAltResult, TypeBuilder};
 
-use crate::scripting::types;
+use crate::scripting::types::resource_context_menus::MenuItem;
 
 #[derive(Clone, Debug, rhai::CustomType)]
 #[rhai_type(extra = Self::build_extra)]
@@ -9,7 +9,7 @@ pub struct SubMenu {
     pub title: String,
 
     #[rhai_type(readonly)]
-    pub items: Vec<types::MenuItem>,
+    pub items: Vec<MenuItem>,
 }
 
 impl SubMenu {

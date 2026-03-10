@@ -6,7 +6,7 @@ use crate::{
     internal::mini_id::random_id,
     scripting::{
         resource_context_menu::{FrontendMenuItem, FrontendMenuItemKind},
-        types::{ActionButton, ResourceSubMenu, SubMenu},
+        types::resource_context_menus::{ActionButton, ResourceSubMenu, SubMenu},
     },
 };
 

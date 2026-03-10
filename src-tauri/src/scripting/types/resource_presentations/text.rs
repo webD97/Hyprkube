@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use rhai::{CustomType, Dynamic, EvalAltResult, Position, TypeBuilder};
 use serde::Serialize;
 
-use crate::scripting::types::{PresentationComponent, Properties};
+use crate::scripting::types::{resource_presentations::PresentationComponent, Properties};
 
 /// Displays plain text from a string.
 #[derive(Clone, Serialize, CustomType)]

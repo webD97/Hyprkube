@@ -9,11 +9,16 @@ use rhai::exported_module;
 use crate::{
     internal::{gvk_extraction::GvkExtraction, mini_id::random_id},
     scripting::{
-        commons::{CallbackContext, ContentScript, FnPtrWithAst},
         modules,
         resource_context_menu::{ContextMenuSection, FrontendMenuSection, MenuBlueprint},
         scripts_provider::{self, ScriptType, ScriptsProvider},
-        types::{self},
+        types::{
+            commons::{CallbackContext, ContentScript, FnPtrWithAst},
+            resource_context_menus::{
+                ActionButton, MenuItem, MenuSection, ResourceSubMenu, SubMenu,
+            },
+            ResourceKind, ResourceRef,
+        },
     },
 };
 
@@ -71,12 +76,12 @@ impl ResourceContextMenuFacade {
     ) -> rhai::Engine {
         let mut engine = rhai::Engine::new();
 
-        engine.build_type::<types::ResourceRef>();
-        engine.build_type::<types::ActionButton>();
-        engine.build_type::<types::SubMenu>();
-        engine.build_type::<types::MenuSection>();
-        engine.build_type::<types::ResourceSubMenu>();
-        engine.build_type::<types::ResourceKind>();
+        engine.build_type::<ResourceRef>();
+        engine.build_type::<ResourceKind>();
+        engine.build_type::<ActionButton>();
+        engine.build_type::<SubMenu>();
+        engine.build_type::<MenuSection>();
+        engine.build_type::<ResourceSubMenu>();
 
         engine.register_static_module(
             "kube",
@@ -94,7 +99,7 @@ impl ResourceContextMenuFacade {
             engine.register_fn(
                 "register_resource_contextmenu_section",
                 move |ctx: rhai::NativeCallContext,
-                      definition: types::MenuSection|
+                      definition: MenuSection|
                       -> Result<(), Box<rhai::EvalAltResult>> {
                     let script = ctx
                         .call_source()
@@ -114,7 +119,7 @@ impl ResourceContextMenuFacade {
 
     fn register_resource_contextmenu_section(
         &self,
-        section: types::MenuSection,
+        section: MenuSection,
         script: &str,
     ) -> Result<(), ResourceContextMenuError> {
         let script: PathBuf = script.into();
@@ -171,14 +176,14 @@ impl ResourceContextMenuFacade {
                         return Ok(None);
                     }
 
-                    let items: Vec<types::MenuItem> = section_template
+                    let items: Vec<MenuItem> = section_template
                         .render_items_for(engine, &section_template.ast, obj.clone())
                         .map_err(ResourceContextMenuError::Items)?;
 
                     let frontend_items = items
                         .into_iter()
                         .map(|item| {
-                            let (item, actions) = types::MenuItem::transform_for_frontend(item);
+                            let (item, actions) = MenuItem::transform_for_frontend(item);
 
                             for (action_id, action) in actions {
                                 menu_stack.actions.entry(action_id).insert_entry(

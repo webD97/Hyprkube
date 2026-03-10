@@ -1,6 +1,6 @@
 use rhai::{CustomType, Dynamic, EvalAltResult, TypeBuilder};
 
-use crate::scripting::types::ColumnTemplate;
+use crate::scripting::types::resource_context_menus::ColumnTemplate;
 
 #[derive(Clone, Debug, rhai::CustomType)]
 #[rhai_type(extra = Self::build_extra)]

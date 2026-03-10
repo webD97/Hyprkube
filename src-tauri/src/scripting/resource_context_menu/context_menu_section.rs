@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use kube::api::GroupVersionKind;
 
-use crate::scripting::types;
+use crate::scripting::types::resource_context_menus::MenuItem;
 
 pub struct ContextMenuSection {
     pub title: Option<String>,
@@ -34,7 +34,7 @@ impl ContextMenuSection {
         engine: &rhai::Engine,
         ast: &rhai::AST,
         obj: rhai::Dynamic,
-    ) -> Result<Vec<types::MenuItem>, Box<rhai::EvalAltResult>> {
+    ) -> Result<Vec<MenuItem>, Box<rhai::EvalAltResult>> {
         Ok(self
             .items
             .call::<rhai::Array>(engine, ast, (obj.clone(),))?
@@ -42,7 +42,7 @@ impl ContextMenuSection {
             .filter(|i| !i.is_unit())
             .flat_map(|dynamic| {
                 let type_name = dynamic.type_name();
-                let something: Option<types::MenuItem> = dynamic
+                let something: Option<MenuItem> = dynamic
                     .try_into()
                     .map_err(|_| {
                         tracing::warn!("Unsupported menu item: {type_name}");

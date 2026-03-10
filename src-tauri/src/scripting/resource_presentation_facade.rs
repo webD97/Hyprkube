@@ -15,11 +15,15 @@ use crate::{
         CrdRenderer, FallbackRenderer, ResourceColumnDefinition, ResourceRenderer,
     },
     scripting::{
-        commons::ContentScript,
         scripts_provider::{self, ScriptType, ScriptsProvider},
         types::{
-            self, ColoredBox, ColoredBoxes, ColumnTemplate, Hyperlink, RelativeTime,
-            ResourcePresentationField, Text,
+            commons::ContentScript,
+            resource_context_menus::ColumnTemplate,
+            resource_presentations::{
+                ColoredBox, ColoredBoxes, Hyperlink, RelativeTime, ResourcePresentation,
+                ResourcePresentationField, Text,
+            },
+            ResourceRef,
         },
     },
 };
@@ -27,7 +31,7 @@ use crate::{
 struct ResourcePresentationDefinition {
     title: String,
     matcher: Option<rhai::FnPtr>,
-    columns: Vec<types::ColumnTemplate>,
+    columns: Vec<ColumnTemplate>,
     ast: Arc<rhai::AST>,
 }
 
@@ -57,9 +61,9 @@ impl ResourcePresentationFacade {
         let mut engine = rhai::Engine::new();
 
         engine
-            .build_type::<types::ResourceRef>()
-            .build_type::<types::ResourcePresentation>()
-            .build_type::<types::ColumnTemplate>()
+            .build_type::<ResourceRef>()
+            .build_type::<ResourcePresentation>()
+            .build_type::<ColumnTemplate>()
             .build_type::<Text>()
             .build_type::<Hyperlink>()
             .build_type::<RelativeTime>()
@@ -71,7 +75,7 @@ impl ResourcePresentationFacade {
             engine.register_fn(
                 "register_resource_presentation",
                 move |ctx: rhai::NativeCallContext,
-                      definition: types::ResourcePresentation|
+                      definition: ResourcePresentation|
                       -> Result<(), Box<rhai::EvalAltResult>> {
                     let script = ctx
                         .call_source()
@@ -91,7 +95,7 @@ impl ResourcePresentationFacade {
 
     fn register_resource_presentation(
         &self,
-        presentation: types::ResourcePresentation,
+        presentation: ResourcePresentation,
         script: &str,
     ) -> Result<(), ResourcePresentationError> {
         let script: PathBuf = script.into();

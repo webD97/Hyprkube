@@ -7,7 +7,10 @@ use k8s_openapi::apiextensions_apiserver::pkg::apis::apiextensions::v1::CustomRe
 use kube::api::GroupVersionKind;
 use serde::Serialize;
 
-use crate::{frontend_types::BackendError, scripting::types::ResourcePresentationField};
+use crate::{
+    frontend_types::BackendError,
+    scripting::types::resource_presentations::ResourcePresentationField,
+};
 
 #[derive(Clone, Serialize)]
 pub struct ResourceColumnDefinition {

@@ -1,6 +1,6 @@
 use serde::Serialize;
 
-use crate::scripting::types::{
+use crate::scripting::types::resource_presentations::{
     ColoredBox, ColoredBoxes, Hyperlink, PresentationComponent, RelativeTime, Text,
 };
 

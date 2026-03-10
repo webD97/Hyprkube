@@ -13,7 +13,7 @@ use crate::{
     frontend_types::BackendError,
     internal::resources::ResourceWatchStreamEvent,
     resource_rendering::ResourceColumnDefinition,
-    scripting::types::PresentationComponent,
+    scripting::types::resource_presentations::PresentationComponent,
 };
 
 #[derive(Clone, Serialize)]
