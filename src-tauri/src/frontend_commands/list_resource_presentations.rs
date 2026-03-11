@@ -21,7 +21,6 @@ pub async fn list_resource_presentations(
         let views = clusters.presentation_scripting_for(&context_source)?;
         views
             .get_renderers(&context_source, &gvk)
-            .await
             .expect("handle me")
     };
 

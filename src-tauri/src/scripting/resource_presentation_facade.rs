@@ -118,7 +118,7 @@ impl ResourcePresentationFacade {
     }
 
     /// Returns the names of all available renderers for the given GVK
-    pub async fn get_renderers(
+    pub fn get_renderers(
         &self,
         context_source: &KubeContextSource,
         gvk: &GroupVersionKind,
