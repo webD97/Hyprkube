@@ -129,9 +129,7 @@ impl ResourcePresentationFacade {
         let registered_presentations = self.registered_presentations.read().unwrap();
 
         let crds: Vec<GroupVersionKind> = match &*discovery {
-            ClusterDiscovery::Inflight(_) => {
-                return Ok(vec![]);
-            }
+            ClusterDiscovery::Inflight(_) => Vec::new(),
             ClusterDiscovery::Completed(resources) => resources.crds.keys().cloned().collect(),
         };
 

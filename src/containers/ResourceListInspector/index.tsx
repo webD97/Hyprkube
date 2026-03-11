@@ -1,13 +1,13 @@
 import { use, useCallback, useEffect, useRef, useState } from "react";
 import { Gvk } from "../../model/k8s";
 
+import { useQuery } from "@tanstack/react-query";
 import { EventCallback } from "@tauri-apps/api/event";
 import { confirm } from '@tauri-apps/plugin-dialog';
 import { Button, Select } from "antd";
 import { deleteResource } from "../../api/deleteResource";
 import getDefaultNamespace from "../../api/getDefaultNamespace";
 import getResourceYaml from "../../api/getResourceYaml";
-import listResourcePresentations, { ResourcePresentationDef } from "../../api/listResourcePresentations";
 import setDefaultNamespace from "../../api/setDefaultNamespace";
 import LogPanel from "../../components/LogPanel";
 import ResourceList from "../../components/ResourceList";
@@ -20,6 +20,7 @@ import useClusterNamespaces from "../../hooks/useClusterNamespaces";
 import { KubeContextSource } from "../../hooks/useContextDiscovery";
 import useResourceWatch, { DisplayableResource } from "../../hooks/useResourceWatch";
 import { useTauriEventListener } from "../../hooks/useTauriEventListener";
+import listResourcePresentationsQuery from "../../queries/listResourcePresentations";
 import ResourceEditor from "../ResourceEditor";
 import classes from './styles.module.css';
 
@@ -49,8 +50,11 @@ const ResourceListInspector: React.FC<ResourceListInspectorProps> = (props) => {
         onNamespaceChanged = () => undefined
     } = props;
 
-    const [availablePresentations, setAvailablePresentations] = useState<ResourcePresentationDef[]>([]);
     const [selectedPresentation, setSelectedPresentation] = useState("");
+    const availablePresentations = useQuery({
+        ...listResourcePresentationsQuery(contextSource, gvk),
+        initialData: [],
+    });
     const allNamespaces = useClusterNamespaces(contextSource);
     const [selectedNamespace, setSelectedNamespace] = useState(preSelectedNamespace);
     const [resourceDefaultNamespace, setResourceDefaultNamespace] = useState('default');
@@ -60,18 +64,9 @@ const ResourceListInspector: React.FC<ResourceListInspectorProps> = (props) => {
 
     const searchbarRef = useRef<HTMLDivElement>(null);
 
-    useEffect(() => {
-        listResourcePresentations(contextSource, gvk)
-            .then(presentations => {
-                setAvailablePresentations(presentations);
-
-                if (presentations.length > 0) {
-                    setSelectedPresentation(presentations[0]);
-                }
-            })
-            .catch(e => alert(JSON.stringify(e)));
-
-    }, [contextSource, gvk]);
+    if (availablePresentations.data.length > 0 && !availablePresentations.data.includes(selectedPresentation)) {
+        setSelectedPresentation(availablePresentations.data[0]);
+    }
 
     useEffect(() => {
         if (preSelectedNamespace) return;
@@ -206,8 +201,8 @@ const ResourceListInspector: React.FC<ResourceListInspectorProps> = (props) => {
         <div className={classes.container}>
             <div className={classes.topBar}>
                 <h2>{resourceNamePlural}</h2>
-                <Select
-                    options={availablePresentations.map(v => ({ label: v, value: v }))}
+                <Select style={{ minWidth: '150px' }}
+                    options={availablePresentations.data.map(v => ({ label: v, value: v }))}
                     value={selectedPresentation}
                     onChange={(value) => setSelectedPresentation(value)}
                 />
