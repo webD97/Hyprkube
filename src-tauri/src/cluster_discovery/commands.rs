@@ -210,9 +210,11 @@ pub async fn connect_cluster(
 
         let result = CompletedDiscovery { resources, crds };
 
-        let context_menu_facade = ResourceContextMenuFacade::new(app.clone());
-        context_menu_facade
-            .initialize_engines(client.clone(), Arc::clone(kube_discovery.as_ref().unwrap()));
+        let context_menu_facade = ResourceContextMenuFacade::new(
+            app.clone(),
+            client.clone(),
+            Arc::clone(kube_discovery.as_ref().unwrap()),
+        );
         context_menu_facade.evaluate(&scripts_provider)?;
 
         // Ugly but works for now
