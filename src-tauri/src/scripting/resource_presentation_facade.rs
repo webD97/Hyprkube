@@ -1,7 +1,7 @@
 use std::{
     collections::HashMap,
     path::PathBuf,
-    sync::{Arc, OnceLock, RwLock},
+    sync::{Arc, RwLock, Weak},
 };
 
 use k8s_openapi::apiextensions_apiserver::pkg::apis::apiextensions::v1::CustomResourceDefinition;
@@ -38,26 +38,21 @@ struct ResourcePresentationDefinition {
 pub struct ResourcePresentationFacade {
     app: tauri::AppHandle,
     scripts: RwLock<HashMap<PathBuf, ContentScript>>,
-    engine: OnceLock<Arc<rhai::Engine>>,
+    engine: Arc<rhai::Engine>,
     registered_presentations: RwLock<Vec<ResourcePresentationDefinition>>,
 }
 
 impl ResourcePresentationFacade {
     pub fn new(app: tauri::AppHandle) -> Arc<Self> {
-        Arc::new(Self {
+        Arc::new_cyclic(|weak| Self {
             app,
-            engine: OnceLock::new(),
+            engine: Self::make_engine(weak.clone()),
             scripts: RwLock::new(HashMap::new()),
             registered_presentations: RwLock::new(Vec::new()),
         })
     }
 
-    pub fn initialize_engines(self: &Arc<Self>) {
-        let engine = Self::make_engine(Arc::clone(self));
-        self.engine.get_or_init(|| Arc::new(engine));
-    }
-
-    fn make_engine(facade: Arc<Self>) -> rhai::Engine {
+    fn make_engine(facade: Weak<Self>) -> Arc<rhai::Engine> {
         let mut engine = rhai::Engine::new();
 
         engine
@@ -71,12 +66,12 @@ impl ResourcePresentationFacade {
             .build_type::<ColoredBoxes>();
 
         {
-            let facade = Arc::clone(&facade);
             engine.register_fn(
                 "register_resource_presentation",
                 move |ctx: rhai::NativeCallContext,
                       definition: ResourcePresentation|
                       -> Result<(), Box<rhai::EvalAltResult>> {
+                    let facade = facade.upgrade().expect("facade dropped");
                     let script = ctx
                         .call_source()
                         .ok_or("only file-based scripts supported")?;
@@ -90,7 +85,7 @@ impl ResourcePresentationFacade {
 
         engine.set_max_expr_depths(64, 32);
 
-        engine
+        Arc::new(engine)
     }
 
     fn register_resource_presentation(
@@ -133,11 +128,6 @@ impl ResourcePresentationFacade {
 
         let registered_presentations = self.registered_presentations.read().unwrap();
 
-        let engine = self
-            .engine
-            .get()
-            .ok_or(ResourcePresentationError::EngineUninitialized)?;
-
         let crds: Vec<GroupVersionKind> = match &*discovery {
             ClusterDiscovery::Inflight(_) => {
                 return Ok(vec![]);
@@ -154,7 +144,7 @@ impl ResourcePresentationFacade {
                     .map(|matcher| {
                         let gvk = gvk.clone();
                         matcher.call::<bool>(
-                            engine,
+                            &self.engine,
                             &Arc::clone(&presentation.ast),
                             (gvk.group, gvk.version, gvk.kind),
                         )
@@ -204,7 +194,7 @@ impl ResourcePresentationFacade {
         Box::new(ScriptedRenderer {
             title: presentation.title.clone(),
             templates: presentation.columns.clone(),
-            engine: Arc::clone(self.engine.get().unwrap()),
+            engine: Arc::clone(&self.engine),
             ast: Arc::clone(&presentation.ast),
         }) as Box<dyn ResourceRenderer>
     }
@@ -213,11 +203,6 @@ impl ResourcePresentationFacade {
         &self,
         scripts_provider: &ScriptsProvider,
     ) -> Result<(), ResourcePresentationError> {
-        let engine = self
-            .engine
-            .get()
-            .ok_or(ResourcePresentationError::EngineUninitialized)?;
-
         let menu_scripts = scripts_provider
             .get_scripts_for_type(ScriptType::Presentation)
             .unwrap();
@@ -232,9 +217,9 @@ impl ResourcePresentationFacade {
                     .entry(entrypoint.to_owned())
                     .or_insert(ContentScript::new());
 
-                let ast_result = script
-                    .ast
-                    .get_or_insert_with(|| engine.compile_file(entrypoint.clone()).map(Arc::new));
+                let ast_result = script.ast.get_or_insert_with(|| {
+                    self.engine.compile_file(entrypoint.clone()).map(Arc::new)
+                });
 
                 ast_result
                     .as_ref()
@@ -242,7 +227,7 @@ impl ResourcePresentationFacade {
                     .clone()
             };
 
-            engine.eval_ast::<()>(&ast_arc)?;
+            self.engine.eval_ast::<()>(&ast_arc)?;
         }
 
         Ok(())
@@ -251,9 +236,6 @@ impl ResourcePresentationFacade {
 
 #[derive(thiserror::Error, Debug)]
 pub enum ResourcePresentationError {
-    #[error("Scripting engine has not been initialized")]
-    EngineUninitialized,
-
     #[error("Error evaluating script: {0}")]
     EvaluationResult(#[from] Box<rhai::EvalAltResult>),
 

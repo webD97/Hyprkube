@@ -108,7 +108,6 @@ pub async fn connect_cluster(
         tracing::info!("Starting discovery for cluster {}", context_source);
 
         let resource_presentation_facade = ResourcePresentationFacade::new(app.clone());
-        resource_presentation_facade.initialize_engines();
         resource_presentation_facade.evaluate(&scripts_provider)?;
 
         let client = make_client(&context_source).await?;
