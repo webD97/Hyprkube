@@ -65,12 +65,7 @@ impl ClusterStateRegistry {
         &self,
         context_source: &KubeContextSource,
     ) -> Result<Arc<ResourceContextMenuFacade>, BackendError> {
-        Ok(self
-            .get_state(context_source)?
-            .context_menu_facade
-            .as_ref()
-            .ok_or_else(|| BackendError::IncompleteClusterDiscovery(context_source.to_owned()))?
-            .clone())
+        Ok(self.get_state(context_source)?.context_menu_facade.clone())
     }
 
     pub fn presentation_scripting_for(
@@ -80,8 +75,6 @@ impl ClusterStateRegistry {
         Ok(self
             .get_state(context_source)?
             .resource_presentation_facade
-            .as_ref()
-            .ok_or_else(|| BackendError::IncompleteClusterDiscovery(context_source.to_owned()))?
             .clone())
     }
 

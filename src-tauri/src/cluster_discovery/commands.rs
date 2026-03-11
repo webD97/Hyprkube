@@ -107,10 +107,13 @@ pub async fn connect_cluster(
 
         tracing::info!("Starting discovery for cluster {}", context_source);
 
+        let client = make_client(&context_source).await?;
+
         let resource_presentation_facade = ResourcePresentationFacade::new(app.clone());
         resource_presentation_facade.evaluate(&scripts_provider)?;
 
-        let client = make_client(&context_source).await?;
+        let context_menu_facade = ResourceContextMenuFacade::new(app.clone(), client.clone());
+        context_menu_facade.evaluate(&scripts_provider)?;
 
         // Attachable stuff
         let inflight = Arc::new(InflightDiscovery::new());
@@ -120,8 +123,8 @@ pub async fn connect_cluster(
             client: client.clone(),
             discovery: Arc::new(ClusterDiscovery::Inflight(Arc::clone(&inflight))),
             kube_discovery: None,
-            context_menu_facade: None,
-            resource_presentation_facade: Some(resource_presentation_facade),
+            context_menu_facade,
+            resource_presentation_facade,
         });
 
         // Cached part
@@ -209,17 +212,16 @@ pub async fn connect_cluster(
 
         let result = CompletedDiscovery { resources, crds };
 
-        let context_menu_facade = ResourceContextMenuFacade::new(
-            app.clone(),
-            client.clone(),
-            Arc::clone(kube_discovery.as_ref().unwrap()),
-        );
-        context_menu_facade.evaluate(&scripts_provider)?;
-
         // Ugly but works for now
         let previous_state = clusters.unmanage(&context_source).unwrap();
+
+        if let Some(discovery) = &kube_discovery {
+            previous_state
+                .context_menu_facade
+                .set_discovery(discovery.clone());
+        }
+
         let next_state = ClusterState {
-            context_menu_facade: Some(context_menu_facade),
             discovery: Arc::new(ClusterDiscovery::Completed(result)),
             kube_discovery,
             ..previous_state

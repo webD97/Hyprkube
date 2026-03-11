@@ -69,8 +69,8 @@ pub struct ClusterState {
     pub client: kube::Client,
     pub discovery: Arc<ClusterDiscovery>,
     pub kube_discovery: Option<Arc<kube::Discovery>>,
-    pub context_menu_facade: Option<Arc<ResourceContextMenuFacade>>,
-    pub resource_presentation_facade: Option<Arc<ResourcePresentationFacade>>,
+    pub context_menu_facade: Arc<ResourceContextMenuFacade>,
+    pub resource_presentation_facade: Arc<ResourcePresentationFacade>,
 }
 
 #[derive(Clone)]

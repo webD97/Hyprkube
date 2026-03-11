@@ -1,7 +1,7 @@
 use std::{
     collections::HashMap,
     path::PathBuf,
-    sync::{Arc, RwLock, Weak},
+    sync::{Arc, OnceLock, RwLock, Weak},
 };
 
 use rhai::exported_module;
@@ -28,6 +28,7 @@ pub struct ResourceContextMenuFacade {
     registered_sections: RwLock<Vec<ContextMenuSection>>,
     scripts: RwLock<HashMap<PathBuf, ContentScript>>,
     menu_stacks: RwLock<HashMap<String, MenuStack>>,
+    kube_discovery: Arc<OnceLock<Arc<kube::Discovery>>>,
 }
 
 #[derive(Debug, Clone)]
@@ -50,25 +51,25 @@ impl MenuStack {
 }
 
 impl ResourceContextMenuFacade {
-    pub fn new(
-        app: tauri::AppHandle,
-        client: kube::Client,
-        discovery: Arc<kube::Discovery>,
-    ) -> Arc<Self> {
+    pub fn new(app: tauri::AppHandle, client: kube::Client) -> Arc<Self> {
         Arc::new_cyclic(|weak| Self {
             app: app.clone(),
-            engine: Self::make_resource_contextmenu_engine(weak.clone(), app, client, discovery),
+            engine: Self::make_resource_contextmenu_engine(weak.clone(), app, client),
             registered_sections: RwLock::new(Vec::new()),
             scripts: RwLock::new(HashMap::new()),
             menu_stacks: RwLock::new(HashMap::new()),
+            kube_discovery: Arc::new(OnceLock::new()),
         })
+    }
+
+    pub fn set_discovery(&self, discovery: Arc<kube::Discovery>) {
+        let _ = self.kube_discovery.set(discovery);
     }
 
     fn make_resource_contextmenu_engine(
         facade: Weak<Self>,
         app: tauri::AppHandle,
         client: kube::Client,
-        discovery: Arc<kube::Discovery>,
     ) -> rhai::Engine {
         let mut engine = rhai::Engine::new();
 
@@ -79,9 +80,17 @@ impl ResourceContextMenuFacade {
         engine.build_type::<MenuSection>();
         engine.build_type::<ResourceSubMenu>();
 
+        let kube_facade = facade.clone();
         engine.register_static_module(
             "kube",
-            modules::kube::build_module(client, discovery).into(),
+            modules::kube::build_module(client, move || {
+                kube_facade
+                    .upgrade()
+                    .expect("facade dropped")
+                    .kube_discovery
+                    .clone()
+            })
+            .into(),
         );
         engine.register_static_module("clipboard", modules::clipboard::build_module(app).into());
         engine.register_static_module("base64", exported_module!(modules::base64_rhai).into());

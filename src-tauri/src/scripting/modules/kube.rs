@@ -1,16 +1,21 @@
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 
 use k8s_openapi::api::apps::v1::{DaemonSet, Deployment, StatefulSet};
 use kube::{
     api::{ApiResource, DeleteParams, DynamicObject, Patch, PatchParams},
+    core::{gvk::ParseGroupVersionError, GroupVersion},
     Api, Discovery,
 };
 use rhai::{FuncRegistration, Module};
 
 use crate::scripting::types::ResourceRef;
 
-pub fn build_module(client: kube::Client, discovery: Arc<kube::Discovery>) -> Module {
+pub fn build_module<F>(client: kube::Client, discovery: F) -> Module
+where
+    F: Fn() -> Arc<OnceLock<Arc<kube::Discovery>>> + Send + Sync + 'static,
+{
     let mut kube_module = Module::new();
+    let discovery = Arc::new(discovery);
 
     {
         let client = client.clone();
@@ -23,8 +28,11 @@ pub fn build_module(client: kube::Client, discovery: Arc<kube::Discovery>) -> Mo
                   namespace: &str,
                   name: &str|
                   -> Result<rhai::Map, Box<rhai::EvalAltResult>> {
+                let discovery = discovery();
+                let discovery = get_cache(discovery.get())?;
+
                 block_on(async {
-                    let ar = api_resource_for(api_version, kind, &discovery)?;
+                    let ar = api_resource_for(api_version, kind, discovery)?;
                     let api: Api<DynamicObject> =
                         Api::namespaced_with(client.clone(), namespace, &ar);
                     let resource = api.get(name).await.map_err(|e| e.to_string())?;
@@ -45,8 +53,11 @@ pub fn build_module(client: kube::Client, discovery: Arc<kube::Discovery>) -> Mo
                   kind: &str,
                   name: &str|
                   -> Result<rhai::Map, Box<rhai::EvalAltResult>> {
+                let discovery = discovery();
+                let discovery = get_cache(discovery.get())?;
+
                 block_on(async {
-                    let ar = api_resource_for(api_version, kind, &discovery)?;
+                    let ar = api_resource_for(api_version, kind, discovery)?;
                     let api: Api<DynamicObject> = Api::all_with(client.clone(), &ar);
                     let resource = api.get(name).await.map_err(|e| e.to_string())?;
 
@@ -67,8 +78,11 @@ pub fn build_module(client: kube::Client, discovery: Arc<kube::Discovery>) -> Mo
                   namespace: &str,
                   name: &str|
                   -> Result<(), Box<rhai::EvalAltResult>> {
+                let discovery = discovery();
+                let discovery = get_cache(discovery.get())?;
+
                 block_on(async {
-                    let ar = api_resource_for(api_version, kind, &discovery)?;
+                    let ar = api_resource_for(api_version, kind, discovery)?;
                     let api: Api<DynamicObject> =
                         Api::namespaced_with(client.clone(), namespace, &ar);
 
@@ -94,8 +108,11 @@ pub fn build_module(client: kube::Client, discovery: Arc<kube::Discovery>) -> Mo
                   name: &str,
                   patch: rhai::Map|
                   -> Result<(), Box<rhai::EvalAltResult>> {
+                let discovery = discovery();
+                let discovery = get_cache(discovery.get())?;
+
                 block_on(async {
-                    let ar = api_resource_for(api_version, kind, &discovery)?;
+                    let ar = api_resource_for(api_version, kind, discovery)?;
                     let api: Api<DynamicObject> =
                         Api::namespaced_with(client.clone(), namespace, &ar);
 
@@ -159,25 +176,25 @@ pub fn build_module(client: kube::Client, discovery: Arc<kube::Discovery>) -> Mo
     kube_module
 }
 
+fn get_cache(discovery: Option<&Arc<Discovery>>) -> Result<&Discovery, String> {
+    if let Some(discovery) = discovery {
+        return Ok(discovery);
+    }
+
+    Err("kube module does not have access to a discovery cache, cannot operate".to_owned())
+}
+
 fn api_resource_for(
     api_version: &str,
     kind: &str,
     discovery: &Discovery,
 ) -> Result<ApiResource, String> {
-    let x: Vec<&str> = api_version.split("/").collect();
-
-    let (group, _) = {
-        if x.len() == 1 {
-            (&"", x.first().unwrap())
-        } else if x.len() == 2 {
-            (x.first().unwrap(), x.get(1).unwrap())
-        } else {
-            panic!("wtf");
-        }
-    };
+    let gv: GroupVersion = api_version
+        .parse()
+        .map_err(|e: ParseGroupVersionError| e.to_string())?;
 
     let (ar, _) = discovery
-        .get(group)
+        .get(&gv.group)
         .ok_or(format!("ApiVersion not found: {}", api_version))?
         .recommended_kind(kind)
         .ok_or(format!("Kind not found: {}", kind))?;
