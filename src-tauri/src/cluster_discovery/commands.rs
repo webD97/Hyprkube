@@ -87,7 +87,7 @@ pub async fn connect_cluster(
 
                     let mut stream = std::pin::pin!(discovery.subscribe());
                     while let Some(event) = stream.next().await {
-                        channel.send(event.clone())?;
+                        channel.send(event)?;
                     }
                 }
                 ClusterDiscovery::Completed(discovery) => {
@@ -181,10 +181,7 @@ pub async fn connect_cluster(
                     )));
 
                     // Forward to frontend
-                    channel.send(FrontendDiscoveryEvent::CustomResourceDefinition((
-                        gvk.clone(),
-                        crd.clone(),
-                    )))?;
+                    channel.send(FrontendDiscoveryEvent::CustomResourceDefinition((gvk, crd)))?;
                 }
                 InternalDiscoveryEvent::DiscoveryComplete(discovery) => {
                     kube_discovery = Some(Arc::new(discovery))
