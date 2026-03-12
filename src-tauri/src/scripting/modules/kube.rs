@@ -10,12 +10,12 @@ use rhai::{FuncRegistration, Module};
 
 use crate::scripting::types::ResourceRef;
 
-pub fn build_module<F>(client: kube::Client, discovery: F) -> Module
+pub fn build_module<F>(client: kube::Client, discovery_supplier: F) -> Module
 where
     F: Fn() -> Arc<OnceLock<Arc<kube::Discovery>>> + Send + Sync + 'static,
 {
     let mut kube_module = Module::new();
-    let discovery = Arc::new(discovery);
+    let discovery = Arc::new(discovery_supplier);
 
     {
         let client = client.clone();
