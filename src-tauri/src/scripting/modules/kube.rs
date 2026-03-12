@@ -1,4 +1,4 @@
-use std::sync::{Arc, OnceLock};
+use std::sync::Arc;
 
 use k8s_openapi::api::apps::v1::{DaemonSet, Deployment, StatefulSet};
 use kube::{
@@ -12,7 +12,7 @@ use crate::scripting::types::ResourceRef;
 
 pub fn build_module<F>(client: kube::Client, discovery_supplier: F) -> Module
 where
-    F: Fn() -> Arc<OnceLock<Arc<kube::Discovery>>> + Send + Sync + 'static,
+    F: Fn() -> Option<Arc<kube::Discovery>> + Send + Sync + 'static,
 {
     let mut kube_module = Module::new();
     let discovery = Arc::new(discovery_supplier);
@@ -29,7 +29,7 @@ where
                   name: &str|
                   -> Result<rhai::Map, Box<rhai::EvalAltResult>> {
                 let discovery = discovery();
-                let discovery = get_cache(discovery.get())?;
+                let discovery = &get_cache(discovery)?;
 
                 block_on(async {
                     let ar = api_resource_for(api_version, kind, discovery)?;
@@ -54,7 +54,7 @@ where
                   name: &str|
                   -> Result<rhai::Map, Box<rhai::EvalAltResult>> {
                 let discovery = discovery();
-                let discovery = get_cache(discovery.get())?;
+                let discovery = &get_cache(discovery)?;
 
                 block_on(async {
                     let ar = api_resource_for(api_version, kind, discovery)?;
@@ -79,7 +79,7 @@ where
                   name: &str|
                   -> Result<(), Box<rhai::EvalAltResult>> {
                 let discovery = discovery();
-                let discovery = get_cache(discovery.get())?;
+                let discovery = &get_cache(discovery)?;
 
                 block_on(async {
                     let ar = api_resource_for(api_version, kind, discovery)?;
@@ -109,7 +109,7 @@ where
                   patch: rhai::Map|
                   -> Result<(), Box<rhai::EvalAltResult>> {
                 let discovery = discovery();
-                let discovery = get_cache(discovery.get())?;
+                let discovery = &get_cache(discovery)?;
 
                 block_on(async {
                     let ar = api_resource_for(api_version, kind, discovery)?;
@@ -176,12 +176,9 @@ where
     kube_module
 }
 
-fn get_cache(discovery: Option<&Arc<Discovery>>) -> Result<&Discovery, String> {
-    if let Some(discovery) = discovery {
-        return Ok(discovery);
-    }
-
-    Err("kube module does not have access to a discovery cache, cannot operate".to_owned())
+fn get_cache(discovery: Option<Arc<Discovery>>) -> Result<Arc<Discovery>, String> {
+    discovery
+        .ok_or("kube module does not have access to a discovery cache, cannot operate".to_owned())
 }
 
 fn api_resource_for(

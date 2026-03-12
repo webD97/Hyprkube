@@ -28,7 +28,7 @@ pub struct ResourceContextMenuFacade {
     registered_sections: RwLock<Vec<ContextMenuSection>>,
     scripts: RwLock<HashMap<PathBuf, ContentScript>>,
     menu_stacks: RwLock<HashMap<String, MenuStack>>,
-    kube_discovery: Arc<OnceLock<Arc<kube::Discovery>>>,
+    kube_discovery: OnceLock<Arc<kube::Discovery>>,
 }
 
 #[derive(Debug, Clone)]
@@ -58,7 +58,7 @@ impl ResourceContextMenuFacade {
             registered_sections: RwLock::new(Vec::new()),
             scripts: RwLock::new(HashMap::new()),
             menu_stacks: RwLock::new(HashMap::new()),
-            kube_discovery: Arc::new(OnceLock::new()),
+            kube_discovery: OnceLock::new(),
         })
     }
 
@@ -88,7 +88,8 @@ impl ResourceContextMenuFacade {
                     .upgrade()
                     .expect("facade dropped")
                     .kube_discovery
-                    .clone()
+                    .get()
+                    .cloned()
             })
             .into(),
         );
