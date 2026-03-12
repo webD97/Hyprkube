@@ -10,9 +10,12 @@ use rhai::{FuncRegistration, Module};
 
 use crate::scripting::types::ResourceRef;
 
+type LazyDiscovery = Option<Arc<kube::Discovery>>;
+type EvalResult<T> = Result<T, Box<rhai::EvalAltResult>>;
+
 pub fn build_module<F>(client: kube::Client, discovery_supplier: F) -> Module
 where
-    F: Fn() -> Option<Arc<kube::Discovery>> + Send + Sync + 'static,
+    F: Fn() -> LazyDiscovery + Send + Sync + 'static,
 {
     let mut kube_module = Module::new();
     let discovery = Arc::new(discovery_supplier);
@@ -27,7 +30,7 @@ where
                   kind: &str,
                   namespace: &str,
                   name: &str|
-                  -> Result<rhai::Map, Box<rhai::EvalAltResult>> {
+                  -> EvalResult<rhai::Map> {
                 let discovery = discovery();
                 let discovery = &get_cache(discovery)?;
 
@@ -49,10 +52,7 @@ where
 
         FuncRegistration::new("get").set_into_module(
             &mut kube_module,
-            move |api_version: &str,
-                  kind: &str,
-                  name: &str|
-                  -> Result<rhai::Map, Box<rhai::EvalAltResult>> {
+            move |api_version: &str, kind: &str, name: &str| -> EvalResult<rhai::Map> {
                 let discovery = discovery();
                 let discovery = &get_cache(discovery)?;
 
@@ -73,11 +73,7 @@ where
 
         FuncRegistration::new("delete").set_into_module(
             &mut kube_module,
-            move |api_version: &str,
-                  kind: &str,
-                  namespace: &str,
-                  name: &str|
-                  -> Result<(), Box<rhai::EvalAltResult>> {
+            move |api_version: &str, kind: &str, namespace: &str, name: &str| -> EvalResult<()> {
                 let discovery = discovery();
                 let discovery = &get_cache(discovery)?;
 
@@ -107,7 +103,7 @@ where
                   namespace: &str,
                   name: &str,
                   patch: rhai::Map|
-                  -> Result<(), Box<rhai::EvalAltResult>> {
+                  -> EvalResult<()> {
                 let discovery = discovery();
                 let discovery = &get_cache(discovery)?;
 
@@ -131,7 +127,7 @@ where
 
         FuncRegistration::new("rollout_restart").set_into_module(
             &mut kube_module,
-            move |resource_ref: ResourceRef| -> Result<(), Box<rhai::EvalAltResult>> {
+            move |resource_ref: ResourceRef| -> EvalResult<()> {
                 block_on(async {
                     match resource_ref.kind.as_str() {
                         "Deployment" => {
@@ -176,7 +172,7 @@ where
     kube_module
 }
 
-fn get_cache(discovery: Option<Arc<Discovery>>) -> Result<Arc<Discovery>, String> {
+fn get_cache(discovery: LazyDiscovery) -> Result<Arc<Discovery>, String> {
     discovery
         .ok_or("kube module does not have access to a discovery cache, cannot operate".to_owned())
 }
