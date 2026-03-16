@@ -1,4 +1,4 @@
-import { ColumnDefinition, DisplayableResource, ResourceViewData, ViewComponent } from "../../hooks/useResourceWatch";
+import { ColumnDefinition, DisplayableResource, PresentationComponent, ResourcePresentationData } from "../../hooks/useResourceWatch";
 import EmojiHint from "../EmojiHint";
 
 import { useEffect, useMemo, useState } from "react";
@@ -17,25 +17,26 @@ import {
     useReactTable,
     VisibilityState
 } from '@tanstack/react-table';
-import { LogicalPosition } from "@tauri-apps/api/dpi";
 import { Checkbox, Input, Space } from "antd";
 import React from "react";
 import { createPortal } from "react-dom";
+import { KubeContextSource } from "../../hooks/useContextDiscovery";
 import { Gvk } from "../../model/k8s";
+import ResourceContextMenu from "../ResourceContextMenu";
 import { CustomCell } from "./CustomCell";
 
 type _TData = [string, DisplayableResource];
 
-export interface ResourceViewProps {
+export interface ResourcePresentationProps {
+    contextSource: KubeContextSource,
     namespace?: string,
     resourceNamePlural?: string,
     columnDefinitions: ColumnDefinition[],
-    resourceData: ResourceViewData,
+    resourceData: ResourcePresentationData,
     gvk: Gvk,
-    onResourceContextMenu: (gvk: Gvk, uid: string, position: LogicalPosition) => void,
     onResourceClicked?: (gvk: Gvk, uid: string) => void,
     onSelectionChanged?: (rows: _TData[]) => void,
-    searchbarPortal: React.RefObject<HTMLDivElement | null>
+    searchbarPortal: React.RefObject<HTMLDivElement | null>,
 }
 
 function createColumns(columnDefinitions: ColumnDefinition[]) {
@@ -45,13 +46,13 @@ function createColumns(columnDefinitions: ColumnDefinition[]) {
             id: `${idx}_${title}`,
             header: () => title,
             sortingFn: (rowA, rowB, columnId) => {
-                const valueA = rowA.getValue<ViewComponent>(columnId).sortableValue;
-                const valueB = rowB.getValue<ViewComponent>(columnId).sortableValue;
+                const valueA = rowA.getValue<PresentationComponent>(columnId).sortableValue;
+                const valueB = rowB.getValue<PresentationComponent>(columnId).sortableValue;
 
                 return valueA.localeCompare(valueB, undefined, { numeric: true });
             },
             filterFn: (row, columnId, filterValue) => {
-                return row.getValue<ViewComponent>(columnId).sortableValue.includes(filterValue as string);
+                return row.getValue<PresentationComponent>(columnId).sortableValue.includes(filterValue as string);
             },
             enableColumnFilter: filterable,
             enableSorting: true, // TODO: View in backend should decide this
@@ -80,14 +81,14 @@ function createColumns(columnDefinitions: ColumnDefinition[]) {
     return [selectionColumn, ...dataColumns];
 }
 
-const ResourceList: React.FC<ResourceViewProps> = (props) => {
+const ResourceList: React.FC<ResourcePresentationProps> = (props) => {
     const {
+        contextSource,
         namespace,
         resourceNamePlural,
         columnDefinitions,
         gvk,
         resourceData = {},
-        onResourceContextMenu,
         onResourceClicked = () => undefined,
         onSelectionChanged = () => undefined,
         searchbarPortal
@@ -222,18 +223,20 @@ const ResourceList: React.FC<ResourceViewProps> = (props) => {
                                         const filters = Object.values(row.columnFilters)
                                         const collapsed = filters.length > 0 && filters.findIndex(c => c === true) === -1;
                                         return (
-                                            <tr key={row.id} className={collapsed ? styles.collapsed : undefined}
-                                                onContextMenu={(e) => {
-                                                    e.preventDefault();
-                                                    onResourceContextMenu(gvk, row.original[0], new LogicalPosition(e.clientX, e.clientY));
-                                                }}
-                                            >
+                                            <tr key={row.id} className={collapsed ? styles.collapsed : undefined}>
                                                 {
                                                     row.getVisibleCells().map((cell, idx) => {
+                                                        const { namespace, name } = resourceData[cell.row.original[0]];
+
                                                         return (
                                                             <td key={cell.id} onClick={idx === 0 ? undefined : () => onResourceClicked(gvk, row.original[0])}>
                                                                 <div>
-                                                                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                                                    <ResourceContextMenu
+                                                                        contextSource={contextSource}
+                                                                        {...{ namespace, name, gvk }}
+                                                                    >
+                                                                        <div>{flexRender(cell.column.columnDef.cell, cell.getContext())}</div>
+                                                                    </ResourceContextMenu>
                                                                 </div>
                                                             </td>
                                                         )

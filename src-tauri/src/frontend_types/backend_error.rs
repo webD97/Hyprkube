@@ -1,6 +1,7 @@
 use crate::{
-    app_state::Rejected, persistence::discovery_cache_service,
-    resource_rendering::ResourceViewError,
+    app_state::Rejected, frontend_commands::KubeContextSource,
+    persistence::discovery_cache_service,
+    scripting::resource_context_menu_facade::ResourceContextMenuError,
 };
 
 #[derive(thiserror::Error, Debug)]
@@ -12,9 +13,6 @@ pub enum BackendError {
     KubeconfigError(#[from] kube::config::KubeconfigError),
 
     #[error(transparent)]
-    ResourceViewError(#[from] ResourceViewError),
-
-    #[error(transparent)]
     TauriError(#[from] tauri::Error),
 
     #[error("BackgroundTaskRejected")]
@@ -22,6 +20,15 @@ pub enum BackendError {
 
     #[error(transparent)]
     DiscoveryCacheServiceError(#[from] discovery_cache_service::Error),
+
+    #[error("Cluster with KubeContextSource {0} is not managed")]
+    Unmanaged(KubeContextSource),
+
+    #[error("Cluster with KubeContextSource {0} has not been fully initialized yet")]
+    IncompleteClusterDiscovery(KubeContextSource),
+
+    #[error(transparent)]
+    ResourceContextMenu(#[from] ResourceContextMenuError),
 
     #[error("{0}")]
     Generic(String),

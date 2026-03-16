@@ -1,12 +1,13 @@
-use tauri::State;
+use crate::{
+    app_state::ManagerExt, cluster_profiles::ClusterProfileRegistry, frontend_types::BackendError,
+};
 
-use crate::frontend_types::BackendError;
-
-use super::cluster_profile_registry::{ClusterProfileId, ClusterProfileRegistryState};
+use super::cluster_profile_registry::ClusterProfileId;
 
 #[tauri::command]
 pub fn list_cluster_profiles(
-    cluster_profile_registry: State<'_, ClusterProfileRegistryState>,
+    app: tauri::AppHandle,
 ) -> Result<Vec<(ClusterProfileId, String)>, BackendError> {
-    Ok(cluster_profile_registry.get_profiles())
+    let registry = app.state::<ClusterProfileRegistry>();
+    Ok(registry.get_profiles())
 }

@@ -13,7 +13,7 @@ type CommonFields = {
     sortableValue: string
 }
 
-export type ViewComponent =
+export type PresentationComponent =
     {
         kind: "Text",
         args: {
@@ -50,7 +50,7 @@ export type ViewComponent =
         }
     } & CommonFields;
 
-export type OkData = { "Ok": ViewComponent };
+export type OkData = { "Ok": PresentationComponent };
 export type ErrData = { "Err": string };
 export type ColumnData = (OkData | ErrData)[];
 
@@ -65,7 +65,7 @@ export type DisplayableResource = {
     uid: string,
     namespace: string,
     name: string,
-    columns: ViewComponent[]
+    columns: PresentationComponent[]
 }
 
 export type ColumnDefinition = {
@@ -91,7 +91,7 @@ export type WatchEvent =
         }
     }
 
-export type ResourceViewData = {
+export type ResourcePresentationData = {
     [key: string]: DisplayableResource
 };
 
@@ -114,13 +114,13 @@ function resourceToDisplayableResource(resource: Resource): DisplayableResource 
     });
 }
 
-export default function useKubernetesResourceWatch(contextSource: KubeContextSource, gvk: Gvk | undefined, viewName: string, namespace: string): [ColumnDefinition[], ResourceViewData] {
+export default function useKubernetesResourceWatch(contextSource: KubeContextSource, gvk: Gvk | undefined, presentationName: string, namespace: string): [ColumnDefinition[], ResourcePresentationData] {
     const [columnDefinitions, setColumnDefinitions] = useState<ColumnDefinition[]>([]);
-    const [resources, setResources] = useState<ResourceViewData>({});
+    const [resources, setResources] = useState<ResourcePresentationData>({});
 
     useEffect(() => {
         if (gvk === undefined) return;
-        if (viewName === '') return;
+        if (presentationName === '') return;
 
         const channel = new Channel<WatchEvent>();
 
@@ -154,7 +154,7 @@ export default function useKubernetesResourceWatch(contextSource: KubeContextSou
         setResources({});
         setColumnDefinitions([]);
 
-        invoke('watch_gvk_with_view', { contextSource, gvk, channel, viewName, namespace })
+        invoke('watch_gvk_with_presentation', { contextSource, gvk, channel, presentationName, namespace })
             .catch(e => {
                 if (e === 'BackgroundTaskRejected') return;
                 alert("blubb" + e);
@@ -163,7 +163,7 @@ export default function useKubernetesResourceWatch(contextSource: KubeContextSou
         return () => {
             void invoke('cleanup_channel', { channel });
         };
-    }, [gvk, contextSource, viewName, namespace]);
+    }, [gvk, contextSource, presentationName, namespace]);
 
     return [columnDefinitions, resources];
 }

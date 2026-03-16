@@ -1,9 +1,16 @@
-use std::{collections::HashMap, fs::OpenOptions, path::PathBuf, sync::Arc};
+use std::{
+    collections::HashMap,
+    fs::OpenOptions,
+    path::PathBuf,
+    sync::{Arc, RwLock},
+};
 
 use scan_dir::ScanDir;
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager};
 use tracing::{error, info};
+
+use crate::app_state::ManagedState;
 
 #[derive(Eq, Hash, PartialEq, Clone, Serialize, Deserialize, Debug)]
 pub struct ClusterProfileId(String);
@@ -16,19 +23,21 @@ impl std::fmt::Display for ClusterProfileId {
 
 pub struct ClusterProfileRegistry {
     app_handle: AppHandle,
-    profiles: HashMap<ClusterProfileId, (String, PathBuf)>,
+    profiles: RwLock<HashMap<ClusterProfileId, (String, PathBuf)>>,
 }
 
-pub type ClusterProfileRegistryState = Arc<ClusterProfileRegistry>;
+impl ManagedState for ClusterProfileRegistry {
+    type WrappedState = Arc<ClusterProfileRegistry>;
+
+    fn build(app: tauri::AppHandle) -> Self::WrappedState {
+        Arc::new(Self {
+            app_handle: app,
+            profiles: RwLock::new(HashMap::new()),
+        })
+    }
+}
 
 impl ClusterProfileRegistry {
-    pub fn new(app_handle: AppHandle) -> Self {
-        Self {
-            app_handle,
-            profiles: HashMap::new(),
-        }
-    }
-
     pub fn ensure_default_profile(&self) -> Result<(), std::io::Error> {
         let profiles_dir = {
             let mut path = get_cluster_profiles_dir(&self.app_handle).unwrap();
@@ -45,7 +54,7 @@ impl ClusterProfileRegistry {
         Ok(())
     }
 
-    pub fn scan_profiles(&mut self) {
+    pub fn scan_profiles(&self) {
         let profiles_dir = get_cluster_profiles_dir(&self.app_handle).unwrap();
 
         let profile_paths: Vec<PathBuf> = ScanDir::files()
@@ -54,12 +63,13 @@ impl ClusterProfileRegistry {
             })
             .unwrap();
 
-        self.profiles.clear();
+        let mut profiles = self.profiles.write().unwrap();
+        profiles.clear();
 
         for path in profile_paths {
             let display_name = path.file_name().unwrap().to_string_lossy().to_string();
 
-            self.profiles
+            profiles
                 .entry(ClusterProfileId(display_name.clone()))
                 .or_insert((display_name, path));
         }
@@ -68,7 +78,9 @@ impl ClusterProfileRegistry {
     }
 
     pub fn get_profiles(&self) -> Vec<(ClusterProfileId, String)> {
-        self.profiles
+        let profiles = self.profiles.read().unwrap();
+
+        profiles
             .iter()
             .map(|profile| {
                 let id = profile.0.clone();

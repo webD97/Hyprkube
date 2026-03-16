@@ -1,12 +1,12 @@
 use futures::StreamExt as _;
 use k8s_openapi::api::core::v1::Namespace;
 use serde::Serialize;
-use tauri::State;
 use tracing::{error, info};
 
 use crate::{
-    app_state::JoinHandleStoreState, cluster_discovery::ClusterRegistryState,
-    frontend_commands::KubeContextSource, frontend_types::BackendError,
+    app_state::{ChannelTasks, ClusterStateRegistry, ManagerExt as _},
+    frontend_commands::KubeContextSource,
+    frontend_types::BackendError,
     internal::resources::ResourceWatchStreamEvent,
 };
 
@@ -20,17 +20,19 @@ pub enum WatchNamespacesEvent {
 #[tauri::command]
 #[tracing::instrument(skip_all, fields(request_id = tracing::field::Empty))]
 pub async fn watch_namespaces(
-    clusters: State<'_, ClusterRegistryState>,
+    app: tauri::AppHandle,
     context_source: KubeContextSource,
-    join_handle_store: State<'_, JoinHandleStoreState>,
     channel: tauri::ipc::Channel<WatchNamespacesEvent>,
 ) -> Result<(), BackendError> {
     crate::internal::tracing::set_span_request_id();
 
+    let clusters = app.state::<ClusterStateRegistry>();
+    let channel_tasks = app.state::<ChannelTasks>();
+
     let channel_id = channel.id();
     info!("Streaming namespaces to channel {channel_id}");
 
-    let client = clusters.get(&context_source).ok_or("not found")?.client;
+    let client = clusters.client_for(&context_source)?;
 
     let api: kube::Api<Namespace> = kube::Api::all(client);
 
@@ -53,7 +55,7 @@ pub async fn watch_namespaces(
             .await;
     };
 
-    join_handle_store.submit(channel_id, stream)?;
+    channel_tasks.submit(channel_id, stream)?;
 
     Ok(())
 }

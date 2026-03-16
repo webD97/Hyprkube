@@ -2,26 +2,28 @@ use kube::{
     api::{DeleteParams, DynamicObject},
     Api,
 };
-use tauri::State;
 use tracing::info;
 
 use crate::{
-    cluster_discovery::ClusterRegistryState, frontend_commands::KubeContextSource,
+    app_state::{ClusterStateRegistry, ManagerExt as _},
+    frontend_commands::KubeContextSource,
     frontend_types::BackendError,
 };
 
 #[tauri::command]
 pub async fn delete_resource(
-    clusters: State<'_, ClusterRegistryState>,
+    app: tauri::AppHandle,
     context_source: KubeContextSource,
     gvk: kube::api::GroupVersionKind,
     namespace: &str,
     name: &str,
     dry_run: Option<bool>,
 ) -> Result<(), BackendError> {
+    let clusters = app.state::<ClusterStateRegistry>();
+
     info!("Deleting {:?} in namespace {}", gvk, namespace);
 
-    let client = clusters.get(&context_source).ok_or("not found")?.client;
+    let client = clusters.client_for(&context_source)?;
 
     // todo: Avoid discovery and use what we already have in cache
     let (api_resource, resource_capabilities) =

@@ -1,13 +1,13 @@
 use k8s_openapi::api::core::v1::Pod;
 use serde::Serialize;
-use tauri::State;
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio_util::compat::FuturesAsyncReadCompatExt;
 use tracing::info;
 
 use crate::{
-    app_state::JoinHandleStoreState, cluster_discovery::ClusterRegistryState,
-    frontend_commands::KubeContextSource, frontend_types::BackendError,
+    app_state::{ChannelTasks, ClusterStateRegistry, ManagerExt as _},
+    frontend_commands::KubeContextSource,
+    frontend_types::BackendError,
 };
 
 #[derive(Clone, Serialize)]
@@ -25,15 +25,16 @@ pub enum LogStreamEvent {
 
 #[tauri::command]
 pub async fn kube_stream_podlogs(
-    clusters: State<'_, ClusterRegistryState>,
+    app: tauri::AppHandle,
     context_source: KubeContextSource,
-    join_handle_store: State<'_, JoinHandleStoreState>,
     namespace: &str,
     name: &str,
     container: &str,
     channel: tauri::ipc::Channel<LogStreamEvent>,
 ) -> Result<(), BackendError> {
-    let client = clusters.get(&context_source).ok_or("not found")?.client;
+    let clusters = app.state::<ClusterStateRegistry>();
+    let channel_tasks = app.state::<ChannelTasks>();
+    let client = clusters.client_for(&context_source)?;
 
     let namespace = namespace.to_string();
     let name = name.to_string();
@@ -85,7 +86,7 @@ pub async fn kube_stream_podlogs(
         };
     };
 
-    join_handle_store.submit(channel_id, stream_task)?;
+    channel_tasks.submit(channel_id, stream_task)?;
 
     Ok(())
 }
