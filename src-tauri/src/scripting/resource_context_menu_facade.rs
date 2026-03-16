@@ -4,6 +4,7 @@ use std::{
     sync::{Arc, OnceLock, RwLock, Weak},
 };
 
+use kube::core::gvk::ParseGroupVersionError;
 use rhai::exported_module;
 
 use crate::{
@@ -155,7 +156,12 @@ impl ResourceContextMenuFacade {
         obj: kube::api::DynamicObject,
         tab_id: &str,
     ) -> Result<MenuBlueprint, ResourceContextMenuError> {
-        let gvk = obj.types.as_ref().unwrap().gvk();
+        let gvk = obj
+            .types
+            .as_ref()
+            .unwrap()
+            .try_gvk()
+            .map_err(ResourceContextMenuError::InvalidKubeApiVersion)?;
         let obj = rhai::serde::to_dynamic(obj)?;
 
         let mut menu_stack =
@@ -315,6 +321,9 @@ pub enum ResourceContextMenuError {
 
     #[error("No menu action with id {0}")]
     NoSuchMenuAction(String),
+
+    #[error("Invalid apiVersion: {0}")]
+    InvalidKubeApiVersion(ParseGroupVersionError),
 
     #[error("Error evaluating script: {0}")]
     EvaluationResult(#[from] Box<rhai::EvalAltResult>),

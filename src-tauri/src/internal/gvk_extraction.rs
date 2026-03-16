@@ -1,17 +1,17 @@
-use kube::api::{GroupVersionKind, TypeMeta};
+use kube::{
+    api::{GroupVersionKind, TypeMeta},
+    core::{gvk::ParseGroupVersionError, GroupVersion},
+};
 
 pub trait GvkExtraction {
-    fn gvk(&self) -> GroupVersionKind;
+    fn try_gvk(&self) -> Result<GroupVersionKind, ParseGroupVersionError>;
 }
 
 impl GvkExtraction for TypeMeta {
-    fn gvk(&self) -> GroupVersionKind {
-        let (group, version) = match self.api_version.split_once('/') {
-            Some((g, v)) => (g, v),
-            None => ("", self.api_version.as_str()),
-        };
+    fn try_gvk(&self) -> Result<GroupVersionKind, ParseGroupVersionError> {
+        let gv = self.api_version.parse::<GroupVersion>()?;
 
-        GroupVersionKind::gvk(group, version, &self.kind)
+        Ok(GroupVersionKind::gvk(&gv.group, &gv.version, &self.kind))
     }
 }
 
@@ -28,7 +28,7 @@ mod tests {
             kind: "Pod".into(),
         };
 
-        let gvk = meta.gvk();
+        let gvk = meta.try_gvk().unwrap();
 
         assert_eq!("", gvk.group);
         assert_eq!("v1", gvk.version);
@@ -42,7 +42,7 @@ mod tests {
             kind: "GiantRubberBand".into(),
         };
 
-        let gvk = meta.gvk();
+        let gvk = meta.try_gvk().unwrap();
 
         assert_eq!("acme.com", gvk.group);
         assert_eq!("v1", gvk.version);

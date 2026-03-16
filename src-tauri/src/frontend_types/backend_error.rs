@@ -1,7 +1,11 @@
 use crate::{
-    app_state::Rejected, frontend_commands::KubeContextSource,
+    app_state::Rejected,
+    frontend_commands::KubeContextSource,
     persistence::discovery_cache_service,
-    scripting::resource_context_menu_facade::ResourceContextMenuError,
+    scripting::{
+        resource_context_menu_facade::ResourceContextMenuError,
+        resource_presentation_facade::ResourcePresentationError,
+    },
 };
 
 #[derive(thiserror::Error, Debug)]
@@ -29,6 +33,9 @@ pub enum BackendError {
 
     #[error(transparent)]
     ResourceContextMenu(#[from] ResourceContextMenuError),
+
+    #[error(transparent)]
+    ResourcePresentationError(#[from] ResourcePresentationError),
 
     #[error("{0}")]
     Generic(String),
