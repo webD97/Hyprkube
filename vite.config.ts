@@ -24,11 +24,14 @@ export default defineConfig({
     },
   },
   build: {
-    rollupOptions: {
+    rolldownOptions: {
       output: {
-        manualChunks: {
-          xterm: ['@xterm/xterm', '@xterm/addon-fit', '@xterm/addon-webgl'],
-          monaco: ['@monaco-editor/react', '@monaco-editor/loader', 'monaco-editor']
+        codeSplitting: {
+          groups: [
+            { name: 'antd', test: /antd/ },
+            { name: "xterm", test: /@xterm\/.+/ },
+            { name: "monaco", test: /@xterm-editor\/.+|monaco-editor/ },
+          ]
         }
       }
     }
