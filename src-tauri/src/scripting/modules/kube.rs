@@ -50,27 +50,6 @@ where
         let client = client.clone();
         let discovery = Arc::clone(&discovery);
 
-        FuncRegistration::new("get").set_into_module(
-            &mut kube_module,
-            move |api_version: &str, kind: &str, name: &str| -> EvalResult<rhai::Map> {
-                let discovery = discovery();
-                let discovery = &get_cache(discovery)?;
-
-                block_on(async {
-                    let ar = api_resource_for(api_version, kind, discovery)?;
-                    let api: Api<DynamicObject> = Api::all_with(client.clone(), &ar);
-                    let resource = api.get(name).await.map_err(|e| e.to_string())?;
-
-                    Ok(rhai::serde::to_dynamic(resource)?.cast::<rhai::Map>())
-                })
-            },
-        );
-    }
-
-    {
-        let client = client.clone();
-        let discovery = Arc::clone(&discovery);
-
         FuncRegistration::new("delete").set_into_module(
             &mut kube_module,
             move |api_version: &str, kind: &str, namespace: &str, name: &str| -> EvalResult<()> {
