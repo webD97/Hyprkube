@@ -71,7 +71,6 @@ pub async fn watch_gvk_with_presentation(
         },
     };
 
-    // let views = Arc::clone(&views);
     let views = clusters.presentation_scripting_for(&context_source)?;
 
     let stream = async move {
