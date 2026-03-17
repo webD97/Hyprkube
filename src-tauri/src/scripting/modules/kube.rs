@@ -53,13 +53,16 @@ where
         FuncRegistration::new("delete").set_into_module(
             &mut kube_module,
             move |api_version: &str, kind: &str, namespace: &str, name: &str| -> EvalResult<()> {
+                let client = client.clone();
                 let discovery = discovery();
                 let discovery = &get_cache(discovery)?;
 
                 block_on(async {
                     let ar = api_resource_for(api_version, kind, discovery)?;
-                    let api: Api<DynamicObject> =
-                        Api::namespaced_with(client.clone(), namespace, &ar);
+                    let api: Api<DynamicObject> = match namespace {
+                        "" => Api::all_with(client, &ar),
+                        namespace => Api::namespaced_with(client, namespace, &ar),
+                    };
 
                     api.delete(name, &DeleteParams::default())
                         .await

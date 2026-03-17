@@ -90,10 +90,10 @@ fn DeleteResource(obj) {
         action: |ctx| {
             let api_version = obj.apiVersion;
             let kind = obj.kind;
-            let namespace = obj.metadata?.namespace;
+            let namespace = obj.metadata?.namespace ?? "";
             let name = obj.metadata?.name;
 
-            print(`Deleting ${api_version}/${kind} "${name}" in namespace ${namespace}`);
+            print(`Deleting ${api_version}/${kind} "${name}" in namespace "${namespace}"`);
             kube::delete(api_version, kind, namespace, name);
         }
     })
