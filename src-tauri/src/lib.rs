@@ -7,6 +7,7 @@ mod cluster_profiles;
 mod frontend_commands;
 mod frontend_types;
 mod internal;
+// mod kubers;
 mod logging;
 mod panic_handler;
 mod persistence;
