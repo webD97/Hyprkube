@@ -1,5 +1,6 @@
 use futures::{Stream, StreamExt as _};
 use kube::{
+    core::table::Table,
     runtime::{
         watcher::{self, Event, InitialListStrategy},
         WatchStreamExt as _,
@@ -24,6 +25,40 @@ where
     K: Resource + Clone + DeserializeOwned + std::fmt::Debug + Send + 'static,
 {
     kube::runtime::watcher(
+        api.clone(),
+        watcher::Config {
+            initial_list_strategy: determine_initial_list_strategy(api.into_client()).await,
+            ..Default::default()
+        },
+    )
+    .default_backoff()
+    .filter_map(|obj| async move {
+        match obj {
+            Ok(Event::Init) => {
+                debug!("Watch init");
+                None
+            }
+            Ok(Event::InitDone) => {
+                debug!("Watch init done");
+                None
+            }
+            Ok(Event::InitApply(obj)) | Ok(Event::Apply(obj)) => {
+                Some(ResourceWatchStreamEvent::Applied { resource: obj })
+            }
+            Ok(Event::Delete(obj)) => Some(ResourceWatchStreamEvent::Deleted { resource: obj }),
+            Err(e) => {
+                error!("Watch error: {e}");
+                None
+            }
+        }
+    })
+}
+
+pub async fn watch_table<K>(api: Api<K>) -> impl Stream<Item = ResourceWatchStreamEvent<Table<K>>>
+where
+    K: Resource + Clone + DeserializeOwned + std::fmt::Debug + Send + 'static,
+{
+    kube::runtime::table_watcher(
         api.clone(),
         watcher::Config {
             initial_list_strategy: determine_initial_list_strategy(api.into_client()).await,

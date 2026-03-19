@@ -8,9 +8,6 @@ use k8s_openapi::apiextensions_apiserver::pkg::apis::apiextensions::v1::CustomRe
 use kube::api::GroupVersionKind;
 
 use crate::{
-    app_state::{ClusterStateRegistry, ManagerExt as _},
-    cluster_discovery::ClusterDiscovery,
-    frontend_commands::KubeContextSource,
     resource_rendering::{
         CrdRenderer, FallbackRenderer, ResourceColumnDefinition, ResourceRenderer,
     },
@@ -36,16 +33,14 @@ struct ResourcePresentationDefinition {
 }
 
 pub struct ResourcePresentationFacade {
-    app: tauri::AppHandle,
     scripts: RwLock<HashMap<PathBuf, ContentScript>>,
     engine: Arc<rhai::Engine>,
     registered_presentations: RwLock<Vec<ResourcePresentationDefinition>>,
 }
 
 impl ResourcePresentationFacade {
-    pub fn new(app: tauri::AppHandle) -> Arc<Self> {
+    pub fn new() -> Arc<Self> {
         Arc::new_cyclic(|weak| Self {
-            app,
             engine: Self::make_engine(weak.clone()),
             scripts: RwLock::new(HashMap::new()),
             registered_presentations: RwLock::new(Vec::new()),
@@ -120,18 +115,9 @@ impl ResourcePresentationFacade {
     /// Returns the names of all available renderers for the given GVK
     pub fn get_renderers(
         &self,
-        context_source: &KubeContextSource,
         gvk: &GroupVersionKind,
     ) -> Result<Vec<String>, ResourcePresentationError> {
-        let clusters = self.app.state::<ClusterStateRegistry>();
-        let discovery = clusters.discovery_for(context_source).unwrap();
-
         let registered_presentations = self.registered_presentations.read().unwrap();
-
-        let crds: Vec<GroupVersionKind> = match &*discovery {
-            ClusterDiscovery::Inflight(_) => Vec::new(),
-            ClusterDiscovery::Completed(resources) => resources.crds.keys().cloned().collect(),
-        };
 
         let renderers = registered_presentations
             .iter()
@@ -152,12 +138,12 @@ impl ResourcePresentationFacade {
                     .expect("handle me")
             })
             .map(|presentation| presentation.title.clone())
-            .chain({
-                crds.contains(gvk)
-                    .then(|| "Custom resource default".to_owned())
-                    .into_iter()
-            })
-            .chain(std::iter::once("Simple list".to_owned()))
+            // .chain({
+            //     crds.contains(gvk)
+            //         .then(|| "Custom resource default".to_owned())
+            //         .into_iter()
+            // })
+            // .chain(std::iter::once("Simple list".to_owned()))
             .collect();
 
         Ok(renderers)
