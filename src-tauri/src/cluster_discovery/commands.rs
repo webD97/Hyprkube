@@ -109,7 +109,7 @@ pub async fn connect_cluster(
 
         let client = make_client(&context_source).await?;
 
-        let resource_presentation_facade = ResourcePresentationFacade::new(app.clone());
+        let resource_presentation_facade = ResourcePresentationFacade::new();
         resource_presentation_facade.evaluate(&scripts_provider)?;
 
         let context_menu_facade = ResourceContextMenuFacade::new(app.clone(), client.clone());
