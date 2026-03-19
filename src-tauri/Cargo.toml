@@ -22,7 +22,12 @@ tauri-build = { version = "2.5.1", features = [] }
 serde_json = "1.0.149"
 serde = { version = "1.0.228", features = ["derive"] }
 tauri = { version = "2.10.3", features = [] }
-kube = { version = "3.1.0", features = ["runtime", "client", "ws", "gzip"] }
+kube = { git = "https://github.com/webd97/kube.git", branch = "experimental", version = "3.0.1", features = [
+    "runtime",
+    "client",
+    "ws",
+    "gzip",
+] }
 k8s-openapi = { version = "0.27.1", features = ["v1_34"] }
 futures = { version = "0.3.32" }
 tokio = { version = "1.50.0" }
@@ -65,3 +70,8 @@ custom-protocol = ["tauri/custom-protocol"]
 [profile.release]
 lto = true
 codegen-units = 1
+
+[patch.crates-io]
+kube = { git = "https://github.com/webd97/kube.git", branch = "experimental" }
+kube-runtime = { git = "https://github.com/webd97/kube.git", branch = "experimental" }
+kube-client = { git = "https://github.com/webd97/kube.git", branch = "experimental" }
