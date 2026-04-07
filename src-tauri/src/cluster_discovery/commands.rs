@@ -4,9 +4,8 @@ use std::{
 };
 
 use futures::{Stream, StreamExt};
-use k8s_openapi::apiextensions_apiserver::pkg::apis::apiextensions::v1::CustomResourceDefinition;
 use kube::{
-    api::{GroupVersionKind, ListParams},
+    api::GroupVersionKind,
     config::{KubeConfigOptions, Kubeconfig},
 };
 use serde::Serialize;
@@ -33,7 +32,6 @@ pub enum FrontendDiscoveryEvent {
     DiscoveredResource(DiscoveredResource),
     /// A resource kind that was previously cached but vanished from the cluster (i.e. CRD uninstall)
     RemovedResource(DiscoveredResource),
-    CustomResourceDefinition((GroupVersionKind, Box<CustomResourceDefinition>)),
     DiscoveryComplete(()),
 }
 
@@ -42,9 +40,6 @@ impl From<&InternalDiscoveryEvent> for FrontendDiscoveryEvent {
         match value {
             InternalDiscoveryEvent::DiscoveredResource(resource) => {
                 FrontendDiscoveryEvent::DiscoveredResource(resource.clone())
-            }
-            InternalDiscoveryEvent::CustomResourceDefinition(inner) => {
-                FrontendDiscoveryEvent::CustomResourceDefinition(inner.clone())
             }
             InternalDiscoveryEvent::DiscoveryComplete(_) => {
                 FrontendDiscoveryEvent::DiscoveryComplete(())
@@ -56,7 +51,6 @@ impl From<&InternalDiscoveryEvent> for FrontendDiscoveryEvent {
 pub enum InternalDiscoveryEvent {
     /// A resource kind that was either discovered from the cluster or read from cache
     DiscoveredResource(DiscoveredResource),
-    CustomResourceDefinition((GroupVersionKind, Box<CustomResourceDefinition>)),
     DiscoveryComplete(kube::Discovery),
 }
 
@@ -148,7 +142,6 @@ pub async fn connect_cluster(
 
         let mut confirmed_resources = HashSet::new();
         let mut resources: HashMap<GroupVersionKind, DiscoveredResource> = HashMap::new();
-        let mut crds: HashMap<GroupVersionKind, CustomResourceDefinition> = HashMap::new();
 
         let mut discovery_stream = std::pin::pin!(online_discovery(client.clone()));
         let mut kube_discovery: Option<Arc<kube::Discovery>> = None;
@@ -171,17 +164,6 @@ pub async fn connect_cluster(
 
                     // Forward to frontend
                     channel.send(FrontendDiscoveryEvent::DiscoveredResource(resource))?;
-                }
-                InternalDiscoveryEvent::CustomResourceDefinition((gvk, crd)) => {
-                    crds.entry(gvk.clone()).insert_entry(*crd.clone());
-                    // Forward to inflight cache
-                    inflight.send(FrontendDiscoveryEvent::CustomResourceDefinition((
-                        gvk.clone(),
-                        crd.clone(),
-                    )));
-
-                    // Forward to frontend
-                    channel.send(FrontendDiscoveryEvent::CustomResourceDefinition((gvk, crd)))?;
                 }
                 InternalDiscoveryEvent::DiscoveryComplete(discovery) => {
                     kube_discovery = Some(Arc::new(discovery))
@@ -207,7 +189,7 @@ pub async fn connect_cluster(
             tracing::warn!("Error updating resource cache: {}", e);
         }
 
-        let result = CompletedDiscovery { resources, crds };
+        let result = CompletedDiscovery { resources };
 
         // Ugly but works for now
         let previous_state = clusters.unmanage(&context_source).unwrap();
@@ -341,27 +323,6 @@ fn online_discovery(
             }
         }
         tracing::debug!("Finished discovery of custom resources");
-
-        // Cache custom resource definitions
-        tracing::info!("Starting caching of custom resource definitions");
-        {
-            let api: kube::Api<CustomResourceDefinition> = kube::Api::all(client.clone());
-            let crd_list = api.list(&ListParams::default()).await?;
-
-            // Handle groups for custom resources
-            for crd in crd_list.items {
-                let latest = crd.spec.versions.first();
-
-                if let Some(latest) = latest {
-                    let gvk = GroupVersionKind::gvk(&crd.spec.group, &latest.name, &crd.spec.names.kind);
-                    yield Ok(InternalDiscoveryEvent::CustomResourceDefinition((gvk, Box::new(crd))));
-                } else {
-                    tracing::error!("CustomResourceDefinition {}.{} has no versions.", crd.spec.names.kind, crd.spec.group);
-                    continue;
-                }
-            }
-        }
-        tracing::debug!("Finished caching of custom resource definitions");
 
         yield Ok(InternalDiscoveryEvent::DiscoveryComplete(full_discovery));
     }
