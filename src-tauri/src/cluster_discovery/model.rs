@@ -4,7 +4,6 @@ use std::{
 };
 
 use futures::Stream;
-use k8s_openapi::apiextensions_apiserver::pkg::apis::apiextensions::v1::CustomResourceDefinition;
 use kube::api::GroupVersionKind;
 use serde::{Deserialize, Serialize};
 use tokio::sync::broadcast;
@@ -54,7 +53,6 @@ impl From<kube::discovery::Scope> for Scope {
 #[derive(Clone, Debug, PartialEq)]
 pub struct CompletedDiscovery {
     pub resources: HashMap<GroupVersionKind, DiscoveredResource>,
-    pub crds: HashMap<GroupVersionKind, CustomResourceDefinition>,
 }
 
 #[derive(Clone)]
