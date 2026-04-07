@@ -7,12 +7,10 @@ mod cluster_profiles;
 mod frontend_commands;
 mod frontend_types;
 mod internal;
-// mod kubers;
 mod logging;
 mod panic_handler;
 mod persistence;
 mod resource_menu;
-mod resource_rendering;
 mod scripting;
 
 use app_state::{ChannelTasks, ExecSessions};
