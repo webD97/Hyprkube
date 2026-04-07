@@ -4,26 +4,27 @@ use std::{
     sync::{Arc, RwLock, Weak},
 };
 
-use k8s_openapi::apiextensions_apiserver::pkg::apis::apiextensions::v1::CustomResourceDefinition;
 use kube::api::GroupVersionKind;
+use serde::Serialize;
 
-use crate::{
-    resource_rendering::{
-        CrdRenderer, FallbackRenderer, ResourceColumnDefinition, ResourceRenderer,
-    },
-    scripting::{
-        scripts_provider::{self, ScriptType, ScriptsProvider},
-        types::{
-            commons::ContentScript,
-            resource_context_menus::ColumnTemplate,
-            resource_presentations::{
-                ColoredBox, ColoredBoxes, Hyperlink, RelativeTime, ResourcePresentation,
-                ResourcePresentationField, Text,
-            },
-            ResourceRef,
+use crate::scripting::{
+    scripts_provider::{self, ScriptType, ScriptsProvider},
+    types::{
+        commons::ContentScript,
+        resource_context_menus::ColumnTemplate,
+        resource_presentations::{
+            ColoredBox, ColoredBoxes, Hyperlink, RelativeTime, ResourcePresentation,
+            ResourcePresentationField, Text,
         },
+        ResourceRef,
     },
 };
+
+#[derive(Clone, Serialize)]
+pub struct ResourceColumnDefinition {
+    pub title: String,
+    pub filterable: bool,
+}
 
 struct ResourcePresentationDefinition {
     title: String,
@@ -138,49 +139,23 @@ impl ResourcePresentationFacade {
                     .expect("handle me")
             })
             .map(|presentation| presentation.title.clone())
-            // .chain({
-            //     crds.contains(gvk)
-            //         .then(|| "Custom resource default".to_owned())
-            //         .into_iter()
-            // })
-            // .chain(std::iter::once("Simple list".to_owned()))
             .collect();
 
         Ok(renderers)
     }
 
-    pub async fn get_renderer(
-        &self,
-        _gvk: &GroupVersionKind,
-        presentation: &str,
-    ) -> Box<dyn ResourceRenderer> {
-        let generic_renderer = FallbackRenderer {};
-        let crd_renderer = CrdRenderer {};
-
-        if presentation == generic_renderer.display_name() {
-            return Box::new(generic_renderer) as Box<dyn ResourceRenderer>;
-        } else if presentation == crd_renderer.display_name() {
-            return Box::new(crd_renderer) as Box<dyn ResourceRenderer>;
-        }
-
+    pub async fn get_renderer(&self, presentation: &str) -> Option<ScriptedRenderer> {
         let registered_presentations = self.registered_presentations.read().unwrap();
 
         let presentation = registered_presentations
             .iter()
             .find(|p| p.title == presentation);
 
-        if presentation.is_none() {
-            return Box::new(generic_renderer) as Box<dyn ResourceRenderer>;
-        }
-
-        let presentation = presentation.unwrap();
-
-        Box::new(ScriptedRenderer {
-            title: presentation.title.clone(),
+        presentation.map(|presentation| ScriptedRenderer {
             templates: presentation.columns.clone(),
             engine: Arc::clone(&self.engine),
             ast: Arc::clone(&presentation.ast),
-        }) as Box<dyn ResourceRenderer>
+        })
     }
 
     pub fn evaluate(
@@ -236,26 +211,16 @@ pub enum ResourcePresentationError {
     Matcher(Box<rhai::EvalAltResult>),
 }
 
-struct ScriptedRenderer {
-    title: String,
+pub struct ScriptedRenderer {
     templates: Vec<ColumnTemplate>,
     engine: Arc<rhai::Engine>,
     ast: Arc<rhai::AST>,
 }
 
-impl ResourceRenderer for ScriptedRenderer {
-    fn display_name(&self) -> &str {
-        &self.title
-    }
-
-    fn column_definitions(
+impl ScriptedRenderer {
+    pub fn column_definitions(
         &self,
-        _gvk: &GroupVersionKind,
-        _crd: Option<&k8s_openapi::apiextensions_apiserver::pkg::apis::apiextensions::v1::CustomResourceDefinition>,
-    ) -> Result<
-        Vec<crate::resource_rendering::ResourceColumnDefinition>,
-        crate::frontend_types::BackendError,
-    > {
+    ) -> Result<Vec<ResourceColumnDefinition>, crate::frontend_types::BackendError> {
         Ok(self
             .templates
             .iter()
@@ -266,10 +231,8 @@ impl ResourceRenderer for ScriptedRenderer {
             .collect())
     }
 
-    fn render(
+    pub fn render(
         &self,
-        _gvk: &GroupVersionKind,
-        _crd: Option<&CustomResourceDefinition>,
         obj: &kube::api::DynamicObject,
     ) -> Result<Vec<Result<ResourcePresentationField, String>>, crate::frontend_types::BackendError>
     {

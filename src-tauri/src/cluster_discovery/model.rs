@@ -112,11 +112,4 @@ impl InflightDiscovery {
         // When there are no subscribers, the replay logic in `subscribe` will kick in.
         let _ = self.tx.send(value);
     }
-
-    pub async fn block_until_done(&self) -> anyhow::Result<CompletedDiscovery> {
-        Ok(CompletedDiscovery {
-            resources: HashMap::new(),
-            crds: HashMap::new(),
-        })
-    }
 }

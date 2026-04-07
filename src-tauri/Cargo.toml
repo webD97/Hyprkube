@@ -44,7 +44,6 @@ rhai = { version = "1.24.0", features = [
 dirs = "6.0.0"
 scan_dir = "0.3.3"
 tauri-plugin-shell = "2.3.5"
-serde_json_path = "0.7.2"
 tauri-plugin-dialog = "2.7.0"
 tauri-plugin-store = "2.4.2"
 serde_yaml = "0.9.34-deprecated"
@@ -58,7 +57,6 @@ anyhow = "1.0.102"
 async-stream = "0.3.6"
 tokio-stream = "0.1.18"
 tauri-plugin-clipboard-manager = "2"
-async-trait = "0.1.89"
 base64 = "0.22.1"
 
 [features]

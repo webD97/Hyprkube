@@ -1,20 +1,18 @@
-use std::collections::HashMap;
-
 use futures::StreamExt as _;
-use k8s_openapi::apiextensions_apiserver::pkg::apis::apiextensions::v1::CustomResourceDefinition;
-use kube::api::{DynamicObject, GroupVersionKind};
+use kube::api::DynamicObject;
 use serde::Serialize;
 use serde_json::json;
 use tracing::{error, info};
 
 use crate::{
     app_state::{ChannelTasks, ClusterStateRegistry, ManagerExt},
-    cluster_discovery::ClusterDiscovery,
     frontend_commands::{KubeContextSource, SERVER_SIDE_PRESENTATION},
     frontend_types::BackendError,
     internal::resources::ResourceWatchStreamEvent,
-    resource_rendering::ResourceColumnDefinition,
-    scripting::types::resource_presentations::PresentationComponent,
+    scripting::{
+        resource_presentation_facade::ResourceColumnDefinition,
+        types::resource_presentations::PresentationComponent,
+    },
 };
 
 #[derive(Clone, Serialize)]
@@ -56,7 +54,6 @@ pub async fn watch_gvk_with_presentation(
     let channel_id = channel.id();
     info!("Streaming {gvk:?} in namespace {namespace} to channel {channel_id}");
 
-    let discovery = clusters.discovery_for(&context_source)?;
     let client = clusters.client_for(&context_source)?;
 
     let (api_resource, resource_capabilities) =
@@ -75,13 +72,6 @@ pub async fn watch_gvk_with_presentation(
     let views = clusters.presentation_scripting_for(&context_source)?;
 
     let stream = async move {
-        let view = views.get_renderer(&gvk, presentation_name.as_str()).await;
-
-        let crds: HashMap<GroupVersionKind, CustomResourceDefinition> = match &*discovery {
-            ClusterDiscovery::Inflight(inflight) => inflight.block_until_done().await.unwrap().crds,
-            ClusterDiscovery::Completed(resources) => resources.crds.clone(),
-        };
-
         let table_mode = presentation_name.as_str() == SERVER_SIDE_PRESENTATION;
 
         if table_mode {
@@ -201,8 +191,11 @@ pub async fn watch_gvk_with_presentation(
                 })
                 .await;
         } else {
-            let crd = crds.get(&gvk);
-            let column_definitions = view.column_definitions(&gvk, crd).unwrap();
+            let view = views
+                .get_renderer(presentation_name.as_str())
+                .await
+                .expect("handle me");
+            let column_definitions = view.column_definitions().unwrap();
 
             channel
                 .send(ResourceEvent::AnnounceColumns {
@@ -218,7 +211,7 @@ pub async fn watch_gvk_with_presentation(
                         namespace: resource.metadata.namespace.clone().unwrap_or_default(),
                         name: resource.metadata.name.clone().unwrap_or_default(),
                         columns: view
-                            .render(&gvk, crd, &resource)
+                            .render(&resource)
                             .unwrap()
                             .into_iter()
                             .map(|value| value.map(|inner| inner.into()))
