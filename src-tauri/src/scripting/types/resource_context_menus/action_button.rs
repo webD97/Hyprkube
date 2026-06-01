@@ -1,4 +1,4 @@
-use rhai::{CustomType, Dynamic, EvalAltResult, TypeBuilder};
+use rhai::EvalAltResult;
 
 #[derive(Clone, Debug, rhai::CustomType)]
 #[rhai_type(extra = Self::build_extra)]

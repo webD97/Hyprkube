@@ -1,4 +1,4 @@
-use rhai::{CustomType, Dynamic, EvalAltResult, TypeBuilder};
+use rhai::EvalAltResult;
 
 use crate::scripting::types::resource_context_menus::ColumnTemplate;
 
@@ -65,6 +65,8 @@ impl TryFrom<rhai::Map> for ResourcePresentation {
 
 #[cfg(test)]
 mod tests {
+    use rhai::Dynamic;
+
     use super::*;
 
     #[test]

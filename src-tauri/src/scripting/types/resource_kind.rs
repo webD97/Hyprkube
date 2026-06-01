@@ -1,5 +1,5 @@
 use kube::{api::GroupVersionKind, core::gvk::ParseGroupVersionError};
-use rhai::{CustomType, EvalAltResult, TypeBuilder};
+use rhai::EvalAltResult;
 use serde::Serialize;
 
 #[derive(Clone, Debug, rhai::CustomType, Serialize)]

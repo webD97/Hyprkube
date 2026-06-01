@@ -1,4 +1,4 @@
-use rhai::{CustomType, Dynamic, EvalAltResult, TypeBuilder};
+use rhai::EvalAltResult;
 use serde::Serialize;
 
 #[derive(Clone, Debug, rhai::CustomType, Serialize)]

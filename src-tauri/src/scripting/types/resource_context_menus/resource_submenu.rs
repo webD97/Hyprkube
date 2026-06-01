@@ -1,4 +1,4 @@
-use rhai::{CustomType, EvalAltResult, TypeBuilder};
+use rhai::EvalAltResult;
 
 use crate::scripting::types::ResourceRef;
 

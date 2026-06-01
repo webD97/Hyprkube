@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use rhai::{CustomType, Dynamic, EvalAltResult, Position, TypeBuilder};
+use rhai::CustomType;
 use serde::Serialize;
 
 use crate::scripting::types::{
