@@ -273,8 +273,11 @@ async fn make_client(context_source: &KubeContextSource) -> anyhow::Result<kube:
 
 /// Performs a discovery of available resources against the given cluster.
 ///
-/// The discovery will first try to discover builtin (i.e. non-crd) resources to optimize
-/// the user experience. CRD-based resources will be yielded after that.
+/// A single aggregated discovery (`kube::Discovery::run_aggregated`) is run up front, so the
+/// time-to-first-event is the cost of that full discovery — this does not optimize latency by
+/// fetching builtins separately. Once it completes, events are yielded in a stable order:
+/// builtin (non-CRD) resources first, then custom resources, then the cached
+/// `CustomResourceDefinition`s, and finally a `DiscoveryComplete` event.
 fn online_discovery(
     client: kube::Client,
 ) -> impl Stream<Item = anyhow::Result<InternalDiscoveryEvent>> {
