@@ -82,38 +82,25 @@ impl ClusterStateRegistry {
         &self,
         context_source: &KubeContextSource,
     ) -> Result<Arc<ClusterDiscovery>, BackendError> {
-        Ok(self.get_state(context_source)?.discovery.clone())
+        Ok(self.get_state(context_source)?.discovery())
     }
 
     pub fn discovery_cache_for(
         &self,
         context_source: &KubeContextSource,
     ) -> Result<Arc<kube::Discovery>, BackendError> {
-        Ok(self
-            .get_state(context_source)?
-            .kube_discovery
-            .as_ref()
-            .ok_or_else(|| BackendError::IncompleteClusterDiscovery(context_source.to_owned()))?
-            .clone())
+        self.get_state(context_source)?
+            .kube_discovery()
+            .ok_or_else(|| BackendError::IncompleteClusterDiscovery(context_source.to_owned()))
     }
 
-    pub fn manage(&self, state: ClusterState) {
-        let mut contexts = self.clusters.write().unwrap();
-        contexts
-            .entry(state.context_source.clone())
-            .insert_entry(Arc::new(state));
-    }
-
-    pub fn unmanage(
-        &self,
-        context_source: &KubeContextSource,
-    ) -> Result<ClusterState, BackendError> {
-        let mut contexts = self.clusters.write().unwrap();
-
-        let x = contexts
-            .remove(context_source)
-            .ok_or_else(|| BackendError::Unmanaged(context_source.to_owned()))?;
-
-        Ok(Arc::into_inner(x).expect("must be the only reference"))
+    /// Registers (or replaces) the state for a cluster and returns the shared handle.
+    pub fn manage(&self, state: ClusterState) -> Arc<ClusterState> {
+        let state = Arc::new(state);
+        self.clusters
+            .write()
+            .unwrap()
+            .insert(state.context_source.clone(), Arc::clone(&state));
+        state
     }
 }

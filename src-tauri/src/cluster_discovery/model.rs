@@ -63,14 +63,53 @@ pub enum ClusterDiscovery {
     Completed(CompletedDiscovery),
 }
 
-#[derive(Clone)]
 pub struct ClusterState {
     pub context_source: KubeContextSource,
     pub client: kube::Client,
-    pub discovery: Arc<ClusterDiscovery>,
-    pub kube_discovery: Option<Arc<kube::Discovery>>,
+    discovery: RwLock<Arc<ClusterDiscovery>>,
+    kube_discovery: RwLock<Option<Arc<kube::Discovery>>>,
     pub context_menu_facade: Arc<ResourceContextMenuFacade>,
     pub resource_presentation_facade: Arc<ResourcePresentationFacade>,
+}
+
+impl ClusterState {
+    pub fn new(
+        context_source: KubeContextSource,
+        client: kube::Client,
+        discovery: Arc<ClusterDiscovery>,
+        context_menu_facade: Arc<ResourceContextMenuFacade>,
+        resource_presentation_facade: Arc<ResourcePresentationFacade>,
+    ) -> Self {
+        Self {
+            context_source,
+            client,
+            discovery: RwLock::new(discovery),
+            kube_discovery: RwLock::new(None),
+            context_menu_facade,
+            resource_presentation_facade,
+        }
+    }
+
+    pub fn discovery(&self) -> Arc<ClusterDiscovery> {
+        self.discovery.read().unwrap().clone()
+    }
+
+    pub fn kube_discovery(&self) -> Option<Arc<kube::Discovery>> {
+        self.kube_discovery.read().unwrap().clone()
+    }
+
+    pub fn finalize_discovery(
+        &self,
+        result: CompletedDiscovery,
+        kube_discovery: Option<Arc<kube::Discovery>>,
+    ) {
+        if let Some(discovery) = &kube_discovery {
+            self.context_menu_facade.set_discovery(discovery.clone());
+        }
+
+        *self.kube_discovery.write().unwrap() = kube_discovery;
+        *self.discovery.write().unwrap() = Arc::new(ClusterDiscovery::Completed(result));
+    }
 }
 
 #[derive(Clone)]

@@ -118,14 +118,13 @@ pub async fn connect_cluster(
         // Attachable stuff
         let inflight = Arc::new(InflightDiscovery::new());
 
-        clusters.manage(ClusterState {
-            context_source: context_source.clone(),
-            client: client.clone(),
-            discovery: Arc::new(ClusterDiscovery::Inflight(Arc::clone(&inflight))),
-            kube_discovery: None,
+        let cluster_state = clusters.manage(ClusterState::new(
+            context_source.clone(),
+            client.clone(),
+            Arc::new(ClusterDiscovery::Inflight(Arc::clone(&inflight))),
             context_menu_facade,
             resource_presentation_facade,
-        });
+        ));
 
         // Cached part
         tracing::info!("Serving cached resources");
@@ -144,7 +143,6 @@ pub async fn connect_cluster(
 
         // Online part
         tracing::info!("Performing live-discovery against cluster");
-        let clusters = Arc::clone(&clusters);
 
         let mut confirmed_resources = HashSet::new();
         let mut resources: HashMap<GroupVersionKind, DiscoveredResource> = HashMap::new();
@@ -209,21 +207,7 @@ pub async fn connect_cluster(
 
         let result = CompletedDiscovery { resources, crds };
 
-        // Ugly but works for now
-        let previous_state = clusters.unmanage(&context_source).unwrap();
-
-        if let Some(discovery) = &kube_discovery {
-            previous_state
-                .context_menu_facade
-                .set_discovery(discovery.clone());
-        }
-
-        let next_state = ClusterState {
-            discovery: Arc::new(ClusterDiscovery::Completed(result)),
-            kube_discovery,
-            ..previous_state
-        };
-        clusters.manage(next_state);
+        cluster_state.finalize_discovery(result, kube_discovery);
 
         channel.send(FrontendDiscoveryEvent::DiscoveryComplete(()))?;
 
