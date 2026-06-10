@@ -128,14 +128,13 @@ impl<R: Runtime> ChannelTasks<R> {
     }
 
     pub fn abort_all(&self) {
-        let channels: Vec<u32> = {
-            let tasks = self.tasks.read().unwrap();
-            tasks.keys().copied().collect()
-        };
-
-        for channel_id in channels {
-            self.abort(&channel_id);
+        let mut tasks = self.tasks.write().unwrap();
+        for (_channel_id, slot) in tasks.drain() {
+            if let TaskSlot::Running(abort_handle) = slot {
+                abort_handle.abort();
+            }
         }
+        Self::emit_stats(&self.app_handle, &tasks);
     }
 
     pub fn abort(&self, channel_id: &u32) {
@@ -218,7 +217,10 @@ mod tests {
                 ran_again.store(true, Ordering::SeqCst);
             })
         };
-        assert!(result.is_ok(), "submit after the marker is consumed must succeed");
+        assert!(
+            result.is_ok(),
+            "submit after the marker is consumed must succeed"
+        );
         tokio::time::sleep(Duration::from_millis(50)).await;
         assert!(ran_again.load(Ordering::SeqCst), "second task should run");
     }
