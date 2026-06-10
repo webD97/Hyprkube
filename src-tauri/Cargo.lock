@@ -2255,7 +2255,7 @@ dependencies = [
 [[package]]
 name = "kube"
 version = "3.1.0"
-source = "git+https://github.com/webd97/kube.git?branch=experimental#12c5ef93b9e4a61a169062a3d4b5eadcad9b4d0a"
+source = "git+https://github.com/webd97/kube.git?branch=experimental#5b01fcb3e49decd914f1e1b536d5b07e1bff2bbc"
 dependencies = [
  "k8s-openapi",
  "kube-client",
@@ -2266,7 +2266,7 @@ dependencies = [
 [[package]]
 name = "kube-client"
 version = "3.1.0"
-source = "git+https://github.com/webd97/kube.git?branch=experimental#12c5ef93b9e4a61a169062a3d4b5eadcad9b4d0a"
+source = "git+https://github.com/webd97/kube.git?branch=experimental#5b01fcb3e49decd914f1e1b536d5b07e1bff2bbc"
 dependencies = [
  "base64 0.22.1",
  "bytes",
@@ -2301,7 +2301,7 @@ dependencies = [
 [[package]]
 name = "kube-core"
 version = "3.1.0"
-source = "git+https://github.com/webd97/kube.git?branch=experimental#12c5ef93b9e4a61a169062a3d4b5eadcad9b4d0a"
+source = "git+https://github.com/webd97/kube.git?branch=experimental#5b01fcb3e49decd914f1e1b536d5b07e1bff2bbc"
 dependencies = [
  "derive_more 2.1.0",
  "form_urlencoded",
@@ -2318,7 +2318,7 @@ dependencies = [
 [[package]]
 name = "kube-runtime"
 version = "3.1.0"
-source = "git+https://github.com/webd97/kube.git?branch=experimental#12c5ef93b9e4a61a169062a3d4b5eadcad9b4d0a"
+source = "git+https://github.com/webd97/kube.git?branch=experimental#5b01fcb3e49decd914f1e1b536d5b07e1bff2bbc"
 dependencies = [
  "ahash",
  "async-broadcast",
@@ -4433,7 +4433,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3a766e1110788c36f4fa1c2b71b387a7815aa65f88ce0229841826633d93723e"
 dependencies = [
  "libc",
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
