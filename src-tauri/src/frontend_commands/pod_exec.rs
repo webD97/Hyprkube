@@ -1,5 +1,3 @@
-use std::io::Read;
-
 use crate::{
     app_state::{
         ChannelTasks, ClusterStateRegistry, ExecSessionError, ExecSessionId, ExecSessions,
@@ -22,6 +20,8 @@ pub enum ExecSessionEvent {
     Bytes(Vec<u8>),
     Ready,
     End,
+    /// The session ended (or failed to start) abnormally; carries a human-readable reason.
+    Error(String),
 }
 
 pub enum ExecSessionRequest {
@@ -101,49 +101,87 @@ pub async fn pod_exec_start_session(
     let exec_session_id = consoles_state.register(request_tx).await;
 
     let exec_task = async move {
-        let mut terminal_stdout_stream =
-            ReaderStream::new(attached_process.stdout().expect("stdout must be connected"));
-        let mut terminal_stdin_writer = attached_process.stdin().expect("stdin must be connected");
-        let mut terminal_size_writer = attached_process.terminal_size().expect("must be a tty");
+        // These streams are expected to be present for an interactive TTY attach, but a
+        // missing one is a failed session, not a reason to panic the worker.
+        let (Some(stdout), Some(mut terminal_stdin_writer), Some(mut terminal_size_writer)) = (
+            attached_process.stdout(),
+            attached_process.stdin(),
+            attached_process.terminal_size(),
+        ) else {
+            let _ = session_event_channel
+                .send(ExecSessionEvent::Error("exec streams not connected".to_owned()));
+            let _ = session_event_channel.send(ExecSessionEvent::End);
+            return;
+        };
 
-        session_event_channel.send(ExecSessionEvent::Ready).unwrap();
+        let mut terminal_stdout_stream = ReaderStream::new(stdout);
+
+        // If the frontend already closed the channel, there's nobody to serve.
+        if session_event_channel.send(ExecSessionEvent::Ready).is_err() {
+            return;
+        }
+
+        // `Some(reason)` => surface an Error event before ending; `None` => clean end.
+        let mut error: Option<String> = None;
 
         loop {
             tokio::select! {
                 upstream_output = terminal_stdout_stream.try_next() => {
-                    if let Ok(Some(stdout)) = upstream_output {
-                        let data: Vec<u8> = stdout.bytes().map(|o| o.unwrap()).collect();
-                        session_event_channel.send(ExecSessionEvent::Bytes(data)).unwrap();
-                    } else {
-                        break;
+                    match upstream_output {
+                        // Process exited / stdout closed: normal end of session.
+                        Ok(None) => break,
+                        Ok(Some(stdout)) => {
+                            // Frontend went away: stop quietly.
+                            if session_event_channel.send(ExecSessionEvent::Bytes(stdout.to_vec())).is_err() {
+                                break;
+                            }
+                        },
+                        Err(e) => {
+                            error = Some(format!("error reading from container: {e}"));
+                            break;
+                        },
                     }
                 },
                 downstream_request = request_rx.recv() => {
-                    if let Some(request) = downstream_request {
-                        match request {
-                            ExecSessionRequest::Input(buf) => {
-                                terminal_stdin_writer.write_all(&buf).await.unwrap();
-                                terminal_stdin_writer.flush().await.unwrap();
-                            },
-                            ExecSessionRequest::Resize(columns, rows) => {
-                                info!("Resizing to {}x{}", columns, rows);
-                                terminal_size_writer.try_send(TerminalSize {
-                                    height: rows,
-                                    width: columns,
-                                }).unwrap();
-                            },
-                            ExecSessionRequest::Abort => {
-                                info!("Aborting exec session");
-                                attached_process.abort();
-                            },
-                        }
+                    // Request channel closed: the session was torn down.
+                    let Some(request) = downstream_request else { break; };
+
+                    match request {
+                        ExecSessionRequest::Input(buf) => {
+                            let write_result = match terminal_stdin_writer.write_all(&buf).await {
+                                Ok(()) => terminal_stdin_writer.flush().await,
+                                Err(e) => Err(e),
+                            };
+                            if let Err(e) = write_result {
+                                error = Some(format!("error writing to container: {e}"));
+                                break;
+                            }
+                        },
+                        ExecSessionRequest::Resize(columns, rows) => {
+                            info!("Resizing to {}x{}", columns, rows);
+                            // A full/closed resize channel is non-fatal — keep the session alive.
+                            if let Err(e) = terminal_size_writer.try_send(TerminalSize {
+                                height: rows,
+                                width: columns,
+                            }) {
+                                tracing::warn!("Failed to send terminal resize: {e}");
+                            }
+                        },
+                        ExecSessionRequest::Abort => {
+                            info!("Aborting exec session");
+                            attached_process.abort();
+                        },
                     }
                 },
             };
         }
 
         info!("End of loop");
-        session_event_channel.send(ExecSessionEvent::End).unwrap();
+
+        if let Some(error) = error {
+            let _ = session_event_channel.send(ExecSessionEvent::Error(error));
+        }
+        let _ = session_event_channel.send(ExecSessionEvent::End);
     };
 
     channel_tasks.submit(channel_id, exec_task)?;
