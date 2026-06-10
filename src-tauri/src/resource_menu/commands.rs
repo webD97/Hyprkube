@@ -16,9 +16,19 @@ pub async fn call_menustack_action(
 ) -> Result<(), BackendError> {
     let clusters = app.state::<ClusterStateRegistry>();
     let facade = clusters.contextmenu_scripting_for(&context_source)?;
-    facade
-        .call_menustack_action(menustack_id, action_ref)
-        .unwrap(); // todo: error should appear in some kind of "scripting console"
+
+    let menustack_id = menustack_id.to_owned();
+    let action_ref = action_ref.to_owned();
+
+    // Rhai actions may call `kube.*`, which blocks the thread for the round-trip. Run on the
+    // blocking pool so core runtime workers (e.g. UI watchers) aren't parked.
+    tokio::task::spawn_blocking(move || {
+        facade
+            .call_menustack_action(&menustack_id, &action_ref)
+            .unwrap(); // todo: error should appear in some kind of "scripting console"
+    })
+    .await
+    .map_err(|e| BackendError::Generic(format!("menu action task failed: {e}")))?;
 
     Ok(())
 }
@@ -56,7 +66,17 @@ pub async fn create_resource_menustack(
     };
 
     let obj = api.get(name).await?;
-    let blueprint = facade.create_resource_menustack(parent_menu, obj, tab_id)?;
+
+    let parent_menu = parent_menu.map(str::to_owned);
+    let tab_id = tab_id.to_owned();
+
+    // Rhai matchers/items may call `kube.*`, which blocks the thread for the round-trip. Run on
+    // the blocking pool so core runtime workers (e.g. UI watchers) aren't parked.
+    let blueprint = tokio::task::spawn_blocking(move || {
+        facade.create_resource_menustack(parent_menu.as_deref(), obj, &tab_id)
+    })
+    .await
+    .map_err(|e| BackendError::Generic(format!("menu build task failed: {e}")))??;
 
     Ok(blueprint)
 }

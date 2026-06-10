@@ -13,6 +13,13 @@ use crate::scripting::types::ResourceRef;
 type LazyDiscovery = Option<Arc<kube::Discovery>>;
 type EvalResult<T> = Result<T, Box<rhai::EvalAltResult>>;
 
+/// Builds the Rhai `kube` module (`kube.get` / `delete` / `patch_merge` / `rollout_restart`).
+///
+/// Every function blocks the calling thread for a full kube round-trip, so they are meant
+/// to be called only from context-menu **action callbacks** — never from matchers or `items`
+/// functions, which run once per resource. The owning engine must be invoked from a
+/// `spawn_blocking` context (see the `resource_menu` commands) so the block lands on Tokio's
+/// blocking pool instead of a core runtime worker driving UI watchers.
 pub fn build_module<F>(client: kube::Client, discovery_supplier: F) -> Module
 where
     F: Fn() -> LazyDiscovery + Send + Sync + 'static,
@@ -142,7 +149,13 @@ where
                                 .await
                                 .map_err(|e| e.to_string())?;
                         }
-                        _ => panic!(),
+                        _ => {
+                            return Err(format!(
+                                "rollout_restart is not supported for kind {}",
+                                resource_ref.kind
+                            )
+                            .into())
+                        }
                     };
 
                     Ok(())
@@ -177,9 +190,16 @@ fn api_resource_for(
     Ok(ar)
 }
 
+/// Drives an async kube operation to completion synchronously.
+///
+/// Rhai has no async support, so the calling thread must block for the round-trip. These
+/// functions are only ever invoked from a `spawn_blocking` context (see the `resource_menu`
+/// commands), i.e. on a Tokio blocking thread rather than a core runtime worker — so a plain
+/// `Handle::block_on` is valid (no `block_in_place`, hence no multi-thread-runtime
+/// dependency) and the workers driving UI watchers are never parked.
 fn block_on<F, T>(future: F) -> T
 where
     F: std::future::Future<Output = T>,
 {
-    tokio::task::block_in_place(|| tokio::runtime::Handle::current().block_on(future))
+    tokio::runtime::Handle::current().block_on(future)
 }
