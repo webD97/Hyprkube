@@ -287,15 +287,15 @@ impl ResourceRenderer for ScriptedRenderer {
         obj: &kube::api::DynamicObject,
     ) -> Result<Vec<Result<ResourcePresentationField, String>>, crate::frontend_types::BackendError>
     {
+        let obj =
+            rhai::serde::to_dynamic(obj).expect("failed to convert Kubernetes resource to dynamic");
+
         Ok(self
             .templates
             .iter()
             .map(|t| {
-                let obj = rhai::serde::to_dynamic(obj)
-                    .expect("failed to convert Kubernetes resource to dynamic");
-
                 t.render
-                    .call::<rhai::Dynamic>(&self.engine, &self.ast, (obj,))
+                    .call::<rhai::Dynamic>(&self.engine, &self.ast, (obj.clone(),))
                     .map_err(|e| e.to_string())
                     .map(|value| {
                         if value.is::<Text>() {
