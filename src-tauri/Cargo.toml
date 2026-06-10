@@ -56,6 +56,10 @@ tauri-plugin-clipboard-manager = "2"
 async-trait = "0.1.89"
 base64 = "0.22.1"
 
+[dev-dependencies]
+# Enables `tauri::test::mock_app` / `MockRuntime` for unit tests only (not in release builds).
+tauri = { version = "2.10.3", features = ["test"] }
+
 [features]
 # this feature is used for production builds or when `devPath` points to the filesystem and the built-in dev server is disabled.
 # If you use cargo directly instead of tauri's cli you can use this feature flag to switch between tauri's `dev` and `build` modes.
