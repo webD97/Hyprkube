@@ -255,6 +255,12 @@ async fn make_client(context_source: &KubeContextSource) -> anyhow::Result<kube:
     Ok(kube::Client::try_from(client_config)?)
 }
 
+/// Whether an API group ships with Kubernetes (vs. being provided by a CRD): the core group
+/// (empty name), any dotless group, and the reserved `*.k8s.io` groups are treated as builtin.
+fn is_builtin_group(name: &str) -> bool {
+    name.ends_with(".k8s.io") || !name.contains('.')
+}
+
 /// Performs a discovery of available resources against the given cluster.
 ///
 /// A single aggregated discovery (`kube::Discovery::run_aggregated`) is run up front, so the
@@ -266,17 +272,6 @@ fn online_discovery(
     client: kube::Client,
 ) -> impl Stream<Item = anyhow::Result<InternalDiscoveryEvent>> {
     async_stream::stream! {
-        tracing::info!("Discovering builtins");
-        let apigroups = &client.list_api_groups().await?;
-        let builtins: Vec<&str> = apigroups
-            .groups
-            .iter()
-            .filter(|group| group.name.ends_with(".k8s.io") || !group.name.contains("."))
-            .map(|group| group.name.as_str())
-            .chain(Some(""))
-            .collect();
-        tracing::debug!("Finished discovering builtins");
-
         let full_discovery = kube::Discovery::new(client.clone())
             .run_aggregated()
             .await?;
@@ -284,7 +279,7 @@ fn online_discovery(
         // Discover builtin resources
         tracing::info!("Starting discovery of builtin resources");
         {
-            for group in full_discovery.groups().filter(|i| builtins.contains(&i.name())) {
+            for group in full_discovery.groups().filter(|group| is_builtin_group(group.name())) {
                 for (ar, capabilities) in group.resources_by_stability() {
                     if !capabilities.supports_operation(kube::discovery::verbs::WATCH) {
                         continue;
@@ -308,7 +303,7 @@ fn online_discovery(
         // Discover custom resources
         tracing::info!("Starting discovery of custom resources");
         {
-            for group in full_discovery.groups().filter(|i| !builtins.contains(&i.name())) {
+            for group in full_discovery.groups().filter(|group| !is_builtin_group(group.name())) {
                 for (ar, capabilities) in group.resources_by_stability() {
                     if !capabilities.supports_operation(kube::discovery::verbs::WATCH) {
                         continue;
