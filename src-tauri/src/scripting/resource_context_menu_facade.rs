@@ -1,7 +1,7 @@
 use std::{
     collections::HashMap,
     path::PathBuf,
-    sync::{Arc, OnceLock, RwLock, Weak},
+    sync::{Arc, RwLock, Weak},
 };
 
 use kube::core::gvk::ParseGroupVersionError;
@@ -29,7 +29,9 @@ pub struct ResourceContextMenuFacade {
     registered_sections: RwLock<Vec<ContextMenuSection>>,
     scripts: RwLock<HashMap<PathBuf, ContentScript>>,
     menu_stacks: RwLock<HashMap<String, MenuStack>>,
-    kube_discovery: OnceLock<Arc<kube::Discovery>>,
+    // RwLock (not OnceLock) so a later `set_discovery` — e.g. on reconnect/refresh — replaces
+    // the cache instead of being silently dropped.
+    kube_discovery: RwLock<Option<Arc<kube::Discovery>>>,
 }
 
 #[derive(Debug, Clone)]
@@ -59,12 +61,12 @@ impl ResourceContextMenuFacade {
             registered_sections: RwLock::new(Vec::new()),
             scripts: RwLock::new(HashMap::new()),
             menu_stacks: RwLock::new(HashMap::new()),
-            kube_discovery: OnceLock::new(),
+            kube_discovery: RwLock::new(None),
         })
     }
 
     pub fn set_discovery(&self, discovery: Arc<kube::Discovery>) {
-        let _ = self.kube_discovery.set(discovery);
+        *self.kube_discovery.write().unwrap() = Some(discovery);
     }
 
     fn make_resource_contextmenu_engine(
@@ -89,8 +91,9 @@ impl ResourceContextMenuFacade {
                     .upgrade()
                     .expect("facade dropped")
                     .kube_discovery
-                    .get()
-                    .cloned()
+                    .read()
+                    .unwrap()
+                    .clone()
             })
             .into(),
         );
