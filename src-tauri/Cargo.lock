@@ -2279,7 +2279,7 @@ dependencies = [
 [[package]]
 name = "kube"
 version = "3.1.0"
-source = "git+https://github.com/webd97/kube.git?branch=experimental#5b01fcb3e49decd914f1e1b536d5b07e1bff2bbc"
+source = "git+https://github.com/webd97/kube.git?branch=experimental#12c5ef93b9e4a61a169062a3d4b5eadcad9b4d0a"
 dependencies = [
  "k8s-openapi",
  "kube-client",
@@ -2290,7 +2290,7 @@ dependencies = [
 [[package]]
 name = "kube-client"
 version = "3.1.0"
-source = "git+https://github.com/webd97/kube.git?branch=experimental#5b01fcb3e49decd914f1e1b536d5b07e1bff2bbc"
+source = "git+https://github.com/webd97/kube.git?branch=experimental#12c5ef93b9e4a61a169062a3d4b5eadcad9b4d0a"
 dependencies = [
  "base64 0.22.1",
  "bytes",
@@ -2325,7 +2325,7 @@ dependencies = [
 [[package]]
 name = "kube-core"
 version = "3.1.0"
-source = "git+https://github.com/webd97/kube.git?branch=experimental#5b01fcb3e49decd914f1e1b536d5b07e1bff2bbc"
+source = "git+https://github.com/webd97/kube.git?branch=experimental#12c5ef93b9e4a61a169062a3d4b5eadcad9b4d0a"
 dependencies = [
  "derive_more 2.1.0",
  "form_urlencoded",
@@ -2342,7 +2342,7 @@ dependencies = [
 [[package]]
 name = "kube-runtime"
 version = "3.1.0"
-source = "git+https://github.com/webd97/kube.git?branch=experimental#5b01fcb3e49decd914f1e1b536d5b07e1bff2bbc"
+source = "git+https://github.com/webd97/kube.git?branch=experimental#12c5ef93b9e4a61a169062a3d4b5eadcad9b4d0a"
 dependencies = [
  "ahash",
  "async-broadcast",
