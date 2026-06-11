@@ -62,21 +62,15 @@ function ClusterCardWithInfo({ contextSource, onConnect, onConnectNewTab, onSett
     const ref = useRef(null);
     const visible = useIntersectionObserver(ref);
 
-    const {
-        data: version,
-        isSuccess,
-        isError, error, isPending
-    } = useQuery({
+    const { data: version, isPending } = useQuery({
         ...getApiServerGitVersionQuery(contextSource),
         enabled: visible,
-        retryDelay: 1000,
-        retry: 2
     });
 
-    const versionString = isPending ? '…' : isError ? `❌ ${error.toString().split(':')[1]}` : isSuccess ? version : '?';
+    const versionString = isPending ? '…' : version ? version.gitVersion : '—';
 
     return (
-        <ClusterCard ref={ref} inert={isError} error={isError}
+        <ClusterCard ref={ref}
             clusterName={capitalizeFirstLetter(contextSource.context)}
             clusterVersion={versionString}
             onClick={onConnect}

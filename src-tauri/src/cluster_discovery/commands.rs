@@ -18,7 +18,11 @@ use crate::{
         InflightDiscovery,
     },
     frontend_commands::KubeContextSource,
-    persistence::{discovery_cache_service::DiscoveryCacheService, repository::Repository},
+    persistence::{
+        apiserver_version_cache_service::{ApiserverVersionCacheService, CachedApiserverVersion},
+        discovery_cache_service::DiscoveryCacheService,
+        repository::Repository,
+    },
     scripting::{
         resource_context_menu_facade::ResourceContextMenuFacade,
         resource_presentation_facade::ResourcePresentationFacade,
@@ -144,72 +148,103 @@ pub async fn connect_cluster(
         // Online part
         tracing::info!("Performing live-discovery against cluster");
 
-        let mut confirmed_resources = HashSet::new();
-        let mut resources: HashMap<GroupVersionKind, DiscoveredResource> = HashMap::new();
-        let mut crds: HashMap<GroupVersionKind, CustomResourceDefinition> = HashMap::new();
+        let version_cache =
+            ApiserverVersionCacheService::new(&context_source.context, Arc::clone(&repository));
+        let version_client = client.clone();
 
-        let mut discovery_stream = std::pin::pin!(online_discovery(client.clone()));
-        let mut kube_discovery: Option<Arc<kube::Discovery>> = None;
+        let discovery_fut = async move {
+            let mut confirmed_resources = HashSet::new();
+            let mut resources: HashMap<GroupVersionKind, DiscoveredResource> = HashMap::new();
+            let mut crds: HashMap<GroupVersionKind, CustomResourceDefinition> = HashMap::new();
 
-        while let Some(msg) = discovery_stream.next().await {
-            let msg = msg?;
+            let mut discovery_stream = std::pin::pin!(online_discovery(client.clone()));
+            let mut kube_discovery: Option<Arc<kube::Discovery>> = None;
 
-            // Save
-            match msg {
-                InternalDiscoveryEvent::DiscoveredResource(resource) => {
-                    confirmed_resources.insert(resource.clone());
+            while let Some(msg) = discovery_stream.next().await {
+                let msg = msg?;
 
-                    let gvk =
-                        GroupVersionKind::gvk(&resource.group, &resource.version, &resource.kind);
+                // Save
+                match msg {
+                    InternalDiscoveryEvent::DiscoveredResource(resource) => {
+                        confirmed_resources.insert(resource.clone());
 
-                    resources.entry(gvk).insert_entry(resource.clone());
+                        let gvk = GroupVersionKind::gvk(
+                            &resource.group,
+                            &resource.version,
+                            &resource.kind,
+                        );
 
-                    // Forward to inflight cache
-                    inflight.send(FrontendDiscoveryEvent::DiscoveredResource(resource.clone()));
+                        resources.entry(gvk).insert_entry(resource.clone());
 
-                    // Forward to frontend
-                    channel.send(FrontendDiscoveryEvent::DiscoveredResource(resource))?;
-                }
-                InternalDiscoveryEvent::CustomResourceDefinition((gvk, crd)) => {
-                    crds.entry(gvk.clone()).insert_entry(*crd.clone());
-                    // Forward to inflight cache
-                    inflight.send(FrontendDiscoveryEvent::CustomResourceDefinition((
-                        gvk.clone(),
-                        crd.clone(),
-                    )));
+                        // Forward to inflight cache
+                        inflight.send(FrontendDiscoveryEvent::DiscoveredResource(resource.clone()));
 
-                    // Forward to frontend
-                    channel.send(FrontendDiscoveryEvent::CustomResourceDefinition((gvk, crd)))?;
-                }
-                InternalDiscoveryEvent::DiscoveryComplete(discovery) => {
-                    kube_discovery = Some(Arc::new(discovery))
+                        // Forward to frontend
+                        channel.send(FrontendDiscoveryEvent::DiscoveredResource(resource))?;
+                    }
+                    InternalDiscoveryEvent::CustomResourceDefinition((gvk, crd)) => {
+                        crds.entry(gvk.clone()).insert_entry(*crd.clone());
+                        // Forward to inflight cache
+                        inflight.send(FrontendDiscoveryEvent::CustomResourceDefinition((
+                            gvk.clone(),
+                            crd.clone(),
+                        )));
+
+                        // Forward to frontend
+                        channel
+                            .send(FrontendDiscoveryEvent::CustomResourceDefinition((gvk, crd)))?;
+                    }
+                    InternalDiscoveryEvent::DiscoveryComplete(discovery) => {
+                        kube_discovery = Some(Arc::new(discovery))
+                    }
                 }
             }
-        }
 
-        // Find resource kinds that vanished from the cluster and remove them from UI and cache
-        for removed_resource in previously_cached.difference(&confirmed_resources) {
-            tracing::info!(
-                "Removing stale resource {}.{} from cache as it no longer exists in the cluster",
-                removed_resource.kind,
-                removed_resource.group
-            );
+            // Find resource kinds that vanished from the cluster and remove them from UI and cache
+            for removed_resource in previously_cached.difference(&confirmed_resources) {
+                tracing::info!(
+                    "Removing stale resource {}.{} from cache as it no longer exists in the cluster",
+                    removed_resource.kind,
+                    removed_resource.group
+                );
 
-            let msg = FrontendDiscoveryEvent::RemovedResource(removed_resource.to_owned());
+                let msg = FrontendDiscoveryEvent::RemovedResource(removed_resource.to_owned());
 
-            inflight.send(msg.clone());
-            channel.send(msg)?;
-        }
+                inflight.send(msg.clone());
+                channel.send(msg)?;
+            }
 
-        if let Err(e) = discovery_cache.set_cache(confirmed_resources) {
-            tracing::warn!("Error updating resource cache: {}", e);
-        }
+            if let Err(e) = discovery_cache.set_cache(confirmed_resources) {
+                tracing::warn!("Error updating resource cache: {}", e);
+            }
 
-        let result = CompletedDiscovery { resources, crds };
+            let result = CompletedDiscovery { resources, crds };
 
-        cluster_state.finalize_discovery(result, kube_discovery);
+            cluster_state.finalize_discovery(result, kube_discovery);
 
-        channel.send(FrontendDiscoveryEvent::DiscoveryComplete(()))?;
+            channel.send(FrontendDiscoveryEvent::DiscoveryComplete(()))?;
+
+            Ok::<(), anyhow::Error>(())
+        };
+
+        let version_fut = async move {
+            match version_client.apiserver_version().await {
+                Ok(info) => {
+                    let cached = CachedApiserverVersion {
+                        git_version: info.git_version,
+                        fetched_at: chrono::Utc::now().to_rfc3339(),
+                    };
+
+                    if let Err(e) = version_cache.set(&cached) {
+                        tracing::warn!("Failed to cache apiserver version: {e}");
+                    }
+                }
+                Err(e) => tracing::warn!("Failed to query apiserver version: {e}"),
+            }
+        };
+
+        let (discovery_result, ()) = tokio::join!(discovery_fut, version_fut);
+        discovery_result?;
 
         Ok(())
     });
@@ -219,19 +254,16 @@ pub async fn connect_cluster(
 
 #[tauri::command]
 #[tracing::instrument(skip_all, fields(request_id = tracing::field::Empty))]
-pub async fn get_apiserver_gitversion(context_source: KubeContextSource) -> Result<String, String> {
+pub async fn get_apiserver_gitversion(
+    app: tauri::AppHandle,
+    context_source: KubeContextSource,
+) -> Result<Option<CachedApiserverVersion>, String> {
     crate::internal::tracing::set_span_request_id();
 
-    let client = make_client(&context_source)
-        .await
-        .map_err(|e| e.to_string())?;
+    let repository = Arc::clone(&app.state::<Repository>());
+    let service = ApiserverVersionCacheService::new(&context_source.context, repository);
 
-    let version = client
-        .apiserver_version()
-        .await
-        .map_err(|e| e.to_string())?;
-
-    Ok(version.git_version)
+    service.read().map_err(|e| e.to_string())
 }
 
 async fn make_client(context_source: &KubeContextSource) -> anyhow::Result<kube::Client> {

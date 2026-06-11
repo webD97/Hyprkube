@@ -1,3 +1,4 @@
+pub mod apiserver_version_cache_service;
 pub mod cluster_profile_service;
 pub mod discovery_cache_service;
 pub mod repository;
