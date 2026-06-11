@@ -1,7 +1,8 @@
 import { ColumnDefinition, DisplayableResource, PresentationComponent, ResourcePresentationData } from "../../hooks/useResourceWatch";
 import EmojiHint from "../EmojiHint";
 
-import { useEffect, useMemo, useState } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import styles from './styles.module.css';
 
 import {
@@ -23,6 +24,7 @@ import { createPortal } from "react-dom";
 import { KubeContextSource } from "../../hooks/useContextDiscovery";
 import { Gvk } from "../../model/k8s";
 import ResourceContextMenu from "../ResourceContextMenu";
+import { buildColumnInfo, computeColumnWidths } from "./columnSizing";
 import { CustomCell } from "./CustomCell";
 
 type _TData = [string, DisplayableResource];
@@ -96,6 +98,9 @@ const ResourceList: React.FC<ResourcePresentationProps> = (props) => {
 
     const columns = useMemo(() => createColumns(columnDefinitions), [columnDefinitions]);
     const data = useMemo(() => Object.entries(resourceData), [resourceData]);
+
+    // Stable per-column sizing inputs derived from the full dataset (see columnSizing).
+    const columnInfo = useMemo(() => buildColumnInfo(columnDefinitions, data), [columnDefinitions, data]);
     const [sorting, setSorting] = useState<SortingState>([]);
     const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
     const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
@@ -153,8 +158,61 @@ const ResourceList: React.FC<ResourcePresentationProps> = (props) => {
         setRowSelection(newSelection);
     }, [data, rowSelection]);
 
+    const tableContainerRef = useRef<HTMLDivElement>(null);
+
+    // Width of one monospace character (≈ the `ch` unit), measured once.
+    const charWidth = useMemo(() => {
+        const ctx = document.createElement('canvas').getContext('2d');
+        if (!ctx) return 8.4;
+
+        ctx.font = '14px monospace';
+
+        return ctx.measureText('0').width || 8.4;
+    }, []);
+
+    // Content width available to the table (excludes the vertical scrollbar).
+    const [availableWidth, setAvailableWidth] = useState(0);
+
+    useLayoutEffect(() => {
+        const el = tableContainerRef.current;
+        if (!el) return;
+        const update = () => setAvailableWidth(el.clientWidth);
+        update();
+        const observer = new ResizeObserver(update);
+        observer.observe(el);
+
+        return () => observer.disconnect();
+    }, []);
+
+    const { rows } = table.getRowModel();
+    const rowVirtualizer = useVirtualizer({
+        count: rows.length,
+        estimateSize: () => 31, // ~2.22em row height at 14px base font
+        getScrollElement: () => tableContainerRef.current,
+        getItemKey: (index) => rows[index].id,
+        overscan: 12,
+    });
+
+    const virtualRows = rowVirtualizer.getVirtualItems();
+    const paddingTop = virtualRows.length > 0 ? virtualRows[0].start : 0;
+    const paddingBottom = virtualRows.length > 0
+        ? rowVirtualizer.getTotalSize() - virtualRows[virtualRows.length - 1].end
+        : 0;
+    const visibleLeafColumns = table.getVisibleLeafColumns();
+    const visibleColumnCount = visibleLeafColumns.length;
+    const columnWidths = computeColumnWidths(
+        visibleLeafColumns.map((column) => column.id),
+        columnInfo,
+        {
+            availableWidth,
+            charWidth,
+            paddingPx: 14, // cells' `0 0.5em` at the 14px base font
+            checkboxPx: Math.ceil(charWidth * 3),
+        },
+    );
+
     return (
-        <div className={styles.container}>
+        <div ref={tableContainerRef} className={styles.container}>
             {
                 !searchbarPortal.current
                     ? null
@@ -172,6 +230,16 @@ const ResourceList: React.FC<ResourcePresentationProps> = (props) => {
                     )
                     : (
                         <table>
+                            <colgroup>
+                                {
+                                    visibleLeafColumns.map((column) => (
+                                        <col
+                                            key={column.id}
+                                            style={{ width: columnWidths.get(column.id) }}
+                                        />
+                                    ))
+                                }
+                            </colgroup>
                             <thead>
                                 {
                                     table.getHeaderGroups().map((headerGroup) => (
@@ -219,31 +287,45 @@ const ResourceList: React.FC<ResourcePresentationProps> = (props) => {
                             </thead>
                             <tbody>
                                 {
-                                    table.getRowModel().rows.map((row) => {
-                                        const filters = Object.values(row.columnFilters)
-                                        const collapsed = filters.length > 0 && filters.findIndex(c => c === true) === -1;
-                                        return (
-                                            <tr key={row.id} className={collapsed ? styles.collapsed : undefined}>
-                                                {
-                                                    row.getVisibleCells().map((cell, idx) => {
-                                                        const { namespace, name } = resourceData[cell.row.original[0]];
+                                    paddingTop > 0 && (
+                                        <tr aria-hidden>
+                                            <td colSpan={visibleColumnCount} style={{ height: paddingTop, padding: 0, border: 0 }} />
+                                        </tr>
+                                    )
+                                }
+                                {
+                                    virtualRows.map((virtualRow) => {
+                                        const row = rows[virtualRow.index];
+                                        const { namespace, name } = row.original[1];
 
-                                                        return (
+                                        return (
+                                            <ResourceContextMenu
+                                                key={row.id}
+                                                contextSource={contextSource}
+                                                {...{ namespace, name, gvk }}
+                                            >
+                                                <tr
+                                                    data-index={virtualRow.index}
+                                                    ref={rowVirtualizer.measureElement}
+                                                >
+                                                    {
+                                                        row.getVisibleCells().map((cell, idx) => (
                                                             <td key={cell.id} onClick={idx === 0 ? undefined : () => onResourceClicked(gvk, row.original[0])}>
-                                                                <div>
-                                                                    <ResourceContextMenu
-                                                                        contextSource={contextSource}
-                                                                        {...{ namespace, name, gvk }}
-                                                                    >
-                                                                        <div>{flexRender(cell.column.columnDef.cell, cell.getContext())}</div>
-                                                                    </ResourceContextMenu>
-                                                                </div>
+                                                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
                                                             </td>
-                                                        )
-                                                    })}
-                                            </tr>
+                                                        ))
+                                                    }
+                                                </tr>
+                                            </ResourceContextMenu>
                                         )
                                     })}
+                                {
+                                    paddingBottom > 0 && (
+                                        <tr aria-hidden>
+                                            <td colSpan={visibleColumnCount} style={{ height: paddingBottom, padding: 0, border: 0 }} />
+                                        </tr>
+                                    )
+                                }
                             </tbody>
                         </table>
                     )

@@ -1,6 +1,7 @@
 import { ItemType } from "antd/es/menu/interface";
 import useModal from "antd/es/modal/useModal";
 import { PropsWithChildren, use, useRef } from "react";
+import { createPortal } from "react-dom";
 import callMenustackAction from "../../api/callMenuStackAction";
 import createResourceMenustack, { ActionButton, MenuItem, ResourceRef } from "../../api/createResourceMenustack";
 import dropResourceMenustack from "../../api/dropResourceMenustack";
@@ -94,9 +95,12 @@ export default function ResourceContextMenu({
 
     return (
         <>
-            <div onClick={(e) => e.stopPropagation()}>
-                {contextHolder}
-            </div>
+            {createPortal(
+                <div onClick={(e) => e.stopPropagation()}>
+                    {contextHolder}
+                </div>,
+                document.body
+            )}
 
             <LazyDropdown
                 fetchItems={async () => {

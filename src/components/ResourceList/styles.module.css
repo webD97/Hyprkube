@@ -1,11 +1,14 @@
 .container {
     height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
 }
 
 .container table {
     font-family: monospace;
     border-spacing: 0;
     width: 100%;
+    table-layout: fixed;
 }
 
 .container table thead {
@@ -15,12 +18,8 @@
     z-index: 10;
 }
 
-.container table tr:not(.collapsed) {
+.container table tr {
     height: 2.22em;
-}
-
-.container table tr.collapsed>td>div {
-    height: 0;
 }
 
 .container table tbody tr {
@@ -39,6 +38,13 @@
     text-overflow: ellipsis;
     padding: 0 0.5em;
     vertical-align: middle;
+}
+
+/* Checkbox column is narrow — drop padding and center so it never clips */
+.container table td:first-child,
+.container table th:first-child {
+    padding: 0;
+    text-align: center;
 }
 
 .container table tbody tr:hover {
