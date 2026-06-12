@@ -7,8 +7,9 @@
 .container table {
     font-family: monospace;
     border-spacing: 0;
-    width: 100%;
+    width: calc(100%-1em);
     table-layout: fixed;
+    padding-right: 1em;
 }
 
 .container table thead {
