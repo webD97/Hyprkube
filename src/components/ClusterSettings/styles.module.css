@@ -1,0 +1,47 @@
+.clusterSettingsContainer {
+    height: 100%;
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 1rem;
+}
+
+.clusterSettingsContainer nav ul {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+}
+
+.clusterSettingsContainer nav ul li {
+    padding: 0.4em 0.8em;
+    padding-right: 3em;
+    margin-top: 0.5em;
+    margin-bottom: 0.5em;
+    border-right: 5px transparent solid;
+}
+
+.clusterSettingsContainer nav ul li:not(.active):hover {
+    background-color: rgba(255, 255, 255, 0.075);
+}
+
+.clusterSettingsContainer nav ul li:first-child {
+    margin-top: 0;
+}
+
+.clusterSettingsContainer nav ul li:last-child {
+    margin-bottom: 0;
+}
+
+.clusterSettingsContainer nav ul li.active {
+    border-right-color: dodgerblue;
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.clusterSettingsContainer main {
+    max-height: 100%;
+    overflow: scroll;
+}
+
+.clusterSettingsContainer h2 {
+    margin: 0;
+    margin-bottom: 0.2em;
+}

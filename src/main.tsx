@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { invoke } from '@tauri-apps/api/core';
+import { App as AntApp, ConfigProvider, theme } from 'antd';
 import dayjs from 'dayjs';
 import durationPlugin from 'dayjs/plugin/duration';
 import localizedFormatPlugin from "dayjs/plugin/localizedFormat";
@@ -31,6 +32,8 @@ console.log = function (...data: unknown[]) {
   consoleLog(...data);
 }
 
+const { darkAlgorithm } = theme;
+
 const queryClient = new QueryClient();
 
 createRoot(document.getElementById('root')!).render(
@@ -38,7 +41,11 @@ createRoot(document.getElementById('root')!).render(
     <BackendPanicListener />
     <StrictMode>
       <QueryClientProvider client={queryClient}>
-        <AppShell />
+        <ConfigProvider theme={{ algorithm: darkAlgorithm }}>
+          <AntApp>
+            <AppShell />
+          </AntApp>
+        </ConfigProvider>
       </QueryClientProvider>
     </StrictMode>
   </>,
