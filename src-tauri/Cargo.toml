@@ -22,13 +22,13 @@ tauri-build = { version = "2.6.2", features = [] }
 serde_json = "1.0.150"
 serde = { version = "1.0.228", features = ["derive"] }
 tauri = { version = "2.11.2", features = [] }
-kube = { git = "https://github.com/webd97/kube.git", branch = "experimental", version = "3.0.1", features = [
+kube = { git = "https://github.com/webd97/kube.git", branch = "experimental", version = "4.0.0", features = [
     "runtime",
     "client",
     "ws",
     "gzip",
 ] }
-k8s-openapi = { version = "0.27.1", features = ["v1_34"] }
+k8s-openapi = { version = "0.28.0", features = ["v1_35"] }
 futures = { version = "0.3.32" }
 tokio = { version = "1.52.3" }
 tokio-util = { version = "0.7.18", features = ["compat"] }
