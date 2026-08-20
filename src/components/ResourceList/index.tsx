@@ -6,17 +6,14 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import styles from './styles.module.css';
 
 import {
-    ColumnDef,
     ColumnFiltersState,
+    ColumnVisibilityState,
     createColumnHelper,
     flexRender,
-    getCoreRowModel,
-    getFilteredRowModel,
-    getSortedRowModel,
     RowSelectionState,
     SortingState,
-    useReactTable,
-    VisibilityState
+    TableOptions,
+    useTable
 } from '@tanstack/react-table';
 import { Checkbox, Input, Space } from "antd";
 import React from "react";
@@ -26,6 +23,7 @@ import { Gvk } from "../../model/k8s";
 import ResourceContextMenu from "../ResourceContextMenu";
 import { buildColumnInfo, computeColumnWidths } from "./columnSizing";
 import { CustomCell } from "./CustomCell";
+import { features } from "./tableFeatures";
 
 type _TData = [string, DisplayableResource];
 
@@ -41,13 +39,22 @@ export interface ResourcePresentationProps {
     searchbarPortal: React.RefObject<HTMLDivElement | null>,
 }
 
+// Referenced from the memoized table options below, so they must keep a stable
+// identity across renders (v9's `useTable` returns a new instance whenever the
+// options object identity changes).
+const defaultColumn = { cell: CustomCell };
+
+function getRowId([resourceUid]: _TData) {
+    return resourceUid;
+}
+
 function createColumns(columnDefinitions: ColumnDefinition[]) {
-    const columnHelper = createColumnHelper<_TData>();
+    const columnHelper = createColumnHelper<typeof features, _TData>();
     const dataColumns = columnDefinitions.map(({ title, filterable }, idx) => {
         return columnHelper.accessor(row => row[1].columns[idx], {
             id: `${idx}_${title}`,
             header: () => title,
-            sortingFn: (rowA, rowB, columnId) => {
+            sortFn: (rowA, rowB, columnId) => {
                 const valueA = rowA.getValue<PresentationComponent>(columnId).sortableValue;
                 const valueB = rowB.getValue<PresentationComponent>(columnId).sortableValue;
 
@@ -61,7 +68,7 @@ function createColumns(columnDefinitions: ColumnDefinition[]) {
         });
     });
 
-    const selectionColumn: ColumnDef<_TData> = {
+    const selectionColumn = columnHelper.display({
         id: '_selection',
         header({ table }) {
             return <Checkbox
@@ -78,9 +85,9 @@ function createColumns(columnDefinitions: ColumnDefinition[]) {
                 onClick={(e) => e.stopPropagation()}
             />
         },
-    };
+    });
 
-    return [selectionColumn, ...dataColumns];
+    return columnHelper.columns([selectionColumn, ...dataColumns]);
 }
 
 const ResourceList: React.FC<ResourcePresentationProps> = (props) => {
@@ -105,32 +112,35 @@ const ResourceList: React.FC<ResourcePresentationProps> = (props) => {
     const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
     const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
 
-    const columnVisibility: VisibilityState = useMemo(() => {
+    // Viewing a single namespace makes the Namespace column redundant. Keys must be
+    // column ids (`${idx}_${title}`), not bare indices.
+    const columnVisibility: ColumnVisibilityState = useMemo(() => {
         if (namespace === "") {
             return {};
         }
 
+        const idx = columnDefinitions.findIndex(c => c.title === "Namespace");
+
+        if (idx < 0) {
+            return {};
+        }
+
         return {
-            [columnDefinitions.findIndex(c => c.title === "Namespace")]: false
+            [`${idx}_Namespace`]: false
         };
     }, [namespace, columnDefinitions]);
 
-    const table = useReactTable({
+    // Memoized because `useTable` returns a new table instance whenever the options
+    // object identity changes; an inline literal would give `table` a new identity
+    // every render and make the selection effect below loop.
+    const tableOptions = useMemo<TableOptions<typeof features, _TData>>(() => ({
+        features,
         columns,
         data,
-        getCoreRowModel: getCoreRowModel(),
-        getSortedRowModel: getSortedRowModel(),
-        getFilteredRowModel: getFilteredRowModel(),
-        defaultColumn: {
-            cell: CustomCell
-        },
-        getRowId([resourceUid]) {
-            return resourceUid;
-        },
+        defaultColumn,
+        getRowId,
         onSortingChange: setSorting,
-        onRowSelectionChange: (x) => {
-            setRowSelection(x);
-        },
+        onRowSelectionChange: setRowSelection,
         onColumnFiltersChange: setColumnFilters,
         state: {
             sorting,
@@ -138,7 +148,9 @@ const ResourceList: React.FC<ResourcePresentationProps> = (props) => {
             rowSelection,
             columnFilters
         }
-    });
+    }), [columns, data, sorting, columnVisibility, rowSelection, columnFilters]);
+
+    const table = useTable(tableOptions);
 
     // Notify parent if selection changes
     useEffect(() => {
