@@ -1,5 +1,6 @@
 import { CellContext } from "@tanstack/react-table";
 import { open } from '@tauri-apps/plugin-shell';
+import type { ResourceTableFeatures } from "./tableFeatures";
 import dayjs from "dayjs";
 import React from "react";
 import { DisplayableResource, PresentationComponent } from "../../hooks/useResourceWatch";
@@ -7,7 +8,7 @@ import RelativeTime from "../RelativeTime";
 import styles from './CustomCell.module.css';
 
 
-export const CustomCell: React.FC<CellContext<[string, DisplayableResource], unknown>> = (props) => {
+export const CustomCell: React.FC<CellContext<ResourceTableFeatures, [string, DisplayableResource], unknown>> = (props) => {
     const component = (props.getValue() as PresentationComponent);
     const style = { color: component.properties?.color };
     const title = component.properties?.title;
