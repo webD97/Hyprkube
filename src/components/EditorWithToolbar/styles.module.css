@@ -1,0 +1,26 @@
+.editorContainer {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.editorContainer .editorToolbar {
+    flex-grow: 0;
+    display: flex;
+    padding: 0 1em;
+    margin-bottom: 0.5em;
+}
+
+.editorContainer .editorToolbar>div {
+    flex-grow: 1;
+    display: flex;
+    gap: 1em;
+}
+
+.editorContainer .editorToolbar>div:last-child {
+    justify-content: flex-end;
+}
+
+.editorContainer .editor {
+    flex-grow: 1;
+}

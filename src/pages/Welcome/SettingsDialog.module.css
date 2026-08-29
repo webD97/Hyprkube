@@ -1,0 +1,12 @@
+.modalDialog {
+    border-radius: 0.5em;
+    border: none;
+    width: 60vw;
+    height: calc(60vh - 1.5rem - 50px);
+    overflow: scroll;
+    padding-left: 0;
+}
+
+.modalDialog:focus {
+    outline: none;
+}
