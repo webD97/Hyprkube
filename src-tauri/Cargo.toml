@@ -36,7 +36,7 @@ rhai = { version = "1.25.1", features = [
     "no_time",
     "only_i64",
 ] }
-dirs = "6.0.0"
+dirs = "7.0.0"
 scan_dir = "0.3.3"
 tauri-plugin-shell = "2.3.5"
 serde_json_path = "0.7.2"
