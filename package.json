@@ -14,7 +14,7 @@
     "@tanstack/react-query": "^5.102.8",
     "@monaco-editor/react": "^4.8.0-rc.3",
     "monaco-editor": "^0.57.0",
-    "@tanstack/react-table": "^9.2.6",
+    "@tanstack/react-table": "^9.3.1",
     "@tanstack/react-virtual": "^3.14.10",
     "@tauri-apps/api": "2.12.4",
     "@tauri-apps/plugin-clipboard-manager": "^2.5.0",
