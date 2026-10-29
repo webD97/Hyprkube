@@ -101,9 +101,13 @@ where
                     let api: Api<DynamicObject> =
                         Api::namespaced_with(client.clone(), namespace, &ar);
 
-                    api.patch(name, &PatchParams::default(), &Patch::Merge(patch))
-                        .await
-                        .map_err(|e| e.to_string())?;
+                    api.patch(
+                        name,
+                        &PatchParams::default(),
+                        &Patch::Merge(rhai::Dynamic::from_map(patch)),
+                    )
+                    .await
+                    .map_err(|e| e.to_string())?;
 
                     Ok(())
                 })
