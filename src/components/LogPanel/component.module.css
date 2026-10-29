@@ -16,7 +16,6 @@
     user-select: initial;
     -webkit-user-select: initial;
     cursor: text;
-    overflow: scroll;
 }
 
 .logWrapper pre {

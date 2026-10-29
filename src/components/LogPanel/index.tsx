@@ -114,7 +114,7 @@ const LogPanel: React.FC<LogPanelProps> = (props) => {
                                 position: 'absolute',
                                 top: 0,
                                 left: 0,
-                                width: '100%',
+                                minWidth: '100%',
                                 transform: `translateY(${virtualItem.start}px)`,
                             }}
                         >
