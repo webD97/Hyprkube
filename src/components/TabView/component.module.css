@@ -11,9 +11,21 @@
 }
 
 .contentWrapper {
-    padding: 0 0.5rem 0.5rem 0.5rem;
+    position: relative;
     flex-grow: 1;
     overflow: hidden;
+}
+
+/* Inactive tabs are hidden via visibility rather than display so they keep their size (scroll position, terminal fit) */
+.tabContent {
+    position: absolute;
+    inset: 0;
+    padding: 0 0.5rem 0.5rem 0.5rem;
+}
+
+.tabContent[hidden] {
+    display: block;
+    visibility: hidden;
 }
 
 .tab {

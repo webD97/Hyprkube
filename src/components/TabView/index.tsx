@@ -1,4 +1,4 @@
-import React, { Activity, ReactElement, ReactNode } from "react";
+import React, { ReactElement, ReactNode } from "react";
 
 import classes from './component.module.css';
 
@@ -12,7 +12,6 @@ export const Tab: React.FC<TabProps> = () => {
 }
 
 export interface TabViewProps {
-    eager?: boolean,
     activeTab: number,
     setActiveTab?: (idx: number) => void,
     onCloseClicked?: (idx: number) => void,
@@ -21,7 +20,6 @@ export interface TabViewProps {
 
 const TabView: React.FC<TabViewProps> = (props) => {
     const {
-        eager = false,
         activeTab,
         setActiveTab = () => undefined,
         onCloseClicked = () => undefined,
@@ -53,15 +51,15 @@ const TabView: React.FC<TabViewProps> = (props) => {
             </div>
             <div className={classes.contentWrapper}>
                 {
+                    // All tabs stay mounted so that streams (logs, shells) keep running in the background
                     React.Children
                         .map(props.children, (child, idx) => {
                             if (!React.isValidElement(child)) return;
-                            if (!eager && activeTab !== idx) return;
 
                             return (
-                                <Activity mode={activeTab === idx ? 'visible' : 'hidden'}>
+                                <div className={classes.tabContent} hidden={activeTab !== idx}>
                                     {child.props.children()}
-                                </Activity>
+                                </div>
                             );
                         })
                 }

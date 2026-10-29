@@ -18,13 +18,18 @@ const HyprkubeTerminal: React.FC<HyprkubeTerminalProps> = (props) => {
     const xtermRef = useRef<HTMLDivElement>(null);
     const fitAddon = useRef<FitAddon | null>(null);
 
+    const { contextSource, podNamespace, podName, container } = props;
+
     useLayoutEffect(() => {
         if (!xtermRef.current) return;
 
-        new ResizeObserver(() => {
+        const observer = new ResizeObserver(() => {
             fitAddon.current?.fit();
-        }).observe(xtermRef.current);
-    });
+        });
+        observer.observe(xtermRef.current);
+
+        return () => observer.disconnect();
+    }, []);
 
     useLayoutEffect(() => {
         const terminal = new Terminal({
@@ -36,13 +41,13 @@ const HyprkubeTerminal: React.FC<HyprkubeTerminalProps> = (props) => {
 
         fitAddon.current = new FitAddon();
 
-        terminal.loadAddon(new AttachHyprkubeAddon(props.contextSource, props.podNamespace, props.podName, props.container));
+        terminal.loadAddon(new AttachHyprkubeAddon(contextSource, podNamespace, podName, container));
         terminal.loadAddon(new WebglAddon());
         terminal.loadAddon(fitAddon.current);
         terminal.open(xtermRef.current!);
 
         return () => terminal.dispose();
-    });
+    }, [contextSource, podNamespace, podName, container]);
 
     return (
         <div ref={xtermRef} className={styles.container}></div>

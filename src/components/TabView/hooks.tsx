@@ -1,4 +1,4 @@
-import { ReactElement, useState } from "react";
+import { cloneElement, ReactElement, useState } from "react";
 import { TabProps } from ".";
 
 export type TabElement = ReactElement<TabProps>;
@@ -8,7 +8,8 @@ export function useTabs(): [TabElement[], number, (tab: TabElement) => void, (id
     const [activeTab, setActiveTab] = useState(0);
 
     const pushTab = (tab: ReactElement<TabProps>) => {
-        setTabs(tabs => [...tabs, tab]);
+        // Tabs need a stable key so closing one doesn't remount the others
+        setTabs(tabs => [...tabs, cloneElement(tab, { key: crypto.randomUUID() })]);
         setActiveTab(tabs.length);
     }
 
@@ -24,7 +25,7 @@ export function useTabs(): [TabElement[], number, (tab: TabElement) => void, (id
 
         setTabs(tabs => tabs.map((tab, idx) => {
             if (idx !== activeTab) return tab;
-            return newTab
+            return cloneElement(newTab, { key: crypto.randomUUID() });
         }))
     }
 
