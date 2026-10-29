@@ -30,9 +30,27 @@
 
 .toolbar {
     display: flex;
-    padding: 0.5em;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+    padding: 6px 8px;
+    font-size: 13px;
 }
 
-.toolbar>* {
-    margin-left: 1em;
+.filter {
+    width: 280px;
+}
+
+.spacer {
+    flex-grow: 1;
+}
+
+.toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    white-space: nowrap;
+    user-select: none;
 }

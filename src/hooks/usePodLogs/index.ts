@@ -19,7 +19,14 @@ export type LogStreamEvent =
         }
     };
 
-export const usePodLogs = (contextSource: KubeContextSource, namespace: string, name: string, container: string) => {
+export interface PodLogsOptions {
+    timestamps: boolean,
+    previous: boolean,
+}
+
+export const usePodLogs = (contextSource: KubeContextSource, namespace: string, name: string, container: string, options: PodLogsOptions) => {
+    const { timestamps, previous } = options;
+
     const [text, setText] = useState('');
 
     useEffect(() => {
@@ -41,13 +48,13 @@ export const usePodLogs = (contextSource: KubeContextSource, namespace: string, 
             }
         };
 
-        invoke('kube_stream_podlogs', { namespace, name, channel, container, contextSource })
+        invoke('kube_stream_podlogs', { namespace, name, channel, container, contextSource, timestamps, previous })
             .catch(e => setText(e as string));
 
         return () => {
             void invoke('cleanup_channel', { channel });
         };
-    }, [namespace, name, contextSource, container]);
+    }, [namespace, name, contextSource, container, timestamps, previous]);
 
     return text;
 };

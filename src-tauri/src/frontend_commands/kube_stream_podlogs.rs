@@ -30,6 +30,8 @@ pub async fn kube_stream_podlogs(
     namespace: &str,
     name: &str,
     container: &str,
+    timestamps: bool,
+    previous: bool,
     channel: tauri::ipc::Channel<LogStreamEvent>,
 ) -> Result<(), BackendError> {
     let clusters = app.state::<ClusterStateRegistry>();
@@ -47,9 +49,11 @@ pub async fn kube_stream_podlogs(
         let pods: kube::Api<Pod> = kube::Api::namespaced(client, &namespace);
 
         let log_params = kube::api::LogParams {
-            follow: true,
+            // the previous container instance has terminated, so there is nothing to follow
+            follow: !previous,
             tail_lines: Some(1000),
-            timestamps: false,
+            timestamps,
+            previous,
             container: Some(container),
             ..Default::default()
         };
