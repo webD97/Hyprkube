@@ -23,6 +23,11 @@
     margin: 0;
 }
 
+.wrap pre {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
 .logWrapper pre:hover {
     background-color: rgba(0, 0, 0, 0.5);
 }

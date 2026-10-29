@@ -2,7 +2,7 @@ import React, { useLayoutEffect, useMemo, useRef, useState } from 'react';
 
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { App, Button, Divider, Input, Switch, theme, Tooltip } from 'antd';
-import { LuChevronsDown, LuClock, LuCopy, LuHistory, LuSearch } from 'react-icons/lu';
+import { LuChevronsDown, LuClock, LuCopy, LuHistory, LuSearch, LuWrapText } from 'react-icons/lu';
 import { KubeContextSource } from '../../hooks/useContextDiscovery';
 import { usePodLogs } from '../../hooks/usePodLogs';
 import Ansi from '../Ansi';
@@ -46,6 +46,7 @@ const LogPanel: React.FC<LogPanelProps> = (props) => {
     const [follow, setFollow] = useState(true);
     const [timestamps, setTimestamps] = useState(false);
     const [previous, setPrevious] = useState(false);
+    const [wrap, setWrap] = useState(false);
 
     const text = usePodLogs(contextSource, namespace, name, container, { timestamps, previous });
     const lines = useMemo(() => text.split('\n').filter(line => line.includes(search)), [search, text]);
@@ -58,9 +59,9 @@ const LogPanel: React.FC<LogPanelProps> = (props) => {
 
     useLayoutEffect(() => {
         if (follow && lines.length > 0) {
-            rowVirtualizer.scrollToOffset(Number.MAX_SAFE_INTEGER);
+            rowVirtualizer.scrollToIndex(lines.length - 1, { align: 'end' });
         }
-    }, [follow, lines, rowVirtualizer]);
+    }, [follow, lines, wrap, rowVirtualizer]);
 
     return (
         <div className={classes.container}>
@@ -86,6 +87,7 @@ const LogPanel: React.FC<LogPanelProps> = (props) => {
                 <div className={classes.spacer} />
                 <Toggle icon={<LuChevronsDown />} label="Follow" tooltip="Scroll to new lines as they arrive" checked={follow} onChange={setFollow} />
                 <Toggle icon={<LuClock />} label="Timestamps" tooltip="Prefix each line with its timestamp" checked={timestamps} onChange={setTimestamps} />
+                <Toggle icon={<LuWrapText />} label="Wrap" tooltip="Wrap long lines" checked={wrap} onChange={setWrap} />
                 <Toggle icon={<LuHistory />} label="Previous" tooltip="Show logs of the previous container instance" checked={previous} onChange={setPrevious} />
                 <Divider orientation="vertical" />
                 <Button
@@ -101,7 +103,7 @@ const LogPanel: React.FC<LogPanelProps> = (props) => {
                 </Button>
             </div>
             <div ref={parentRef} style={{ overflow: 'scroll', width: '100%', height: '100%', flexGrow: 1 }} onWheel={() => setFollow(false)}>
-                <div className={classes.logWrapper}
+                <div className={`${classes.logWrapper} ${wrap ? classes.wrap : ''}`}
                     style={{
                         height: `${rowVirtualizer.getTotalSize()}px`,
                         minHeight: '100%'
@@ -110,11 +112,13 @@ const LogPanel: React.FC<LogPanelProps> = (props) => {
                     {rowVirtualizer.getVirtualItems().map((virtualItem) => (
                         <div
                             key={virtualItem.key}
+                            data-index={virtualItem.index}
+                            ref={rowVirtualizer.measureElement}
                             style={{
                                 position: 'absolute',
                                 top: 0,
                                 left: 0,
-                                minWidth: '100%',
+                                ...(wrap ? { width: '100%' } : { minWidth: '100%' }),
                                 transform: `translateY(${virtualItem.start}px)`,
                             }}
                         >
