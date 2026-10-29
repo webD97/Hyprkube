@@ -22,7 +22,7 @@ tauri-build = { version = "2.6.2", features = [] }
 serde_json = "1.0.150"
 serde = { version = "1.0.228", features = ["derive"] }
 tauri = { version = "2.11.2", features = [] }
-kube = { git = "https://github.com/webd97/kube.git", branch = "experimental", version = "4.0.0", features = [
+kube = { git = "https://github.com/webd97/kube.git", branch = "experimental", version = "4.2.0", features = [
     "runtime",
     "client",
     "ws",
