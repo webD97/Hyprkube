@@ -23,14 +23,19 @@ type FrontendTriggerPickGvk = { tabId: string, gvk: Gvk };
 export interface ClusterViewProps {
     contextSource: KubeContextSource,
     preSelectedGvk?: Gvk,
-    preSelectedNamespace?: string
+    preSelectedNamespace?: string,
+    preSelectedNamespaceLocked?: boolean
 }
 
-const ClusterView: React.FC<ClusterViewProps> = ({ contextSource, preSelectedGvk, preSelectedNamespace }) => {
+const ClusterView: React.FC<ClusterViewProps> = ({ contextSource, preSelectedGvk, preSelectedNamespace, preSelectedNamespaceLocked }) => {
     const clusterProfiles = useClusterProfiles();
     const [activeGvk, setActiveGvk] = useState<Gvk | undefined>(preSelectedGvk);
     const [bottomTabs, activeBottomTab, pushBottomTab, removeBottomTab, setActiveBottomTab] = useTabs();
-    const [currentNamespace, setCurrentNamespace] = useState(preSelectedNamespace || 'default');
+    // undefined until the first resource has picked its namespace
+    const [currentNamespace, setCurrentNamespace] = useState(preSelectedNamespace);
+    // Namespace inherited from the tab we were opened from; only applies to the initially selected GVK
+    const [inheritedNamespace, setInheritedNamespace] = useState(preSelectedNamespace);
+    const [namespaceLocked, setNamespaceLocked] = useState(preSelectedNamespaceLocked ?? true);
 
     const { pushTab, switchTab } = use(MegaTabsContext)!;
     const { setMeta, tabIdentifier } = use(MegaTabContext)!;
@@ -48,12 +53,17 @@ const ClusterView: React.FC<ClusterViewProps> = ({ contextSource, preSelectedGvk
         onFinished: onClusterDiscoveryFinished,
     });
 
-    function updateTabMeta(gvk: Gvk, namespace: string) {
+    function updateTabMeta(gvk: Gvk, namespace: string | undefined) {
         setMeta(tabIdentifier, meta => ({ ...meta, subtitle: makeTabSubtitle(discovery, gvk, namespace) }));
     }
 
-    function handleGvkChange(nextGvk: Gvk) {
+    const selectGvk = useCallback((nextGvk: Gvk) => {
         setActiveGvk(nextGvk);
+        setInheritedNamespace(undefined);
+    }, []);
+
+    function handleGvkChange(nextGvk: Gvk) {
+        selectGvk(nextGvk);
         updateTabMeta(nextGvk, currentNamespace);
     }
 
@@ -69,15 +79,15 @@ const ClusterView: React.FC<ClusterViewProps> = ({ contextSource, preSelectedGvk
             switchTab(
                 pushTab(
                     { icon: '🌍', title: capitalizeFirstLetter(contextSource.context), subtitle: makeTabSubtitle(discovery, gvk, currentNamespace), keepAlive: true },
-                    () => <ClusterView preSelectedNamespace={currentNamespace} contextSource={contextSource} preSelectedGvk={gvk} />
+                    () => <ClusterView preSelectedNamespace={currentNamespace} preSelectedNamespaceLocked={namespaceLocked} contextSource={contextSource} preSelectedGvk={gvk} />
                 )
             );
         }
     }
 
     const onTriggerPickGvk = useCallback<EventCallback<FrontendTriggerPickGvk>>((event) => {
-        setActiveGvk(event.payload.gvk);
-    }, []);
+        selectGvk(event.payload.gvk);
+    }, [selectGvk]);
 
     useTauriEventListener<FrontendTriggerPickGvk>('hyprkube:menu:resource:pick_gvk', tabIdentifier.toString(), onTriggerPickGvk);
 
@@ -114,10 +124,13 @@ const ClusterView: React.FC<ClusterViewProps> = ({ contextSource, preSelectedGvk
                                     ? <EmojiHint emoji="👈">Select a resource to get started.</EmojiHint>
                                     : (
                                         <ResourceListInspector
+                                            key={`${activeGvk.group}/${activeGvk.version}/${activeGvk.kind}`}
                                             discovery={discovery}
                                             gvk={activeGvk}
-                                            preSelectedNamespace={preSelectedNamespace || 'default'}
+                                            preSelectedNamespace={namespaceLocked ? currentNamespace : inheritedNamespace}
                                             onNamespaceChanged={handleNamespaceChange}
+                                            namespaceLocked={namespaceLocked}
+                                            onNamespaceLockChanged={setNamespaceLocked}
                                             contextSource={contextSource}
                                             clusterProfile={clusterProfiles[0][0]}
                                             pushBottomTab={pushBottomTab}
@@ -148,9 +161,9 @@ const ClusterView: React.FC<ClusterViewProps> = ({ contextSource, preSelectedGvk
     )
 }
 
-function makeTabSubtitle(discovery: DiscoveryResult, gvk: Gvk, namespace: string) {
+function makeTabSubtitle(discovery: DiscoveryResult, gvk: Gvk, namespace: string | undefined) {
     if (findResourceScope(discovery, gvk) === 'namespaced') {
-        return `${gvk.kind}${namespace && ` (${namespace})`}`;
+        return `${gvk.kind}${namespace ? ` (${namespace})` : ''}`;
     }
     return `${gvk.kind}`;
 }

@@ -1,10 +1,10 @@
-import { use, useCallback, useEffect, useRef, useState } from "react";
+import { use, useCallback, useEffect, useEffectEvent, useRef, useState } from "react";
 import { Gvk } from "../../model/k8s";
 
 import { useQuery } from "@tanstack/react-query";
 import { EventCallback } from "@tauri-apps/api/event";
 import { confirm } from '@tauri-apps/plugin-dialog';
-import { Button, Select } from "antd";
+import { Button, Select, Switch } from "antd";
 import { deleteResource } from "../../api/deleteResource";
 import getDefaultNamespace from "../../api/getDefaultNamespace";
 import getResourceYaml from "../../api/getResourceYaml";
@@ -26,12 +26,14 @@ import classes from './styles.module.css';
 
 export interface ResourceListInspectorProps {
     gvk: Gvk,
-    preSelectedNamespace: string,
+    preSelectedNamespace?: string,
+    namespaceLocked: boolean,
     contextSource: KubeContextSource,
     clusterProfile: string,
     discovery: DiscoveryResult,
     pushBottomTab: (tab: TabElement) => void,
     onNamespaceChanged?: (namespace: string) => void,
+    onNamespaceLockChanged?: (locked: boolean) => void,
 }
 
 type FrontendTriggerResourceEdit = { tabId: string, gvk: Gvk, namespace: string, name: string };
@@ -47,7 +49,9 @@ const ResourceListInspector: React.FC<ResourceListInspectorProps> = (props) => {
         discovery,
         pushBottomTab,
         preSelectedNamespace,
-        onNamespaceChanged = () => undefined
+        namespaceLocked,
+        onNamespaceChanged = () => undefined,
+        onNamespaceLockChanged = () => undefined
     } = props;
 
     const [selectedPresentation, setSelectedPresentation] = useState("");
@@ -56,8 +60,11 @@ const ResourceListInspector: React.FC<ResourceListInspectorProps> = (props) => {
         initialData: [],
     });
     const allNamespaces = useClusterNamespaces(contextSource);
-    const [selectedNamespace, setSelectedNamespace] = useState(preSelectedNamespace);
-    const [resourceDefaultNamespace, setResourceDefaultNamespace] = useState('default');
+    // The pre-selected namespace only matters on mount; we're remounted whenever the GVK changes
+    const [initialNamespace] = useState(preSelectedNamespace);
+    // undefined until we know which namespace to show, so we don't start watching the wrong one
+    const [selectedNamespace, setSelectedNamespace] = useState(initialNamespace);
+    const [resourceDefaultNamespace, setResourceDefaultNamespace] = useState<string>();
     const [selectedResources, setSelectedResources] = useState<[string, DisplayableResource][]>([]);
     const [columnDefinitions, resources] = useResourceWatch(contextSource, gvk, selectedPresentation, selectedNamespace);
     const { tabIdentifier } = use(MegaTabContext)!;
@@ -68,17 +75,35 @@ const ResourceListInspector: React.FC<ResourceListInspectorProps> = (props) => {
         setSelectedPresentation(availablePresentations.data[0]);
     }
 
+    const resourceScope = findResourceScope(discovery, gvk);
+    const resourceNamePlural = findResourcePlural(discovery, gvk);
+
     useEffect(() => {
-        if (preSelectedNamespace) return;
+        let cancelled = false;
 
         getDefaultNamespace(clusterProfile, gvk)
             .then(namespace => {
+                if (cancelled) return;
                 setResourceDefaultNamespace(namespace);
-                setSelectedNamespace(namespace);
-                onNamespaceChanged(namespace);
+                setSelectedNamespace(selected => selected ?? namespace);
             })
-            .catch(e => alert(JSON.stringify(e)))
-    }, [clusterProfile, gvk, onNamespaceChanged, preSelectedNamespace]);
+            .catch(e => alert(JSON.stringify(e)));
+
+        return () => {
+            cancelled = true;
+        };
+    }, [clusterProfile, gvk]);
+
+    const notifyNamespaceChanged = useEffectEvent((namespace: string) => {
+        // Cluster-scoped resources have no namespace, so keep whatever the parent has
+        if (resourceScope === 'cluster') return;
+        onNamespaceChanged(namespace);
+    });
+
+    useEffect(() => {
+        if (selectedNamespace === undefined) return;
+        notifyNamespaceChanged(selectedNamespace);
+    }, [selectedNamespace]);
 
     const deleteSelectedResources = useCallback(() => {
         confirm(`This action cannot be reverted. Are you sure?`, { kind: 'warning', title: `Permanently delete ${selectedResources.length} resources?` })
@@ -93,7 +118,10 @@ const ResourceListInspector: React.FC<ResourceListInspectorProps> = (props) => {
     }, [contextSource, gvk, selectedResources]);
 
     const saveDefaultNamespace = useCallback(() => {
+        if (selectedNamespace === undefined) return;
+
         setDefaultNamespace(clusterProfile, gvk, selectedNamespace)
+            .then(() => setResourceDefaultNamespace(selectedNamespace))
             .catch(e => alert(JSON.stringify(e)));
     }, [clusterProfile, gvk, selectedNamespace]);
 
@@ -194,8 +222,7 @@ const ResourceListInspector: React.FC<ResourceListInspectorProps> = (props) => {
         }
     }, [contextSource, pushBottomTab, resources]);
 
-    const resourceScope = findResourceScope(discovery, gvk);
-    const resourceNamePlural = findResourcePlural(discovery, gvk);
+    const markDefault = (label: string, namespace: string) => namespace === resourceDefaultNamespace ? label + ' ⭐' : label;
 
     return (
         <div className={classes.container}>
@@ -213,8 +240,8 @@ const ResourceListInspector: React.FC<ResourceListInspectorProps> = (props) => {
                             <>
                                 <Select style={{ minWidth: '200px' }}
                                     options={[
-                                        { label: '(All namespaces)', value: '' },
-                                        ...allNamespaces.map(n => ({ label: n === resourceDefaultNamespace ? n + ' ⭐' : n, value: n }))
+                                        { label: markDefault('(All namespaces)', ''), value: '' },
+                                        ...allNamespaces.map(n => ({ label: markDefault(n, n), value: n }))
                                     ]}
                                     value={selectedNamespace}
                                     onChange={(value) => setSelectedNamespace(value)}
@@ -222,8 +249,20 @@ const ResourceListInspector: React.FC<ResourceListInspectorProps> = (props) => {
                                     popupMatchSelectWidth={false}
                                     listHeight={512}
                                 />
+                                <Switch
+                                    checked={namespaceLocked}
+                                    onChange={onNamespaceLockChanged}
+                                    checkedChildren="🔒"
+                                    unCheckedChildren="🔓"
+                                    aria-label="Lock namespace"
+                                    title={
+                                        namespaceLocked
+                                            ? 'Namespace locked: stays in this namespace when switching resources'
+                                            : 'Namespace unlocked: switching resources uses their default namespace'
+                                    }
+                                />
                                 {
-                                    resourceDefaultNamespace !== selectedNamespace
+                                    resourceDefaultNamespace !== undefined && selectedNamespace !== undefined && resourceDefaultNamespace !== selectedNamespace
                                         ? <Button icon="💾" title="Save as custom default namespace" onClick={saveDefaultNamespace}>Save as default</Button>
                                         : null
                                 }
