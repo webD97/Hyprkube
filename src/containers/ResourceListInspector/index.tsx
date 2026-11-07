@@ -24,9 +24,13 @@ import listResourcePresentationsQuery from "../../queries/listResourcePresentati
 import ResourceEditor from "../ResourceEditor";
 import classes from './styles.module.css';
 
+/** Every new object is applied, even if the namespace didn't change */
+export type NamespaceRequest = { namespace: string };
+
 export interface ResourceListInspectorProps {
     gvk: Gvk,
     preSelectedNamespace?: string,
+    namespaceRequest?: NamespaceRequest,
     namespaceLocked: boolean,
     contextSource: KubeContextSource,
     clusterProfile: string,
@@ -39,7 +43,6 @@ export interface ResourceListInspectorProps {
 type FrontendTriggerResourceEdit = { tabId: string, gvk: Gvk, namespace: string, name: string };
 type FrontendTriggerLogView = { tabId: string, namespace: string, name: string, container: string };
 type FrontendTriggerExecSession = { tabId: string, namespace: string, name: string, container: string };
-type FrontendTriggerPickNamespace = { tabId: string, namespace: string };
 
 const ResourceListInspector: React.FC<ResourceListInspectorProps> = (props) => {
     const {
@@ -49,6 +52,7 @@ const ResourceListInspector: React.FC<ResourceListInspectorProps> = (props) => {
         discovery,
         pushBottomTab,
         preSelectedNamespace,
+        namespaceRequest,
         namespaceLocked,
         onNamespaceChanged = () => undefined,
         onNamespaceLockChanged = () => undefined
@@ -73,6 +77,14 @@ const ResourceListInspector: React.FC<ResourceListInspectorProps> = (props) => {
 
     if (availablePresentations.data.length > 0 && !availablePresentations.data.includes(selectedPresentation)) {
         setSelectedPresentation(availablePresentations.data[0]);
+    }
+
+    const [appliedNamespaceRequest, setAppliedNamespaceRequest] = useState(namespaceRequest);
+    if (namespaceRequest !== appliedNamespaceRequest) {
+        setAppliedNamespaceRequest(namespaceRequest);
+        if (namespaceRequest !== undefined) {
+            setSelectedNamespace(namespaceRequest.namespace);
+        }
     }
 
     const resourceScope = findResourceScope(discovery, gvk);
@@ -187,14 +199,9 @@ const ResourceListInspector: React.FC<ResourceListInspectorProps> = (props) => {
         );
     }, [contextSource, pushBottomTab]);
 
-    const onTriggerPickNamespace = useCallback<EventCallback<FrontendTriggerPickNamespace>>((event) => {
-        setSelectedNamespace(event.payload.namespace);
-    }, []);
-
     useTauriEventListener<FrontendTriggerLogView>('hyprkube:menu:resource:trigger_logs', tabIdentifier.toString(), onTriggerLogview);
     useTauriEventListener<FrontendTriggerResourceEdit>('hyprkube:menu:resource:trigger_edit', tabIdentifier.toString(), onTriggerEdit);
     useTauriEventListener<FrontendTriggerExecSession>('hyprkube:menu:resource:trigger_exec', tabIdentifier.toString(), onTriggerExec);
-    useTauriEventListener<FrontendTriggerPickNamespace>('hyprkube:menu:resource:pick_namespace', tabIdentifier.toString(), onTriggerPickNamespace);
 
     const yamlViewerFactory = useCallback(() => {
         return (gvk: Gvk, resourceUID: string) => {

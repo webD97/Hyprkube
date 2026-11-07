@@ -6,7 +6,7 @@ import EmojiHint from '../../components/EmojiHint';
 import RotatingSpinner from '../../components/RotatingSpinner';
 import TabView from '../../components/TabView';
 import { useTabs } from '../../components/TabView/hooks';
-import ResourceListInspector from '../../containers/ResourceListInspector';
+import ResourceListInspector, { NamespaceRequest } from '../../containers/ResourceListInspector';
 import { MegaTabContext } from '../../contexts/MegaTab';
 import MegaTabsContext from '../../contexts/MegaTabs';
 import { DiscoveryResult, useClusterDiscovery } from '../../hooks/useClusterDiscovery';
@@ -19,6 +19,7 @@ import Sidebar from './Sidebar';
 import classes from './styles.module.css';
 
 type FrontendTriggerPickGvk = { tabId: string, gvk: Gvk };
+type FrontendTriggerPickNamespace = { tabId: string, namespace: string };
 
 export interface ClusterViewProps {
     contextSource: KubeContextSource,
@@ -33,8 +34,9 @@ const ClusterView: React.FC<ClusterViewProps> = ({ contextSource, preSelectedGvk
     const [bottomTabs, activeBottomTab, pushBottomTab, removeBottomTab, setActiveBottomTab] = useTabs();
     // undefined until the first resource has picked its namespace
     const [currentNamespace, setCurrentNamespace] = useState(preSelectedNamespace);
-    // Namespace inherited from the tab we were opened from; only applies to the initially selected GVK
-    const [inheritedNamespace, setInheritedNamespace] = useState(preSelectedNamespace);
+    const [namespaceRequest, setNamespaceRequest] = useState<NamespaceRequest | undefined>(
+        preSelectedNamespace === undefined ? undefined : { namespace: preSelectedNamespace }
+    );
     const [namespaceLocked, setNamespaceLocked] = useState(preSelectedNamespaceLocked ?? true);
 
     const { pushTab, switchTab } = use(MegaTabsContext)!;
@@ -57,18 +59,15 @@ const ClusterView: React.FC<ClusterViewProps> = ({ contextSource, preSelectedGvk
         setMeta(tabIdentifier, meta => ({ ...meta, subtitle: makeTabSubtitle(discovery, gvk, namespace) }));
     }
 
-    const selectGvk = useCallback((nextGvk: Gvk) => {
-        setActiveGvk(nextGvk);
-        setInheritedNamespace(undefined);
-    }, []);
-
     function handleGvkChange(nextGvk: Gvk) {
-        selectGvk(nextGvk);
+        setActiveGvk(nextGvk);
+        setNamespaceRequest(undefined);
         updateTabMeta(nextGvk, currentNamespace);
     }
 
     function handleNamespaceChange(nextNamespace: string) {
         setCurrentNamespace(nextNamespace);
+        setNamespaceRequest(request => request?.namespace === nextNamespace ? request : undefined);
         updateTabMeta(activeGvk!, nextNamespace);
     }
 
@@ -86,10 +85,17 @@ const ClusterView: React.FC<ClusterViewProps> = ({ contextSource, preSelectedGvk
     }
 
     const onTriggerPickGvk = useCallback<EventCallback<FrontendTriggerPickGvk>>((event) => {
-        selectGvk(event.payload.gvk);
-    }, [selectGvk]);
+        // Keep any pending namespace request: scripts may pick the namespace before the kind
+        setActiveGvk(event.payload.gvk);
+    }, []);
+
+    // Not in ResourceListInspector: it remounts when a script also picks a kind and would lose the namespace
+    const onTriggerPickNamespace = useCallback<EventCallback<FrontendTriggerPickNamespace>>((event) => {
+        setNamespaceRequest({ namespace: event.payload.namespace });
+    }, []);
 
     useTauriEventListener<FrontendTriggerPickGvk>('hyprkube:menu:resource:pick_gvk', tabIdentifier.toString(), onTriggerPickGvk);
+    useTauriEventListener<FrontendTriggerPickNamespace>('hyprkube:menu:resource:pick_namespace', tabIdentifier.toString(), onTriggerPickNamespace);
 
     if (!clusterProfiles[0]?.[0]) {
         return null;
@@ -127,7 +133,8 @@ const ClusterView: React.FC<ClusterViewProps> = ({ contextSource, preSelectedGvk
                                             key={`${activeGvk.group}/${activeGvk.version}/${activeGvk.kind}`}
                                             discovery={discovery}
                                             gvk={activeGvk}
-                                            preSelectedNamespace={namespaceLocked ? currentNamespace : inheritedNamespace}
+                                            preSelectedNamespace={namespaceRequest?.namespace ?? (namespaceLocked ? currentNamespace : undefined)}
+                                            namespaceRequest={namespaceRequest}
                                             onNamespaceChanged={handleNamespaceChange}
                                             namespaceLocked={namespaceLocked}
                                             onNamespaceLockChanged={setNamespaceLocked}
